@@ -1,0 +1,236 @@
+[
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "created_at",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "signup_dt",
+    "confidence": 0.8,
+    "reasoning": "Likely match but naming is ambiguous -- flagged for review",
+    "status": "pending"
+  },
+  {
+    "source_table": "customer",
+    "source_column": "status",
+    "suggested_target_table": "customers",
+    "suggested_target_column": "acct_status",
+    "confidence": 0.6,
+    "reasoning": "Enum values may differ between systems -- needs human confirmation",
+    "status": "pending"
+  }
+]

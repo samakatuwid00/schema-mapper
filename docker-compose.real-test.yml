@@ -1,0 +1,33 @@
+services:
+  real_source_db:
+    image: postgres:17
+    container_name: schema_mapper_real_source
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: real_source
+    ports:
+      - "5440:5432"
+    volumes:
+      - real_source_data:/var/lib/postgresql/data
+
+  real_target_db:
+    # Match the 8.0.40 server that produced sql/lrmis.sql. MySQL 8.4 rejects
+    # one legacy foreign key that the source server accepted.
+    image: mysql:8.0.40
+    container_name: schema_mapper_real_target
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: lrmis
+      MYSQL_USER: irimsv_writer
+      MYSQL_PASSWORD: change-me
+    ports:
+      - "3310:3306"
+    volumes:
+      - real_target_data:/var/lib/mysql
+      - ./sql/lrmis.sql:/docker-entrypoint-initdb.d/01_lrmis.sql:ro
+      - ./sql/real_test_target_setup.sql:/docker-entrypoint-initdb.d/02_staging.sql:ro
+
+volumes:
+  real_source_data:
+  real_target_data:

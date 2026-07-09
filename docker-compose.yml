@@ -1,0 +1,35 @@
+# version: "3.8"
+
+services:
+  central_db:
+    image: postgres:16
+    container_name: schema_mapper_central_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: central
+    ports:
+      - "5433:5432"
+    volumes:
+      - central_db_data:/var/lib/postgresql/data
+      - ./sql/central_db_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./sql/001_integration_foundation.sql:/docker-entrypoint-initdb.d/02_integration.sql
+      - ./sql/002_onboarding_metadata.sql:/docker-entrypoint-initdb.d/03_onboarding.sql
+
+  lrmis_staging_db:
+    image: mysql:8.4
+    container_name: schema_mapper_lrmis_staging
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: lrmis_staging
+      MYSQL_USER: irimsv_writer
+      MYSQL_PASSWORD: change-me
+    ports:
+      - "3307:3306"
+    volumes:
+      - lrmis_staging_data:/var/lib/mysql
+      - ./sql/lrmis_staging_init.sql:/docker-entrypoint-initdb.d/01_staging.sql
+
+volumes:
+  central_db_data:
+  lrmis_staging_data:

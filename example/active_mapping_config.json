@@ -1,0 +1,55 @@
+{
+  "version": 15,
+  "mappings": [
+    {
+      "source_column": "id",
+      "target_table": "customers",
+      "target_column": "cust_id",
+      "confidence": 1.0,
+      "transform": "none",
+      "approved_by": "auto"
+    },
+    {
+      "source_column": "full_name",
+      "target_table": "customers",
+      "target_column": "cust_nm",
+      "confidence": 1.0,
+      "transform": "none",
+      "approved_by": "auto"
+    },
+    {
+      "source_column": "email",
+      "target_table": "customers",
+      "target_column": "email_addr",
+      "confidence": 1.0,
+      "transform": "none",
+      "approved_by": "auto"
+    },
+    {
+      "source_column": "phone",
+      "target_table": "customers",
+      "target_column": "phone_no",
+      "confidence": 1.0,
+      "transform": "none",
+      "approved_by": "auto"
+    },
+    {
+      "source_column": "created_at",
+      "target_table": "customers",
+      "target_column": "signup_dt",
+      "confidence": 0.9,
+      "transform": "none",
+      "approved_by": "auto"
+    },
+    {
+      "source_column": "status",
+      "target_table": "customers",
+      "target_column": "acct_status",
+      "confidence": 0.9,
+      "transform": "enum_remap:{\"active\":\"ACTIVE\",\"inactive\":\"INACTIVE\",\"churned\":\"CHURNED\"}",
+      "approved_by": "auto"
+    }
+  ],
+  "source_table": "customer",
+  "updated_at": 1783522978.4771452
+}

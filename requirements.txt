@@ -1,0 +1,8 @@
+# Official Google Gemini SDK; mapping_engine uses structured JSON output.
+google-genai>=2.0.0,<3.0.0
+python-dotenv>=1.0.0,<2.0.0
+psycopg2-binary>=2.9.0
+mysql-connector-python>=9.0.0
+sqlglot>=26.0.0
+rich>=13.0.0
+pytest>=8.0.0
