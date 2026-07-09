@@ -40,21 +40,21 @@
 
 ## 6. Frontend
 
-- [ ] 6.1 Scaffold `web/` (Vite + React + TS, Router, TanStack Query, EventSource client, dev proxy, FastAPI static serving of production build)
-- [ ] 6.2 App shell: dark database-console theme, entity sidebar, status chips, guarded action modal components (one-click / confirm+reason / typed-confirmation tiers)
-- [ ] 6.3 Login page + session handling
-- [ ] 6.4 Overview page (live health cards, drift alerts)
-- [ ] 6.5 Worker & Queues page (loop toggle, outbox table, quarantine/dead-letter inspection, replay)
-- [ ] 6.6 Schema Scanner page (scan trigger, schema trees, diff viewer)
-- [ ] 6.7 Onboarding Wizard (discover → propose → review/resolve → deploy → backfill with job progress)
-- [ ] 6.8 Mapping Review page (mapping lanes, resolve actions, unmet required columns)
-- [ ] 6.9 Migrations page (applied/pending, SQL preview, typed-confirmation apply)
-- [ ] 6.10 Drift Reports + Audit Log pages
+- [x] 6.1 Scaffold `web/` (Vite + React + TS, Router, TanStack Query, EventSource client, dev proxy, FastAPI static serving of production build)
+- [x] 6.2 App shell: dark database-console theme, entity sidebar, status chips, guarded action modal components (one-click / confirm+reason / typed-confirmation tiers)
+- [x] 6.3 Login page + session handling
+- [x] 6.4 Overview page (live health cards, drift alerts)
+- [x] 6.5 Worker & Queues page (loop toggle, outbox table, quarantine/dead-letter inspection, replay)
+- [x] 6.6 Schema Scanner page (scan trigger, schema trees, diff viewer)
+- [x] 6.7 Onboarding Wizard (discover → propose → review/resolve → deploy → backfill with job progress)
+- [x] 6.8 Mapping Review page (mapping lanes, resolve actions, unmet required columns)
+- [x] 6.9 Migrations page (applied/pending, SQL preview, typed-confirmation apply)
+- [x] 6.10 Drift Reports + Audit Log pages
 
 ## 7. Tests & verification
 
 - [x] 7.1 Backend tests: auth/roles, audit-in-transaction, job allowlist + state machine, deploy conflict (409), migration checksum mismatch, replay CAS mapping
-- [ ] 7.2 Frontend tests: guarded modal tiers, status chip rendering, job drawer updates from SSE events
+- [x] 7.2 Frontend tests: guarded modal tiers, status chip rendering, job drawer updates from SSE events
 - [ ] 7.3 E2E happy path against Docker stack: login → scan → onboard pilot table → worker pass → replay a quarantined event → apply migration
 - [x] 7.4 `pytest -q` and `python -m compileall -q src scripts tests` clean
 
@@ -62,5 +62,5 @@
 
 - [x] 8.1 Update README/LOCAL_SETUP: admin UI quickstart; correct stale script references to `python -m src.pipeline` equivalents
 - [x] 8.2 Update `CLAUDE.md` with admin UI dev commands
-- [ ] 8.3 Run `graphify update .` so the graph includes the new backend/frontend
+- [x] 8.3 Run `graphify update .` so the graph includes the new backend/frontend
 - [ ] 8.4 `openspec validate add-admin-database-dashboard --strict` passes; archive change after acceptance
