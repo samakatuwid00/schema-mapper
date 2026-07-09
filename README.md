@@ -25,12 +25,14 @@ Requirements: Docker Compose and Python 3.10+.
 pip install -r requirements.txt
 docker compose up -d
 python scripts/schema_monitor.py --approve-initial --by YOUR_NAME
-python scripts/create_pilot_mapping.py
-python scripts/integration_admin.py approve-mapping MAPPING_ID --by YOUR_NAME
+python -m src.pipeline onboard --source-schema irimsv --source-table customer --target-system LRMIS --by YOUR_NAME
 python scripts/insert_sample_row.py "Ada Lovelace" ada@example.com
 python -m src.worker
-python scripts/reconcile.py
+python -m src.pipeline reconcile --entity customer
 ```
+
+(The former `create_pilot_mapping.py`, `reconcile.py`, and `backfill_customers.py`
+scripts were superseded by `python -m src.pipeline onboard/reconcile/backfill`.)
 
 The first schema observation may be approved with `--approve-initial`. That flag never
 approves later changes. For a later compatible contract, explicitly run:
@@ -66,8 +68,33 @@ python scripts/integration_admin.py entity customer --enable
 python scripts/integration_admin.py replay EVENT_UUID
 
 # Repeat-safe initial load through the same validation and delivery path
-python scripts/backfill_customers.py
+python -m src.pipeline backfill --entity customer
 ```
+
+## Admin web UI
+
+A guarded web dashboard centralizes every operation above (schema scans, onboarding,
+mapping review, deploy, backfill, refresh, worker control, replay, kill switches,
+migrations, audit log) with real-time job progress. Governing specs live in
+`openspec/changes/add-admin-database-dashboard/`.
+
+```bash
+# one-time: admin tables (auto-applied on fresh docker volumes) + first login
+docker exec -i schema_mapper_central_db psql -U postgres -d central < sql/003_admin_ui.sql
+python scripts/create_admin_user.py YOUR_NAME --role admin
+
+# set ADMIN_SESSION_SECRET in .env, then start the API (serves web/dist too)
+python -m src.admin_api.app
+
+# frontend dev server (proxies /api to :8400) or production build
+cd web && npm install && npm run dev     # http://localhost:5173
+cd web && npm run build                  # emits web/dist, served by the API
+```
+
+Dangerous actions are tiered: safe workflows are one click; deploy/backfill need a
+reason; refresh, redeploy, and migration apply require typing the target name. Every
+mutation is written to `integration.admin_action_audit` under the logged-in user -
+client-supplied actor names are never trusted.
 
 ## Production configuration
 

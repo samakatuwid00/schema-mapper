@@ -1,3 +1,14 @@
+## Project quick reference
+
+- Spec-driven changes live in `openspec/` — read
+  `openspec/changes/add-admin-database-dashboard/{proposal,design,tasks}.md` before
+  touching the admin UI; validate with `openspec validate <change> --strict`.
+- Admin API: `python -m src.admin_api.app` (FastAPI, port 8400; needs
+  `ADMIN_SESSION_SECRET` in .env). Frontend: `cd web && npm run dev` (proxies /api).
+- Web/API both call `src/services/` — never bypass it to reimplement workflow logic,
+  and never accept a client-supplied actor; identity comes from the session.
+- Tests: `pytest -q`. Full stack: `docker compose up -d` then see README "Admin web UI".
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
