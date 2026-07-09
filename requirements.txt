@@ -6,3 +6,10 @@ mysql-connector-python>=9.0.0
 sqlglot>=26.0.0
 rich>=13.0.0
 pytest>=8.0.0
+# Admin web UI backend (src/admin_api)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sse-starlette>=2.1.0
+bcrypt>=4.0.0
+itsdangerous>=2.2.0
+httpx>=0.27.0

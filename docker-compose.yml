@@ -15,6 +15,7 @@ services:
       - ./sql/central_db_init.sql:/docker-entrypoint-initdb.d/01_init.sql
       - ./sql/001_integration_foundation.sql:/docker-entrypoint-initdb.d/02_integration.sql
       - ./sql/002_onboarding_metadata.sql:/docker-entrypoint-initdb.d/03_onboarding.sql
+      - ./sql/003_admin_ui.sql:/docker-entrypoint-initdb.d/04_admin.sql
 
   lrmis_staging_db:
     image: mysql:8.4

@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import time
+import threading
 from datetime import datetime, timezone
 
 from src.connectors import MySQLStagingConnector, PostgresCentralConnector
@@ -96,21 +96,43 @@ def process_once(central: PostgresCentralConnector | None = None,
             central.close()
 
 
+def run_loop(stop_event: threading.Event,
+             interval: int = DEFAULT_INTERVAL,
+             batch_size: int = DEFAULT_BATCH_SIZE,
+             on_result=None) -> None:
+    """Run delivery passes until stop_event is set; at most one in-flight batch after stop."""
+    central = PostgresCentralConnector()
+    staging = MySQLStagingConnector()
+    try:
+        while not stop_event.is_set():
+            started = datetime.now(timezone.utc).isoformat()
+            try:
+                result = {"started_at": started,
+                          **process_once(central, staging, batch_size)}
+            except Exception as exc:
+                result = {"started_at": started, "worker_error": str(exc)}
+            if on_result:
+                on_result(result)
+            stop_event.wait(interval)
+    finally:
+        central.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Deliver approved IRIMSV events to LRMIS staging")
     parser.add_argument("--loop", action="store_true")
     parser.add_argument("--interval", type=int, default=DEFAULT_INTERVAL)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     args = parser.parse_args()
-    while True:
+    if not args.loop:
         started = datetime.now(timezone.utc).isoformat()
         try:
             print(json.dumps({"started_at": started, **process_once(batch_size=args.batch_size)}, default=str))
         except Exception as exc:
             print(json.dumps({"started_at": started, "worker_error": str(exc)}))
-        if not args.loop:
-            break
-        time.sleep(args.interval)
+        return
+    run_loop(threading.Event(), args.interval, args.batch_size,
+             on_result=lambda r: print(json.dumps(r, default=str)))
 
 
 if __name__ == "__main__":

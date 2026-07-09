@@ -2,11 +2,17 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE SCHEMA IF NOT EXISTS integration;
 CREATE SCHEMA IF NOT EXISTS lrmis_projection;
 
-CREATE TYPE integration.event_operation AS ENUM ('insert', 'update', 'deactivate', 'backfill');
-CREATE TYPE integration.delivery_status AS ENUM ('pending', 'processing', 'delivered', 'retry', 'quarantined', 'dead_letter');
-CREATE TYPE integration.mapping_status AS ENUM ('draft', 'approved', 'superseded', 'paused');
+DO $$ BEGIN
+    CREATE TYPE integration.event_operation AS ENUM ('insert', 'update', 'deactivate', 'backfill');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+    CREATE TYPE integration.delivery_status AS ENUM ('pending', 'processing', 'delivered', 'retry', 'quarantined', 'dead_letter');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+    CREATE TYPE integration.mapping_status AS ENUM ('draft', 'approved', 'superseded', 'paused');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-CREATE TABLE integration.schema_version (
+CREATE TABLE IF NOT EXISTS integration.schema_version (
     id BIGSERIAL PRIMARY KEY,
     target_system TEXT NOT NULL,
     fingerprint TEXT NOT NULL,
@@ -17,7 +23,7 @@ CREATE TABLE integration.schema_version (
     UNIQUE (target_system, fingerprint)
 );
 
-CREATE TABLE integration.mapping_version (
+CREATE TABLE IF NOT EXISTS integration.mapping_version (
     id BIGSERIAL PRIMARY KEY,
     source_entity TEXT NOT NULL,
     target_system TEXT NOT NULL,
@@ -31,11 +37,11 @@ CREATE TABLE integration.mapping_version (
     approved_by TEXT,
     UNIQUE (source_entity, target_system, version)
 );
-CREATE UNIQUE INDEX one_approved_mapping_per_entity
+CREATE UNIQUE INDEX IF NOT EXISTS one_approved_mapping_per_entity
     ON integration.mapping_version (source_entity, target_system)
     WHERE status = 'approved';
 
-CREATE TABLE integration.entity_control (
+CREATE TABLE IF NOT EXISTS integration.entity_control (
     source_entity TEXT NOT NULL,
     target_system TEXT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT true,
@@ -44,7 +50,7 @@ CREATE TABLE integration.entity_control (
     PRIMARY KEY (source_entity, target_system)
 );
 
-CREATE TABLE integration.outbox (
+CREATE TABLE IF NOT EXISTS integration.outbox (
     event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_system TEXT NOT NULL DEFAULT 'IRIMSV_REGION_V',
     source_entity TEXT NOT NULL,
@@ -64,10 +70,10 @@ CREATE TABLE integration.outbox (
     last_error_code TEXT,
     last_error_message TEXT
 );
-CREATE INDEX outbox_work_queue ON integration.outbox (target_system, status, available_at, created_at)
+CREATE INDEX IF NOT EXISTS outbox_work_queue ON integration.outbox (target_system, status, available_at, created_at)
     WHERE status IN ('pending', 'retry');
 
-CREATE TABLE integration.projection_record (
+CREATE TABLE IF NOT EXISTS integration.projection_record (
     event_id UUID PRIMARY KEY REFERENCES integration.outbox(event_id),
     external_reference UUID NOT NULL,
     target_system TEXT NOT NULL,
@@ -79,7 +85,7 @@ CREATE TABLE integration.projection_record (
     delivered_at TIMESTAMPTZ
 );
 
-CREATE TABLE integration.quarantine (
+CREATE TABLE IF NOT EXISTS integration.quarantine (
     event_id UUID PRIMARY KEY REFERENCES integration.outbox(event_id),
     errors JSONB NOT NULL,
     payload_snapshot JSONB NOT NULL,
@@ -89,7 +95,7 @@ CREATE TABLE integration.quarantine (
     resolved_by TEXT
 );
 
-CREATE TABLE integration.id_crosswalk (
+CREATE TABLE IF NOT EXISTS integration.id_crosswalk (
     source_system TEXT NOT NULL,
     source_entity TEXT NOT NULL,
     external_reference UUID NOT NULL,
@@ -101,7 +107,7 @@ CREATE TABLE integration.id_crosswalk (
     PRIMARY KEY (source_system, source_entity, external_reference, target_system)
 );
 
-CREATE TABLE integration.delivery_audit (
+CREATE TABLE IF NOT EXISTS integration.delivery_audit (
     id BIGSERIAL PRIMARY KEY,
     event_id UUID NOT NULL REFERENCES integration.outbox(event_id),
     attempt INTEGER NOT NULL,
@@ -111,7 +117,7 @@ CREATE TABLE integration.delivery_audit (
     attempted_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE integration.schema_drift_report (
+CREATE TABLE IF NOT EXISTS integration.schema_drift_report (
     id BIGSERIAL PRIMARY KEY,
     target_system TEXT NOT NULL,
     previous_fingerprint TEXT,

@@ -718,120 +718,24 @@ def cmd_resolve(args):
 
 def cmd_deploy(args):
     """Deploy a proposal: create staging table, trigger, and enable entity."""
-    central = PostgresCentralConnector()
-    staging = MySQLStagingConnector()
+    from .services.common import ServiceError
+    from .services.onboarding import deploy as deploy_service
 
-    with central.connection() as conn:
-        # Get proposal
-        proposals = _query(conn, """
-            SELECT p.*, e.source_schema, e.source_table, e.target_system,
-                   e.primary_key_columns, e.updated_at_column
-            FROM integration.onboarding_proposal p
-            JOIN integration.onboarding_entity e ON p.entity_id = e.id
-            WHERE p.id = %s
-        """, (args.proposal,))
-        if not proposals:
-            print(f"Error: Proposal {args.proposal} not found.")
-            sys.exit(1)
-        proposal = proposals[0]
+    try:
+        result = deploy_service(args.proposal, args.by)
+    except ServiceError as exc:
+        print(f"Error: {exc}")
+        sys.exit(1)
 
-        if proposal["status"] not in ("approved", "auto_approved"):
-            print(f"Error: Proposal status is '{proposal['status']}'. Must be 'approved' or 'auto_approved'.")
-            sys.exit(1)
-
-        entity_id = proposal["entity_id"]
-        source_schema = proposal["source_schema"]
-        source_table = proposal["source_table"]
-        target_system = proposal["target_system"]
-        pk_columns = json.loads(proposal["primary_key_columns"]) if isinstance(proposal["primary_key_columns"], str) else proposal["primary_key_columns"]
-        updated_at_column = proposal.get("updated_at_column")
-
-        # Get accepted mappings
-        accepted_reviews = _query(conn, """
-            SELECT * FROM integration.onboarding_field_review
-            WHERE proposal_id = %s AND status IN ('accepted', 'resolved')
-        """, (args.proposal,))
-
-        mappings = []
-        for r in accepted_reviews:
-            target_col = r.get("resolved_target_column") or r.get("suggested_target_column")
-            transform = r.get("resolved_transform") or r["transform"]
-            mappings.append({
-                "source_column": r["source_column"],
-                "target_table": f"irimsv_{source_table}_staging",
-                "target_column": target_col,
-                "confidence": r["confidence"],
-                "transform": transform,
-            })
-
-        staging_table = f"irimsv_{source_table}_staging"
-        print(f"\nDeploying Proposal #{args.proposal}")
-        print(f"Source: {source_schema}.{source_table}")
-        print(f"Target: {staging_table}")
-        print(f"Mappings: {len(mappings)}")
-        print("=" * 60)
-
-        # 1. Create MySQL staging table
-        print("\n[1/3] Creating MySQL staging table...")
-        _create_staging_table(staging, staging_table, mappings, pk_columns)
-
-        # 2. Create PostgreSQL trigger
-        print("[2/3] Creating PostgreSQL trigger...")
-        _create_source_trigger(conn, source_schema, source_table, pk_columns, updated_at_column)
-
-        # 3. Save staging table schema to schema_version
-        print("[3/4] Saving staging table schema to schema_version...")
-        staging_rows = staging.information_schema("lrmis_staging")
-        staging_schema = from_information_schema(staging_rows, "LRMIS")
-        # Filter to only the new staging table
-        staging_tables = [t for t in staging_schema.tables if t.name == staging_table]
-        if staging_tables:
-            staging_fp = schema_fingerprint(Schema(system_name="LRMIS", tables=staging_tables))
-            staging_doc = Schema(system_name="LRMIS", tables=staging_tables).to_dict()
-            _execute(conn, """
-                INSERT INTO integration.schema_version (target_system, fingerprint, schema_document, approved_at, approved_by)
-                VALUES (%s, %s, %s, now(), %s)
-                ON CONFLICT (target_system, fingerprint) DO UPDATE SET schema_document = %s, approved_at = now()
-            """, (target_system, staging_fp, json.dumps(staging_doc), args.by, json.dumps(staging_doc)))
-            print(f"  Fingerprint: {staging_fp[:16]}...")
-
-        # 4. Update entity and proposal status
-        print("[4/4] Updating onboarding metadata...")
-        _execute(conn, """
-            UPDATE integration.onboarding_entity
-            SET status = 'deployed', staging_table = %s, deployed_by = %s, deployed_at = now(), updated_at = now()
-            WHERE id = %s
-        """, (staging_table, args.by, entity_id))
-
-        _execute(conn, """
-            UPDATE integration.onboarding_proposal
-            SET status = 'approved', reviewed_by = %s, reviewed_at = now(), updated_at = now()
-            WHERE id = %s
-        """, (args.by, args.proposal))
-
-        # Create or update entity_control
-        _execute(conn, """
-            INSERT INTO integration.entity_control (source_entity, target_system, enabled)
-            VALUES (%s, %s, true)
-            ON CONFLICT (source_entity, target_system) DO UPDATE SET enabled = true, paused_reason = NULL
-        """, (source_table, target_system))
-
-        # Audit
-        _execute(conn, """
-            INSERT INTO integration.onboarding_audit (entity_id, proposal_id, action, details, performed_by)
-            VALUES (%s, %s, 'deploy', %s, %s)
-        """, (entity_id, args.proposal, json.dumps({"staging_table": staging_table}), args.by))
-
-        conn.commit()
-
-        print(f"\nDeployment complete!")
-        print(f"  Staging table: {staging_table}")
-        print(f"  Trigger: integration.trg_{source_schema}_{source_table}_outbox")
-        print(f"\nNext steps:")
-        print(f"  python -m src.pipeline backfill --entity {source_table}")
-        print(f"  python -m src.worker")
-
-    central.close()
+    print(json.dumps(result, indent=2, default=str))
+    print(f"\nDeployment complete!")
+    print(f"  Staging table: {result['staging_table']}")
+    print(f"  Trigger: integration.{result['trigger']}")
+    if result.get("snapshot"):
+        print(f"  Pre-drop snapshot: {result['snapshot']}")
+    print(f"\nNext steps:")
+    print(f"  python -m src.pipeline backfill --entity <source_table>")
+    print(f"  python -m src.worker")
 
 
 def _create_staging_table(staging: MySQLStagingConnector, table_name: str,
@@ -1212,8 +1116,8 @@ def cmd_status(args):
 
 def cmd_refresh(args):
     """Refresh staging tables by dropping and recreating with fresh data."""
-    from .terminal_ui import print_header, print_field_mapping_table
-    from .fast_refresh import generate_refresh_sql, fetch_and_bulk_insert, drop_staging_table
+    from .services.ops import get_status, refresh as refresh_service
+    from .terminal_ui import print_header, print_onboarding_status
 
     logging.basicConfig(
         level=logging.INFO,
@@ -1221,135 +1125,17 @@ def cmd_refresh(args):
         datefmt="%H:%M:%S",
     )
 
-    central = PostgresCentralConnector()
-    staging = MySQLStagingConnector()
-
     tables = [t.strip() for t in args.source_table.split(",")]
+    print_header(f"Refreshing: {args.source_schema}.{args.source_table}")
+    result = refresh_service(
+        args.source_schema, tables, args.target_system,
+        source_system=args.source_system, batch_size=args.batch_size,
+        schedule=args.schedule,
+    )
+    print(json.dumps(result, indent=2, default=str))
 
-    for table in tables:
-        print_header(f"Refreshing: {args.source_schema}.{table}")
-
-        with central.connection() as conn:
-            # Get approved mapping
-            from .integration_store import approved_mapping
-            mapping = approved_mapping(conn, table, args.target_system)
-            if not mapping:
-                log.error("No approved mapping found for %s. Run 'onboard' first.", table)
-                continue
-
-            mappings = mapping["mappings"]
-            if isinstance(mappings, str):
-                mappings = json.loads(mappings)
-
-            # Get target table name
-            target_table = mapping.get("target_table", f"irimsv_{table}_staging")
-
-            # Get source table columns for PK detection
-            source_schema_obj = _discover_source_schema(conn, args.source_schema)
-            source_table_obj = source_schema_obj.get_table(table)
-            if not source_table_obj:
-                log.error("Source table %s.%s not found", args.source_schema, table)
-                continue
-
-            pk_cols = [c.name for c in source_table_obj.columns if c.is_primary_key]
-            if not pk_cols:
-                pk_cols = ["id"]
-
-            # Detect updated_at column
-            updated_at_col = None
-            for c in source_table_obj.columns:
-                if c.name.lower() in ("updated_at", "modified_at", "last_updated", "timestamp"):
-                    updated_at_col = c.name
-                    break
-
-            # Step 1: Drop existing table
-            log.info("Step 1/3: Dropping existing table...")
-            drop_staging_table(staging, target_table)
-
-            # Step 2: Create new table with inferred types
-            log.info("Step 2/3: Creating new table...")
-            target_schema = _discover_target_schema(conn, args.target_system)
-
-            # Build deploy mappings with inferred types
-            deploy_mappings = []
-            for m in mappings:
-                target_col = m.get("target_column")
-                if not target_col:
-                    continue
-                col_type = _infer_column_type(target_schema, target_table, target_col)
-                deploy_mappings.append({
-                    "source_column": m["source_column"],
-                    "target_table": target_table,
-                    "target_column": target_col,
-                    "confidence": m.get("confidence", 0.0),
-                    "transform": m.get("transform", "none"),
-                    "col_type": col_type,
-                })
-
-            _create_staging_table(staging, target_table, deploy_mappings, pk_cols)
-
-            # Step 3: Generate SQL and bulk insert
-            log.info("Step 3/3: Loading data...")
-            sql = generate_refresh_sql(
-                args.source_schema, table, target_table,
-                mappings, args.source_system, pk_cols,
-                updated_at_column=updated_at_col,
-            )
-            log.debug("Generated SQL:\n%s", sql)
-
-            # Build column list for MySQL insert (must match SELECT order)
-            columns = [
-                "event_id", "external_reference", "source_system", "operation",
-                "source_updated_at", "mapping_version", "payload_checksum",
-                "active", "accepted_at",
-            ]
-            for m in mappings:
-                target_col = m.get("target_column")
-                if target_col and target_col not in columns:
-                    columns.append(target_col)
-
-            count = fetch_and_bulk_insert(conn, staging, sql, target_table, columns, args.batch_size)
-            log.info("Loaded %d rows into %s", count, target_table)
-
-            # Update entity status if not already deployed
-            _execute(conn, """
-                UPDATE integration.onboarding_entity
-                SET status = 'deployed', staging_table = %s, deployed_by = %s, deployed_at = now(), updated_at = now()
-                WHERE source_schema = %s AND source_table = %s AND target_system = %s
-            """, (target_table, args.source_system, args.source_schema, table, args.target_system))
-            conn.commit()
-
-            # Save schedule if provided
-            if args.schedule:
-                _execute(conn, """
-                    INSERT INTO integration.onboarding_audit (entity_id, action, details, performed_by)
-                    VALUES (
-                        (SELECT id FROM integration.onboarding_entity WHERE source_schema = %s AND source_table = %s AND target_system = %s),
-                        'schedule',
-                        %s,
-                        %s
-                    )
-                """, (args.source_schema, table, args.target_system,
-                      json.dumps({"schedule": args.schedule}), args.source_system))
-                conn.commit()
-                log.info("Schedule saved: %s", args.schedule)
-
-    # Show final status
-    from .terminal_ui import print_onboarding_status
-    with central.connection() as conn:
-        entities = _query(conn, """
-            SELECT * FROM integration.onboarding_entity
-            WHERE status IN ('deployed', 'proposed', 'reviewed', 'paused')
-            ORDER BY created_at
-        """)
-        outbox_stats = _query(conn, """
-            SELECT source_entity, status, COUNT(*) as events, MIN(created_at) as oldest
-            FROM integration.outbox
-            GROUP BY source_entity, status
-            ORDER BY source_entity, status
-        """)
-    print_onboarding_status(entities, outbox_stats)
-    central.close()
+    status = get_status()
+    print_onboarding_status(status["entities"], status["outbox_stats"])
 
 
 # ---------------------------------------------------------------------------
