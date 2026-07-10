@@ -17,6 +17,8 @@ MIGRATION_FILES = [
     "sql/001_integration_foundation.sql",
     "sql/002_onboarding_metadata.sql",
     "sql/003_admin_ui.sql",
+    "sql/004_schema_scope_isolation.sql",
+    "sql/005_crosswalk_target_table.sql",
 ]
 
 _MIGRATION_LOCK_KEY = "schema_mapper:migrations"

@@ -235,6 +235,17 @@ def test_unmanaged_migration_file_rejected():
 
 
 def test_migration_sql_readable_for_managed_files():
+    """Assert on named files; keyed off MIGRATION_FILES[-1] this broke whenever
+    a new migration was appended."""
     from src.services.migrations import MIGRATION_FILES, read_migration_sql
-    sql = read_migration_sql(MIGRATION_FILES[-1])
-    assert "admin_action_audit" in sql
+
+    for filename in MIGRATION_FILES:
+        assert read_migration_sql(filename).strip(), f"{filename} is empty"
+
+    scope = read_migration_sql("sql/004_schema_scope_isolation.sql")
+    assert "scope_kind" in scope
+    assert "lrmis_projection" in scope
+
+    crosswalk = read_migration_sql("sql/005_crosswalk_target_table.sql")
+    assert "id_crosswalk" in crosswalk
+    assert "target_table" in crosswalk
