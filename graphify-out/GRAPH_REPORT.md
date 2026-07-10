@@ -1,16 +1,16 @@
 # Graph Report - schema_mapper  (2026-07-11)
 
 ## Corpus Check
-- 157 files · ~89,410 words
+- 162 files · ~90,912 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1508 nodes · 3140 edges · 119 communities (92 shown, 27 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 114 edges (avg confidence: 0.61)
+- 1550 nodes · 3248 edges · 115 communities (89 shown, 26 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 119 edges (avg confidence: 0.61)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3a1a49dc`
+- Built from commit: `bf9206e2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -116,73 +116,69 @@
 - WriterError
 - test_worker_routing.py
 - db.py
-- migrations.py
-- test_init_lrmis_target.py
-- create_admin_user.py
-- firehose
 - resolve_reference_id
 - group_by_table
 
 ## God Nodes (most connected - your core abstractions)
-1. `PostgresCentralConnector` - 70 edges
+1. `PostgresCentralConnector` - 76 edges
 2. `MySQLStagingConnector` - 60 edges
-3. `Schema` - 51 edges
-4. `LrmisRegistry` - 49 edges
-5. `ValidationError` - 47 edges
-6. `NotFoundError` - 35 edges
-7. `Table` - 34 edges
+3. `ValidationError` - 54 edges
+4. `Schema` - 53 edges
+5. `LrmisRegistry` - 51 edges
+6. `NotFoundError` - 37 edges
+7. `Table` - 36 edges
 8. `_onboard_single_table()` - 30 edges
-9. `Column` - 26 edges
+9. `Column` - 28 edges
 10. `AdminUser` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `real_source_db (PostgreSQL 17 Real-Test Service)` --semantically_similar_to--> `central_db (PostgreSQL 16 Service)`  [INFERRED] [semantically similar]
   docker-compose.real-test.yml → docker-compose.yml
+- `test_worker_controller_stop_without_start_conflicts()` --indirect_call--> `ConflictError`  [INFERRED]
+  tests/test_admin_api.py → src/services/common.py
+- `test_enqueue_validates_type_before_db()` --indirect_call--> `ValidationError`  [INFERRED]
+  tests/test_admin_api.py → src/services/common.py
 - `real_target_db (MySQL 8.0.40 Real-Test Service)` --semantically_similar_to--> `lrmis_staging_db (MySQL 8.4 Service)`  [INFERRED] [semantically similar]
   docker-compose.real-test.yml → docker-compose.yml
-- `_Conn` --uses--> `LrmisRegistry`  [INFERRED]
-  tests/test_lrmis_mapping.py → src/lrmis_registry.py
-- `_Cur` --uses--> `LrmisRegistry`  [INFERRED]
-  tests/test_lrmis_mapping.py → src/lrmis_registry.py
-- `_Cursor` --uses--> `LrmisRegistry`  [INFERRED]
-  tests/test_lrmis_writer.py → src/lrmis_registry.py
+- `app()` --calls--> `create_app()`  [EXTRACTED]
+  tests/test_admin_api.py → src/admin_api/app.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (119 total, 27 thin omitted)
+## Communities (115 total, 26 thin omitted)
 
 ### Community 0 - "Schema Drift Monitoring"
-Cohesion: 0.14
-Nodes (22): AdminUser, audited(), Audit success or failure of the wrapped block (failure re-raises)., clear_session(), all_jobs(), data_compare(), data_rows(), data_tables() (+14 more)
+Cohesion: 0.15
+Nodes (7): _clamp_mysql_dates(), Return a qualified table name, optionally database-prefixed for views., Reject anything that is not a bare SQL identifier.      Callers must additionall, Bulk insert using executemany for better performance., Replace out-of-range Python date/datetime objects (year > 9999) with None., safe_identifier(), _sort_clause()
 
 ### Community 1 - "Architecture & Deployment Docs"
 Cohesion: 0.33
 Nodes (6): central_db (PostgreSQL 16 Service), real_source_db (PostgreSQL 17 Real-Test Service), psycopg2-binary (PostgreSQL Driver), sql/001_integration_foundation.sql, sql/002_onboarding_metadata.sql, sql/central_db_init.sql
 
 ### Community 2 - "Outbox & Delivery Store"
-Cohesion: 0.11
-Nodes (36): Event, approved_mapping(), canonical_json(), checksum(), claim_events(), delivered(), mark_event_delivered(), Exception (+28 more)
+Cohesion: 0.07
+Nodes (54): Event, Database adapters for the authoritative PostgreSQL DB and LRMIS MySQL staging., approved_mapping(), canonical_json(), checksum(), claim_events(), delivered(), mark_event_delivered() (+46 more)
 
 ### Community 3 - "AI Mapping Engine"
-Cohesion: 0.11
-Nodes (17): list_audit(), audit_log(), _entity_deployed_for_proposal(), generate_view(), GenerateViewBody, JobBody, proposal(), API routes: auth, reads, guarded actions, jobs + SSE, migrations, users. (+9 more)
+Cohesion: 0.05
+Nodes (84): AdminUser, BaseModel, FastAPI, main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, audited(), list_audit(), Uniform admin_action_audit writer for every mutating endpoint and job. (+76 more)
 
 ### Community 4 - "Pipeline Commands & Central DB"
 Cohesion: 0.08
 Nodes (38): ApiError, getJob(), ViewProposal, AdminUser, AuditRow, CompareField, CompareResponse, CreateJobPayload (+30 more)
 
 ### Community 5 - "Terminal UI & Pipeline Entry"
-Cohesion: 0.07
-Nodes (66): connection, cmd_backfill(), cmd_deploy(), cmd_discover(), cmd_monitor(), cmd_onboard(), cmd_propose(), cmd_reconcile() (+58 more)
+Cohesion: 0.06
+Nodes (76): connection, drop_staging_table(), fetch_and_bulk_insert(), _qt(), Fast refresh module for dropping and recreating staging tables. Bypasses the out, Fetch from PostgreSQL and bulk insert to MySQL., Drop staging table if it exists., mapping_to_dicts() (+68 more)
 
 ### Community 6 - "MySQL Staging Connector"
-Cohesion: 0.14
-Nodes (27): main(), Preview or apply the one-time entity fingerprint scope migration., PostgresCentralConnector, approve_mapping(), approve_schema(), cancel_queue(), _entity_fingerprints(), get_schema_trees() (+19 more)
+Cohesion: 0.13
+Nodes (29): main(), Preview or apply the one-time entity fingerprint scope migration., PostgresCentralConnector, generate_refresh_sql(), Generate PostgreSQL SELECT statement for refresh., approve_mapping(), approve_schema(), cancel_queue() (+21 more)
 
 ### Community 7 - "Staging Fast Refresh"
-Cohesion: 0.09
-Nodes (23): _clamp_mysql_dates(), MySQLStagingConnector, Least-privilege writer. It never creates or alters LRMIS tables., A connector to a different database on the same server (same creds).          Us, Return a qualified table name, optionally database-prefixed for views., Reject anything that is not a bare SQL identifier.      Callers must additionall, Bulk insert using executemany for better performance., Replace out-of-range Python date/datetime objects (year > 9999) with None. (+15 more)
+Cohesion: 0.14
+Nodes (19): central(), Process-wide pooled connectors shared by all request handlers and jobs., staging(), MySQLStagingConnector, Least-privilege writer. It never creates or alters LRMIS tables., A connector to a different database on the same server (same creds).          Us, restore_staging_snapshot(), staging_snapshots() (+11 more)
 
 ### Community 8 - "Deployment & Staging DDL"
 Cohesion: 0.07
@@ -201,20 +197,20 @@ Cohesion: 0.07
 Nodes (26): dependencies, lucide-react, react, react-dom, react-router-dom, @tanstack/react-query, devDependencies, jsdom (+18 more)
 
 ### Community 15 - "Package Init"
-Cohesion: 0.19
-Nodes (23): FakeConn, _mysql(), Writer: parent-first order, read-only reference tables, app-assigned ids for `st, Records SQL. `responses` is an ordered list of (marker, row) pairs;     the firs, A stateful counter mimicking allocate_id's atomic increment., The pipeline must never mint new geographic codes., Regression: station's write path must not consume beis's crosswalk row., _sequence() (+15 more)
+Cohesion: 0.23
+Nodes (19): FakeConn, _mysql(), Writer: parent-first order, read-only reference tables, app-assigned ids for `st, Records SQL. `responses` is an ordered list of (marker, row) pairs;     the firs, The pipeline must never mint new geographic codes., Regression: station's write path must not consume beis's crosswalk row., test_beis_crosswalk_update_path_is_independent_of_station(), test_delete_is_scoped_children_first_and_skips_station() (+11 more)
 
 ### Community 16 - "ValidationError"
-Cohesion: 0.19
-Nodes (15): FastAPI, create_app(), FastAPI app factory and entrypoint (python -m src.admin_api.app)., get_job(), ConflictError, NotFoundError, Exception, Typed exceptions shared by all services; the API maps them to HTTP codes. (+7 more)
+Cohesion: 0.15
+Nodes (21): create_app(), FastAPI app factory and entrypoint (python -m src.admin_api.app)., ConflictError, Exception, Typed exceptions shared by all services; the API maps them to HTTP codes., A concurrent operation holds the resource (maps to HTTP 409)., Input or state precondition failed (maps to HTTP 422)., Base class for service-level failures. (+13 more)
 
 ### Community 17 - "JobRunner"
-Cohesion: 0.07
-Nodes (18): write_audit(), enqueue(), _h_backfill(), _h_deploy(), _h_discover(), _h_onboard_bulk(), _h_propose(), _h_refresh() (+10 more)
+Cohesion: 0.09
+Nodes (13): enqueue(), _h_onboard_bulk(), _h_refresh(), _h_refresh_all(), _h_schema_scan(), JobContext, JobRunner, _normalize_tables() (+5 more)
 
 ### Community 18 - "test_admin_api.py"
-Cohesion: 0.09
-Nodes (10): read_migration_sql(), admin_client(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, Spoofed actor/by fields are ignored - identity comes from the session., Assert on named files; keyed off MIGRATION_FILES[-1] this broke whenever     a n, test_action_bodies_do_not_accept_actor_fields() (+2 more)
+Cohesion: 0.08
+Nodes (13): read_migration_sql(), admin_client(), app(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, Spoofed actor/by fields are ignored - identity comes from the session., Assert on named files; keyed off MIGRATION_FILES[-1] this broke whenever     a n (+5 more)
 
 ### Community 19 - "Overview.tsx"
 Cohesion: 0.18
@@ -225,8 +221,8 @@ Cohesion: 0.11
 Nodes (17): compilerOptions, isolatedModules, jsx, lib, module, moduleDetection, moduleResolution, noEmit (+9 more)
 
 ### Community 21 - "Decisions"
-Cohesion: 0.09
-Nodes (10): LrmisRegistry, LrmisTable, Fallback when the DDL file is unavailable: read the live database., The column on `table` that points at `ref_table` (first match)., True when the pipeline must not INSERT into this table.          A table whose p, Columns a source mapping MUST supply a value for on insert.          Excludes co, Every table transitively reachable via foreign keys from `tables`         (paren, Lookup tables that must hold data for the pipeline's inserts to         satisfy (+2 more)
+Cohesion: 0.12
+Nodes (8): LrmisRegistry, The column on `table` that points at `ref_table` (first match)., True when the pipeline must not INSERT into this table.          A table whose p, Columns a source mapping MUST supply a value for on insert.          Excludes co, Every table transitively reachable via foreign keys from `tables`         (paren, Lookup tables that must hold data for the pipeline's inserts to         satisfy, The tables a school row fans out into: station plus everything that         refe, Parent-first ordering. Self-loops are ignored; real cycles raise.          `subs
 
 ### Community 22 - "WorkerQueues.tsx"
 Cohesion: 0.39
@@ -293,8 +289,8 @@ Cohesion: 0.22
 Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
 ### Community 38 - "migrations.py"
-Cohesion: 0.13
-Nodes (12): _iter_create_blocks(), LrmisColumn, LrmisForeignKey, _parse_block(), _parse_column(), _parse_default(), Path, Typed registry of the canonical LRMIS schema (Path B, Phase 0).  Parses the LRMI (+4 more)
+Cohesion: 0.11
+Nodes (14): _iter_create_blocks(), LrmisColumn, LrmisForeignKey, LrmisTable, _parse_block(), _parse_column(), _parse_default(), Path (+6 more)
 
 ### Community 39 - "Add Admin Database Dashboard"
 Cohesion: 0.14
@@ -389,28 +385,28 @@ Cohesion: 0.22
 Nodes (4): Health, PipelineDiagramProps, TONE, base
 
 ### Community 96 - "view_proposer.py"
-Cohesion: 0.15
-Nodes (22): _all_columns(), _all_tables(), apply_view(), _discover_fks(), _ensure_table(), _fetchval(), _find_join_path(), _generate_view_sql() (+14 more)
+Cohesion: 0.17
+Nodes (20): _all_columns(), _all_tables(), _discover_fks(), _ensure_table(), _fetchval(), _find_join_path(), _generate_view_sql(), list_view_proposals() (+12 more)
 
 ### Community 97 - "JobRunner"
-Cohesion: 0.20
-Nodes (16): AdminUser, authenticate(), current_user(), _get_signer(), load_user(), Request, Per-admin session authentication and role checks.  The acting identity always co, require_admin() (+8 more)
+Cohesion: 0.21
+Nodes (6): _Central, _Conn, Phase 7: LRMIS DDL fingerprinting and drift detection (pure logic)., test_drift_false_when_stored_matches(), test_drift_true_when_stored_differs(), test_drift_unversioned_when_nothing_stored()
 
 ### Community 98 - "lrmis_registry.py"
-Cohesion: 0.26
-Nodes (12): iter_seed_statements(), main(), Path B, Phase 1: create and seed the `lrmis_target` database.  Builds a parallel, Yield complete `INSERT INTO <wanted>` statements from a mysqldump.      Streams, The lookup tables to seed, derived from the schema's FK graph., Drop degenerate self-referential FKs (a column referencing itself).      e.g. `C, _root_config(), sanitize_ddl() (+4 more)
+Cohesion: 0.13
+Nodes (13): iter_seed_statements(), main(), Path B, Phase 1: create and seed the `lrmis_target` database.  Builds a parallel, Yield complete `INSERT INTO <wanted>` statements from a mysqldump.      Streams, The lookup tables to seed, derived from the schema's FK graph., Drop degenerate self-referential FKs (a column referencing itself).      e.g. `C, _root_config(), sanitize_ddl() (+5 more)
 
 ### Community 99 - "lrmis_writer.py"
-Cohesion: 0.12
-Nodes (29): build_values_by_table(), deliver_event(), Path B delivery: fan a source row out into the real LRMIS tables (Phases 4-5)., Rebuild an entity's LRMIS rows from the current source rows.      Deletes only t, Group transformed source values by their target table.      Returns ({table: {ta, Write the envelope row for this event into lrmis_target.delivery_audit., Deliver one outbox event across the LRMIS tables. Returns a result dict.      A, _record_delivery_audit() (+21 more)
+Cohesion: 0.22
+Nodes (17): _apply_foreign_keys(), _crosswalk_lookup(), _crosswalk_record(), crosswalk_rows_for_entity(), delete_entity_rows(), _insert(), _quote(), Write one source row across several LRMIS tables (Path B, Phase 3).  Rules this (+9 more)
 
 ### Community 100 - "snapshots.py"
 Cohesion: 0.24
 Nodes (13): _event(), FakeTargetConn, mp(), Path B delivery (Phases 4-5): value grouping, transforms, deliver/refresh.  The, test_deactivate_marks_audit_inactive_but_still_writes(), test_deliver_event_errors_when_no_target_values(), test_deliver_event_returns_error_on_transform_failure(), test_deliver_event_writes_and_audits() (+5 more)
 
 ### Community 101 - "JobDrawer.tsx"
-Cohesion: 0.17
-Nodes (16): BaseModel, apply_view(), ApplyViewBody, approve_mapping(), approve_schema(), ApproveMappingBody, ApproveSchemaBody, mark_applied() (+8 more)
+Cohesion: 0.29
+Nodes (11): ddl_path(), check_ddl_drift(), current_ddl_fingerprint(), _pipeline(), LRMIS target-schema versioning and drift (Path B, Phase 7).  Records the fingerp, Approve the current LRMIS DDL as the accepted target structure., Compare the current lrmis.sql DDL against the last approved fingerprint., Describe what a target redeploy would do, without changing anything.      A rede (+3 more)
 
 ### Community 102 - "Onboarding.tsx"
 Cohesion: 0.22
@@ -421,52 +417,40 @@ Cohesion: 0.31
 Nodes (7): main(), Minimal administrator/auditor CLI; suitable for wrapping in a future web UI., set_enabled(), status(), replay(), approve(), Immutable, reviewed database-backed mapping versions.
 
 ### Community 104 - "onboarding.py"
-Cohesion: 0.05
-Nodes (81): get_mapping(), load_their_schema(), main(), our_central_schema(), End-to-end demo of the pipeline using fake data, so you can see the whole flow b, This is YOUR schema -- stable, never changes per target system., AI Draft Mapping Proposals, google-genai (Official Gemini SDK) (+73 more)
+Cohesion: 0.07
+Nodes (66): get_mapping(), load_their_schema(), main(), our_central_schema(), End-to-end demo of the pipeline using fake data, so you can see the whole flow b, This is YOUR schema -- stable, never changes per target system., AI Draft Mapping Proposals, google-genai (Official Gemini SDK) (+58 more)
 
 ### Community 105 - "_Cursor"
 Cohesion: 0.15
 Nodes (6): RuntimeError, Base class for multi-table write failures., A mapping names a table that is not part of the LRMIS schema., UnknownTargetTable, WriterError, _Cursor
 
 ### Community 106 - "rebaseline_entity_fingerprints"
-Cohesion: 0.20
-Nodes (11): drop_staging_table(), fetch_and_bulk_insert(), generate_refresh_sql(), _qt(), Fast refresh module for dropping and recreating staging tables. Bypasses the out, Fetch from PostgreSQL and bulk insert to MySQL., Drop staging table if it exists., Generate PostgreSQL SELECT statement for refresh. (+3 more)
+Cohesion: 0.39
+Nodes (6): _Central, _patch(), Phase 6 deploy gating: status + coverage checks before an entity becomes Path B., test_rejects_invalid_mapping(), test_rejects_unapproved_proposal(), test_rejects_when_no_mappings()
 
 ### Community 108 - "labels.ts"
-Cohesion: 0.29
-Nodes (7): _h_cancel_queue(), _h_refresh_all(), Input or state precondition failed (maps to HTTP 422)., ValidationError, The handler must refuse an empty batch rather than 'succeed' on nothing., test_enqueue_validates_type_before_db(), test_onboard_bulk_rejects_empty_table_list()
+Cohesion: 0.12
+Nodes (21): get_job(), _h_backfill(), _h_cancel_queue(), _h_deploy(), _h_discover(), _h_propose(), latest_event_id(), Durable allowlisted job orchestration (job-orchestration spec).  Jobs live in in (+13 more)
 
 ### Community 109 - "group_by_table"
-Cohesion: 0.18
-Nodes (9): CoverageReport, Multi-table mapping validation for the LRMIS target (Path B, Phase 2).  A source, Record an entity's LRMIS footprint (the distinct target tables it fans     out i, Sorted distinct target tables a mapping fans out into., _reg(), store_target_tables(), TableCoverage, target_tables_for() (+1 more)
+Cohesion: 0.16
+Nodes (14): CoverageReport, Multi-table mapping validation for the LRMIS target (Path B, Phase 2).  A source, Record an entity's LRMIS footprint (the distinct target tables it fans     out i, Sorted distinct target tables a mapping fans out into., _reg(), store_target_tables(), TableCoverage, target_tables_for() (+6 more)
 
 ### Community 110 - "WriterError"
-Cohesion: 0.19
-Nodes (24): columns_a_mapping_must_supply(), coverage_report(), Raise ValidationError if the mapping is not deployable; else return the     cove, Columns the writer/allocator fills, so a mapping need not: FK columns     (fille, Required columns (NOT NULL, no default, not auto-increment) that the     system, Assess whether `mappings` can be deployed against the LRMIS schema., system_handled_columns(), validate_deployment() (+16 more)
+Cohesion: 0.18
+Nodes (25): columns_a_mapping_must_supply(), coverage_report(), Raise ValidationError if the mapping is not deployable; else return the     cove, Columns the writer/allocator fills, so a mapping need not: FK columns     (fille, Required columns (NOT NULL, no default, not auto-increment) that the     system, Assess whether `mappings` can be deployed against the LRMIS schema., system_handled_columns(), validate_deployment() (+17 more)
 
 ### Community 111 - "test_worker_routing.py"
 Cohesion: 0.24
 Nodes (6): _Central, _Conn, _events(), Worker routing (Phase 5): Path B entities go to lrmis_target; every other entity, test_legacy_entities_take_legacy_path_and_open_no_target(), test_path_b_entities_route_to_target()
 
 ### Community 112 - "db.py"
-Cohesion: 0.22
-Nodes (5): Uniform admin_action_audit writer for every mutating endpoint and job., central(), Process-wide pooled connectors shared by all request handlers and jobs., staging(), FastAPI admin backend for the schema_mapper integration.  Run with: python -m sr
-
-### Community 113 - "migrations.py"
-Cohesion: 0.39
-Nodes (8): apply_migration(), _checksum(), _ensure_tracker(), list_migrations(), mark_applied(), Path, Tracked, checksummed, advisory-lock-guarded SQL migration runner (central Postgr, Record a file as applied without executing it (Docker-initialized databases).
-
-### Community 115 - "create_admin_user.py"
 Cohesion: 0.40
-Nodes (5): main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, hash_password(), create_user(), CreateUserBody
-
-### Community 116 - "firehose"
-Cohesion: 0.53
-Nodes (6): _event_stream(), firehose(), job_events(), Request, Honor the SSE reconnect header so no event is missed across a drop., _resume_from()
+Nodes (5): allocate_id(), Atomically hand out the next app-assigned id for `table`.      A single INSERT ., A stateful counter mimicking allocate_id's atomic increment., _sequence(), test_repeated_allocation_is_sequential()
 
 ### Community 117 - "resolve_reference_id"
-Cohesion: 0.47
-Nodes (6): Find an existing row's primary key; never insert.      If the mapping already su, A read-only reference row (e.g. psgc) could not be resolved., ReferenceRowNotFound, resolve_reference_id(), test_reference_row_with_missing_pk_raises(), test_reference_row_without_any_lookup_value_raises()
+Cohesion: 0.43
+Nodes (7): Find an existing row's primary key; never insert.      If the mapping already su, A read-only reference row (e.g. psgc) could not be resolved., ReferenceRowNotFound, resolve_reference_id(), test_reference_row_with_missing_pk_raises(), test_reference_row_without_any_lookup_value_raises(), test_unresolvable_reference_row_raises_rather_than_inserting()
 
 ### Community 118 - "group_by_table"
 Cohesion: 0.67
@@ -475,22 +459,22 @@ Nodes (3): group_by_table(), Group column mappings by their `target_table`., tes
 ## Knowledge Gaps
 - **310 isolated node(s):** `import_irimsv_data.sh script`, `import_lrmis_schema.sh script`, `name`, `private`, `version` (+305 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ValidationError` connect `labels.ts` to `view_proposer.py`, `AI Mapping Engine`, `JobDrawer.tsx`, `MySQL Staging Connector`, `onboarding.py`, `db.py`, `group_by_table`, `WriterError`, `ValidationError`, `JobRunner`, `migrations.py`, `create_admin_user.py`, `test_admin_api.py`, `ADDED Requirements`, `Onboarding.tsx`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Why does `LrmisRegistry` connect `Decisions` to `lrmis_registry.py`, `lrmis_writer.py`, `migrations.py`, `_Cursor`, `db.py`, `group_by_table`, `WriterError`, `Package Init`, `resolve_reference_id`, `Migrations.tsx`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
-- **Why does `PostgresCentralConnector` connect `MySQL Staging Connector` to `view_proposer.py`, `Outbox & Delivery Store`, `AI Mapping Engine`, `Terminal UI & Pipeline Entry`, `Staging Fast Refresh`, `onboarding.py`, `integration_admin.py`, `db.py`, `migrations.py`, `create_admin_user.py`, `Onboarding.tsx`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Why does `ValidationError` connect `ValidationError` to `view_proposer.py`, `AI Mapping Engine`, `MySQL Staging Connector`, `rebaseline_entity_fingerprints`, `db.py`, `labels.ts`, `group_by_table`, `WriterError`, `JobRunner`, `test_admin_api.py`, `ADDED Requirements`, `Onboarding.tsx`?**
+  _High betweenness centrality (0.056) - this node is a cross-community bridge._
+- **Why does `PostgresCentralConnector` connect `MySQL Staging Connector` to `Schema Drift Monitoring`, `view_proposer.py`, `Outbox & Delivery Store`, `AI Mapping Engine`, `Terminal UI & Pipeline Entry`, `JobDrawer.tsx`, `Staging Fast Refresh`, `onboarding.py`, `integration_admin.py`, `labels.ts`, `group_by_table`, `ValidationError`, `Onboarding.tsx`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `MySQLStagingConnector` connect `Staging Fast Refresh` to `Schema Drift Monitoring`, `Outbox & Delivery Store`, `Terminal UI & Pipeline Entry`, `MySQL Staging Connector`, `onboarding.py`, `labels.ts`, `Onboarding.tsx`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Are the 17 inferred relationships involving `ValidationError` (e.g. with `create_app()` and `CoverageReport`) actually correct?**
+  _`ValidationError` has 17 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 4 inferred relationships involving `Schema` (e.g. with `FieldMapping` and `_Client`) actually correct?**
   _`Schema` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 7 inferred relationships involving `LrmisRegistry` (e.g. with `ReferenceRowNotFound` and `UnknownTargetTable`) actually correct?**
-  _`LrmisRegistry` has 7 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 13 inferred relationships involving `ValidationError` (e.g. with `create_app()` and `CoverageReport`) actually correct?**
-  _`ValidationError` has 13 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 8 inferred relationships involving `LrmisRegistry` (e.g. with `ReferenceRowNotFound` and `UnknownTargetTable`) actually correct?**
+  _`LrmisRegistry` has 8 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `End-to-end demo of the pipeline using fake data, so you can see the whole flow b`, `This is YOUR schema -- stable, never changes per target system.`, `import_irimsv_data.sh script` to the rest of the system?**
-  _497 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _507 weakly-connected nodes found - possible documentation gaps or missing edges._

@@ -175,8 +175,8 @@
     "semantic_hash": "15c2a4dec3da96a5ed495ededbceee80"
   },
   "docker-compose.yml": {
-    "mtime": 1783701241.3956513,
-    "ast_hash": "9752e6aa516a56e8dff72e1e7507f225",
+    "mtime": 1783703059.2180018,
+    "ast_hash": "4ceb764c6e880de8d3567b466642b58d",
     "semantic_hash": ""
   },
   "requirements.txt": {
@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "src/services/migrations.py": {
-    "mtime": 1783701234.7489922,
-    "ast_hash": "234fd638dcd4afb7ca38ffe3fac47191",
+    "mtime": 1783703053.1552837,
+    "ast_hash": "e62d0c9dd8f68ad92cad68b9db4af47b",
     "semantic_hash": ""
   },
   "src/services/onboarding.py": {
@@ -812,6 +812,31 @@
   "tests/test_worker_routing.py": {
     "mtime": 1783702482.9733217,
     "ast_hash": "17ed6de59147c72947d5d94c2f68013c",
+    "semantic_hash": ""
+  },
+  "sql/008_target_ddl_scope.sql": {
+    "mtime": 1783703042.718336,
+    "ast_hash": "174529f85718a51be4ae9489d30b9138",
+    "semantic_hash": ""
+  },
+  "src/services/lrmis_onboarding.py": {
+    "mtime": 1783702958.8954132,
+    "ast_hash": "38f74c402e6d4a307bb65672eb7d5244",
+    "semantic_hash": ""
+  },
+  "src/services/lrmis_schema.py": {
+    "mtime": 1783703082.18064,
+    "ast_hash": "2c7b281ffeacbba58054ea36d4e0d64f",
+    "semantic_hash": ""
+  },
+  "tests/test_lrmis_onboarding.py": {
+    "mtime": 1783703006.690389,
+    "ast_hash": "feec4a0fe2596e24529e1302e7b5de9b",
+    "semantic_hash": ""
+  },
+  "tests/test_lrmis_schema.py": {
+    "mtime": 1783703117.689602,
+    "ast_hash": "5d97a2bec95dfe2014e1647f7ca683bf",
     "semantic_hash": ""
   }
 }
