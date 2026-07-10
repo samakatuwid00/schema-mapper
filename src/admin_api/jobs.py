@@ -119,6 +119,27 @@ def _h_refresh(params, ctx):
     )
 
 
+def _h_refresh_all(params, ctx):
+    with db.central().connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT source_table FROM integration.onboarding_entity
+                WHERE status = 'deployed'
+            """)
+            tables = [row["source_table"] for row in cur.fetchall()]
+    if not tables:
+        raise ValidationError("no deployed entities to refresh")
+    source_schema = params.get("source_schema", "irimsv")
+    target_system = params.get("target_system", "LRMIS").upper()
+    return ops_service.refresh(
+        source_schema, tables, target_system,
+        source_system=params.get("source_system", "IRIMSV_REGION_V"),
+        batch_size=int(params.get("batch_size", 1000)),
+        schedule=params.get("schedule"),
+        progress=lambda i, n, msg: ctx.progress(i, n, msg),
+    )
+
+
 def _h_worker_run(params, ctx):
     return worker_module.process_once(batch_size=int(params.get("batch_size", 100)))
 
@@ -131,6 +152,13 @@ def _h_entity_toggle(params, ctx):
     return ops_service.set_entity_enabled(
         params["entity"], params.get("target_system", "LRMIS").upper(),
         bool(params["enabled"]), params.get("reason"))
+
+
+def _h_cancel_queue(params, ctx):
+    entity = params.get("entity") or params.get("source_entity")
+    if not entity:
+        raise ValidationError("entity is required")
+    return ops_service.cancel_queue(entity)
 
 
 def _h_migration_apply(params, ctx):
@@ -147,9 +175,11 @@ JOB_HANDLERS = {
     "reconcile": _h_reconcile,
     "monitor": _h_monitor,
     "refresh": _h_refresh,
+    "refresh_all": _h_refresh_all,
     "worker_run": _h_worker_run,
     "replay": _h_replay,
     "entity_toggle": _h_entity_toggle,
+    "cancel_queue": _h_cancel_queue,
     "migration_apply": _h_migration_apply,
 }
 
@@ -159,11 +189,13 @@ ADMIN_ONLY_JOBS = {"migration_apply"}
 _SCOPED = {
     "deploy": lambda p: f"deploy:{p.get('proposal_id')}",
     "refresh": lambda p: f"refresh:{p.get('source_tables')}",
+    "refresh_all": lambda p: "refresh-all",
     "migration_apply": lambda p: "migrations",
     "onboard_bulk": lambda p: (
         f"onboard:{p.get('source_schema', 'irimsv')}:"
         f"{','.join(sorted(_normalize_tables(p.get('tables'))))}"
     ),
+    "cancel_queue": lambda p: f"cancel:{p.get('entity', '')}",
 }
 
 
@@ -227,6 +259,14 @@ def list_jobs(limit: int = 100) -> list[dict]:
                 FROM integration.admin_job ORDER BY created_at DESC LIMIT %s
             """, (limit,))
             return [dict(r) for r in cur.fetchall()]
+
+
+def latest_event_id() -> int:
+    """Current head of the event log, so a live tail can skip replaying history."""
+    with db.central().connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(max(id), 0) FROM integration.admin_job_event")
+            return cur.fetchone()[0]
 
 
 def job_events_after(last_id: int, job_id: str | None = None, limit: int = 500) -> list[dict]:

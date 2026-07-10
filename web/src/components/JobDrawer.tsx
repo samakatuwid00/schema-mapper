@@ -34,15 +34,23 @@ export default function JobDrawer() {
   });
 
   useEffect(() => {
-    const handle = subscribeJobEvents(
-      "/api/events",
-      () => {
+    // Coalesce bursts: a running job emits a progress event per table, and one
+    // refetch per event would hammer the API. Refresh at most once per tick.
+    let pending: number | undefined;
+    const refreshSoon = () => {
+      if (pending !== undefined) return;
+      pending = window.setTimeout(() => {
+        pending = undefined;
         void queryClient.invalidateQueries({ queryKey: ["jobs"] });
         void queryClient.invalidateQueries({ queryKey: ["job"] });
-      },
-      setConnected,
-    );
-    return () => handle.close();
+      }, 400);
+    };
+
+    const handle = subscribeJobEvents("/api/events", refreshSoon, setConnected);
+    return () => {
+      if (pending !== undefined) window.clearTimeout(pending);
+      handle.close();
+    };
   }, [queryClient]);
 
   const jobs = [...(data ?? [])]

@@ -5,13 +5,14 @@ import asyncio
 import json
 
 import psycopg2.extras
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from ..services import data_browser as data_browser_service
 from ..services import migrations as migrations_service
 from ..services import ops as ops_service
+from ..services import view_proposer
 from ..services.common import ValidationError
 from ..services.onboarding import get_review, resolve
 from . import db, jobs
@@ -119,6 +120,11 @@ def audit_log(limit: int = 200, actor: str | None = None, action: str | None = N
 @reads_router.get("/snapshots/{table}")
 def snapshots(table: str):
     return ops_service.staging_snapshots(table, staging=db.staging())
+
+
+@reads_router.get("/views/proposals")
+def view_proposals(status: str | None = None):
+    return view_proposer.list_view_proposals(status=status, central=db.central())
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +262,36 @@ def restore_snapshot(body: RestoreSnapshotBody, user: AdminUser = Depends(requir
                                                     staging=db.staging())
 
 
+class GenerateViewBody(BaseModel):
+    entity_id: int
+    source_schema: str = "irimsv"
+    source_table: str
+    target_system: str = "LRMIS"
+
+
+@actions_router.post("/generate-view")
+def generate_view(body: GenerateViewBody, user: AdminUser = Depends(require_operator)):
+    with audited(user.username, "generate_view", target_type="entity",
+                 target_id=f"{body.source_schema}.{body.source_table}",
+                 details={"target_system": body.target_system}):
+        return view_proposer.propose_view(
+            body.entity_id, body.source_schema, body.source_table,
+            body.target_system, central=db.central(),
+        )
+
+
+class ApplyViewBody(BaseModel):
+    proposal_id: int
+
+
+@actions_router.post("/apply-view")
+def apply_view(body: ApplyViewBody, user: AdminUser = Depends(require_operator)):
+    with audited(user.username, "apply_view", target_type="view_proposal",
+                 target_id=str(body.proposal_id)):
+        return view_proposer.apply_view(body.proposal_id, user.username,
+                                        central=db.central())
+
+
 # ---------------------------------------------------------------------------
 # Jobs + SSE
 # ---------------------------------------------------------------------------
@@ -272,7 +308,8 @@ class JobBody(BaseModel):
 # dropped by it, so typed confirmation would be friction without a hazard.
 _CONFIRM_MODAL_JOBS = {"deploy", "backfill", "onboard_bulk"}
 _ONE_CLICK_JOBS = {"schema_scan", "discover", "propose", "monitor",
-                   "worker_run", "reconcile", "replay", "entity_toggle"}
+                   "worker_run", "reconcile", "replay", "entity_toggle",
+                   "cancel_queue"}
 
 
 def _entity_deployed_for_proposal(proposal_id: int) -> str | None:
@@ -299,6 +336,9 @@ def submit_job(body: JobBody, user: AdminUser = Depends(require_operator)):
         tables = params.get("source_tables", "")
         expected = tables if isinstance(tables, str) else ",".join(tables)
         _require_typed_confirm(body.confirm, expected)
+    elif job_type == "refresh_all":                 # typed-confirmation tier
+        _require_reason(body.reason)
+        _require_typed_confirm(body.confirm, "REFRESH ALL")
     elif job_type == "migration_apply":             # typed-confirmation tier
         _require_reason(body.reason)
         _require_typed_confirm(body.confirm, params.get("filename", ""))
@@ -323,8 +363,16 @@ def one_job(job_id: str, user: AdminUser = Depends(current_user)):
     return jobs.get_job(job_id)
 
 
-async def _event_stream(job_id: str | None):
-    last_id = 0
+def _resume_from(request: Request) -> int | None:
+    """Honor the SSE reconnect header so no event is missed across a drop."""
+    raw = request.headers.get("last-event-id")
+    if raw and raw.isdigit():
+        return int(raw)
+    return None
+
+
+async def _event_stream(job_id: str | None, start_after: int = 0):
+    last_id = start_after
     while True:
         events = await asyncio.to_thread(jobs.job_events_after, last_id, job_id)
         for e in events:
@@ -339,13 +387,20 @@ async def _event_stream(job_id: str | None):
 
 
 @jobs_router.get("/jobs/{job_id}/events")
-async def job_events(job_id: str, user: AdminUser = Depends(current_user)):
-    return EventSourceResponse(_event_stream(job_id))
+async def job_events(job_id: str, request: Request, user: AdminUser = Depends(current_user)):
+    # A single job's history is small and worth replaying, so a client that
+    # opens the stream late still sees the run from its first progress tick.
+    start_after = _resume_from(request) or 0
+    return EventSourceResponse(_event_stream(job_id, start_after))
 
 
 @jobs_router.get("/events")
-async def firehose(user: AdminUser = Depends(current_user)):
-    return EventSourceResponse(_event_stream(None))
+async def firehose(request: Request, user: AdminUser = Depends(current_user)):
+    # Live tail. Replaying the whole event log on every connect would fire one
+    # client-side refetch per historical event and hammer the API.
+    resume = _resume_from(request)
+    start_after = resume if resume is not None else await asyncio.to_thread(jobs.latest_event_id)
+    return EventSourceResponse(_event_stream(None, start_after))
 
 
 # ---------------------------------------------------------------------------
