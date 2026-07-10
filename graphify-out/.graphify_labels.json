@@ -112,6 +112,11 @@
   "110": "WriterError",
   "111": "test_worker_routing.py",
   "112": "db.py",
+  "113": "_h_onboard_bulk",
+  "114": "test_init_lrmis_target.py",
+  "115": "lrmis_cutover.py",
+  "116": "Path B — direct delivery into the real LRMIS schema",
   "117": "resolve_reference_id",
-  "118": "group_by_table"
+  "118": "group_by_table",
+  "119": "db.py"
 }

@@ -112,10 +112,6 @@
   "110": "WriterError",
   "111": "test_worker_routing.py",
   "112": "db.py",
-  "113": "migrations.py",
-  "114": "test_init_lrmis_target.py",
-  "115": "create_admin_user.py",
-  "116": "firehose",
   "117": "resolve_reference_id",
   "118": "group_by_table"
 }

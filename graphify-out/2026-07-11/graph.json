@@ -136,7 +136,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_create_admin_user",
-      "community": 115,
+      "community": 3,
       "norm_label": "create_admin_user.py"
     },
     {
@@ -146,7 +146,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "scripts_create_admin_user_main",
-      "community": 115,
+      "community": 3,
       "norm_label": "main()"
     },
     {
@@ -156,7 +156,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_create_admin_user_rationale_1",
-      "community": 115,
+      "community": 3,
       "norm_label": "bootstrap or update an admin ui user.  usage: python scripts/create_admin_user.p"
     },
     {
@@ -416,7 +416,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_init",
-      "community": 17,
+      "community": 108,
       "norm_label": "__init__.py"
     },
     {
@@ -426,7 +426,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_init",
-      "community": 112,
+      "community": 3,
       "norm_label": "__init__.py"
     },
     {
@@ -436,7 +436,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_init_rationale_1",
-      "community": 112,
+      "community": 3,
       "norm_label": "fastapi admin backend for the schema_mapper integration.  run with: python -m sr"
     },
     {
@@ -466,7 +466,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "fastapi",
-      "community": 16,
+      "community": 3,
       "norm_label": "fastapi"
     },
     {
@@ -486,7 +486,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_audit",
-      "community": 112,
+      "community": 3,
       "norm_label": "audit.py"
     },
     {
@@ -496,7 +496,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_admin_api_audit_write_audit",
-      "community": 17,
+      "community": 3,
       "norm_label": "write_audit()"
     },
     {
@@ -506,7 +506,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_admin_api_audit_audited",
-      "community": 0,
+      "community": 3,
       "norm_label": "audited()"
     },
     {
@@ -526,7 +526,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_audit_rationale_1",
-      "community": 112,
+      "community": 3,
       "norm_label": "uniform admin_action_audit writer for every mutating endpoint and job."
     },
     {
@@ -536,7 +536,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_admin_api_audit_rationale_33",
-      "community": 0,
+      "community": 3,
       "norm_label": "audit success or failure of the wrapped block (failure re-raises)."
     },
     {
@@ -546,7 +546,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_auth",
-      "community": 97,
+      "community": 3,
       "norm_label": "auth.py"
     },
     {
@@ -556,7 +556,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_admin_api_auth_get_signer",
-      "community": 97,
+      "community": 3,
       "norm_label": "_get_signer()"
     },
     {
@@ -566,7 +566,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "timestampsigner",
-      "community": 97,
+      "community": 3,
       "norm_label": "timestampsigner"
     },
     {
@@ -576,7 +576,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_admin_api_auth_adminuser",
-      "community": 97,
+      "community": 3,
       "norm_label": "adminuser"
     },
     {
@@ -586,7 +586,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_admin_api_auth_hash_password",
-      "community": 115,
+      "community": 3,
       "norm_label": "hash_password()"
     },
     {
@@ -596,7 +596,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_admin_api_auth_verify_password",
-      "community": 97,
+      "community": 3,
       "norm_label": "verify_password()"
     },
     {
@@ -606,7 +606,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "src_admin_api_auth_load_user",
-      "community": 97,
+      "community": 3,
       "norm_label": "load_user()"
     },
     {
@@ -616,7 +616,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "src_admin_api_auth_authenticate",
-      "community": 97,
+      "community": 3,
       "norm_label": "authenticate()"
     },
     {
@@ -626,7 +626,7 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "src_admin_api_auth_set_session",
-      "community": 97,
+      "community": 3,
       "norm_label": "set_session()"
     },
     {
@@ -636,7 +636,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "src_admin_api_auth_clear_session",
-      "community": 0,
+      "community": 3,
       "norm_label": "clear_session()"
     },
     {
@@ -646,7 +646,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "src_admin_api_auth_current_user",
-      "community": 97,
+      "community": 3,
       "norm_label": "current_user()"
     },
     {
@@ -656,7 +656,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_admin_api_auth_py_request",
-      "community": 97,
+      "community": 3,
       "norm_label": "request"
     },
     {
@@ -666,7 +666,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "src_admin_api_auth_require_operator",
-      "community": 97,
+      "community": 3,
       "norm_label": "require_operator()"
     },
     {
@@ -676,7 +676,7 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "src_admin_api_auth_require_admin",
-      "community": 97,
+      "community": 3,
       "norm_label": "require_admin()"
     },
     {
@@ -686,7 +686,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_auth_rationale_1",
-      "community": 97,
+      "community": 3,
       "norm_label": "per-admin session authentication and role checks.  the acting identity always co"
     },
     {
@@ -696,7 +696,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_db",
-      "community": 112,
+      "community": 7,
       "norm_label": "db.py"
     },
     {
@@ -706,7 +706,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_admin_api_db_central",
-      "community": 112,
+      "community": 7,
       "norm_label": "central()"
     },
     {
@@ -716,7 +716,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_admin_api_db_staging",
-      "community": 112,
+      "community": 7,
       "norm_label": "staging()"
     },
     {
@@ -726,7 +726,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_admin_api_db_close_all",
-      "community": 112,
+      "community": 7,
       "norm_label": "close_all()"
     },
     {
@@ -736,7 +736,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_db_rationale_1",
-      "community": 112,
+      "community": 7,
       "norm_label": "process-wide pooled connectors shared by all request handlers and jobs."
     },
     {
@@ -746,7 +746,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_jobs",
-      "community": 17,
+      "community": 108,
       "norm_label": "jobs.py"
     },
     {
@@ -806,7 +806,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_discover",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_discover()"
     },
     {
@@ -816,7 +816,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_propose",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_propose()"
     },
     {
@@ -826,7 +826,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_deploy",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_deploy()"
     },
     {
@@ -836,7 +836,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_backfill",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_backfill()"
     },
     {
@@ -866,7 +866,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_reconcile",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_reconcile()"
     },
     {
@@ -876,7 +876,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_monitor",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_monitor()"
     },
     {
@@ -896,7 +896,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_refresh_all",
-      "community": 108,
+      "community": 17,
       "norm_label": "_h_refresh_all()"
     },
     {
@@ -906,7 +906,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_worker_run",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_worker_run()"
     },
     {
@@ -916,7 +916,7 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_replay",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_replay()"
     },
     {
@@ -926,7 +926,7 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_entity_toggle",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_entity_toggle()"
     },
     {
@@ -946,7 +946,7 @@
       "source_location": "L164",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_migration_apply",
-      "community": 17,
+      "community": 108,
       "norm_label": "_h_migration_apply()"
     },
     {
@@ -976,7 +976,7 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "src_admin_api_jobs_get_job",
-      "community": 16,
+      "community": 108,
       "norm_label": "get_job()"
     },
     {
@@ -986,7 +986,7 @@
       "source_location": "L253",
       "_origin": "ast",
       "id": "src_admin_api_jobs_list_jobs",
-      "community": 17,
+      "community": 108,
       "norm_label": "list_jobs()"
     },
     {
@@ -996,7 +996,7 @@
       "source_location": "L264",
       "_origin": "ast",
       "id": "src_admin_api_jobs_latest_event_id",
-      "community": 17,
+      "community": 108,
       "norm_label": "latest_event_id()"
     },
     {
@@ -1006,7 +1006,7 @@
       "source_location": "L272",
       "_origin": "ast",
       "id": "src_admin_api_jobs_job_events_after",
-      "community": 17,
+      "community": 108,
       "norm_label": "job_events_after()"
     },
     {
@@ -1176,7 +1176,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_jobs_rationale_1",
-      "community": 17,
+      "community": 108,
       "norm_label": "durable allowlisted job orchestration (job-orchestration spec).  jobs live in in"
     },
     {
@@ -1186,7 +1186,7 @@
       "source_location": "L265",
       "_origin": "ast",
       "id": "src_admin_api_jobs_rationale_265",
-      "community": 17,
+      "community": 108,
       "norm_label": "current head of the event log, so a live tail can skip replaying history."
     },
     {
@@ -1206,7 +1206,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_admin_api_routers_require_reason",
-      "community": 101,
+      "community": 3,
       "norm_label": "_require_reason()"
     },
     {
@@ -1226,7 +1226,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_admin_api_routers_loginbody",
-      "community": 97,
+      "community": 3,
       "norm_label": "loginbody"
     },
     {
@@ -1236,7 +1236,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "basemodel",
-      "community": 101,
+      "community": 3,
       "norm_label": "basemodel"
     },
     {
@@ -1246,7 +1246,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "src_admin_api_routers_login",
-      "community": 97,
+      "community": 3,
       "norm_label": "login()"
     },
     {
@@ -1256,7 +1256,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_admin_api_routers_logout",
-      "community": 0,
+      "community": 3,
       "norm_label": "logout()"
     },
     {
@@ -1266,7 +1266,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "adminuser",
-      "community": 0,
+      "community": 3,
       "norm_label": "adminuser"
     },
     {
@@ -1276,7 +1276,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "src_admin_api_routers_me",
-      "community": 0,
+      "community": 3,
       "norm_label": "me()"
     },
     {
@@ -1386,7 +1386,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "src_admin_api_routers_no_store",
-      "community": 0,
+      "community": 3,
       "norm_label": "_no_store()"
     },
     {
@@ -1396,7 +1396,7 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "src_admin_api_routers_data_tables",
-      "community": 0,
+      "community": 3,
       "norm_label": "data_tables()"
     },
     {
@@ -1406,7 +1406,7 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "src_admin_api_routers_data_rows",
-      "community": 0,
+      "community": 3,
       "norm_label": "data_rows()"
     },
     {
@@ -1416,7 +1416,7 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "src_admin_api_routers_data_compare",
-      "community": 0,
+      "community": 3,
       "norm_label": "data_compare()"
     },
     {
@@ -1426,7 +1426,7 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "src_admin_api_routers_replaybody",
-      "community": 0,
+      "community": 3,
       "norm_label": "replaybody"
     },
     {
@@ -1436,7 +1436,7 @@
       "source_location": "L181",
       "_origin": "ast",
       "id": "src_admin_api_routers_replay",
-      "community": 0,
+      "community": 3,
       "norm_label": "replay()"
     },
     {
@@ -1446,7 +1446,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "src_admin_api_routers_entitytogglebody",
-      "community": 0,
+      "community": 3,
       "norm_label": "entitytogglebody"
     },
     {
@@ -1456,7 +1456,7 @@
       "source_location": "L195",
       "_origin": "ast",
       "id": "src_admin_api_routers_entity_toggle",
-      "community": 0,
+      "community": 3,
       "norm_label": "entity_toggle()"
     },
     {
@@ -1466,7 +1466,7 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "src_admin_api_routers_approveschemabody",
-      "community": 101,
+      "community": 3,
       "norm_label": "approveschemabody"
     },
     {
@@ -1476,7 +1476,7 @@
       "source_location": "L211",
       "_origin": "ast",
       "id": "src_admin_api_routers_approve_schema",
-      "community": 101,
+      "community": 3,
       "norm_label": "approve_schema()"
     },
     {
@@ -1486,7 +1486,7 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "src_admin_api_routers_approvemappingbody",
-      "community": 101,
+      "community": 3,
       "norm_label": "approvemappingbody"
     },
     {
@@ -1496,7 +1496,7 @@
       "source_location": "L225",
       "_origin": "ast",
       "id": "src_admin_api_routers_approve_mapping",
-      "community": 101,
+      "community": 3,
       "norm_label": "approve_mapping()"
     },
     {
@@ -1526,7 +1526,7 @@
       "source_location": "L250",
       "_origin": "ast",
       "id": "src_admin_api_routers_restoresnapshotbody",
-      "community": 101,
+      "community": 3,
       "norm_label": "restoresnapshotbody"
     },
     {
@@ -1536,7 +1536,7 @@
       "source_location": "L257",
       "_origin": "ast",
       "id": "src_admin_api_routers_restore_snapshot",
-      "community": 101,
+      "community": 3,
       "norm_label": "restore_snapshot()"
     },
     {
@@ -1566,7 +1566,7 @@
       "source_location": "L283",
       "_origin": "ast",
       "id": "src_admin_api_routers_applyviewbody",
-      "community": 101,
+      "community": 3,
       "norm_label": "applyviewbody"
     },
     {
@@ -1576,7 +1576,7 @@
       "source_location": "L288",
       "_origin": "ast",
       "id": "src_admin_api_routers_apply_view",
-      "community": 101,
+      "community": 3,
       "norm_label": "apply_view()"
     },
     {
@@ -1616,7 +1616,7 @@
       "source_location": "L357",
       "_origin": "ast",
       "id": "src_admin_api_routers_all_jobs",
-      "community": 0,
+      "community": 3,
       "norm_label": "all_jobs()"
     },
     {
@@ -1626,7 +1626,7 @@
       "source_location": "L362",
       "_origin": "ast",
       "id": "src_admin_api_routers_one_job",
-      "community": 0,
+      "community": 3,
       "norm_label": "one_job()"
     },
     {
@@ -1636,7 +1636,7 @@
       "source_location": "L366",
       "_origin": "ast",
       "id": "src_admin_api_routers_resume_from",
-      "community": 116,
+      "community": 3,
       "norm_label": "_resume_from()"
     },
     {
@@ -1646,7 +1646,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_admin_api_routers_py_request",
-      "community": 116,
+      "community": 3,
       "norm_label": "request"
     },
     {
@@ -1656,7 +1656,7 @@
       "source_location": "L374",
       "_origin": "ast",
       "id": "src_admin_api_routers_event_stream",
-      "community": 116,
+      "community": 3,
       "norm_label": "_event_stream()"
     },
     {
@@ -1666,7 +1666,7 @@
       "source_location": "L390",
       "_origin": "ast",
       "id": "src_admin_api_routers_job_events",
-      "community": 116,
+      "community": 3,
       "norm_label": "job_events()"
     },
     {
@@ -1676,7 +1676,7 @@
       "source_location": "L398",
       "_origin": "ast",
       "id": "src_admin_api_routers_firehose",
-      "community": 116,
+      "community": 3,
       "norm_label": "firehose()"
     },
     {
@@ -1686,7 +1686,7 @@
       "source_location": "L410",
       "_origin": "ast",
       "id": "src_admin_api_routers_workerstartbody",
-      "community": 101,
+      "community": 3,
       "norm_label": "workerstartbody"
     },
     {
@@ -1706,7 +1706,7 @@
       "source_location": "L422",
       "_origin": "ast",
       "id": "src_admin_api_routers_worker_start",
-      "community": 101,
+      "community": 3,
       "norm_label": "worker_start()"
     },
     {
@@ -1716,7 +1716,7 @@
       "source_location": "L429",
       "_origin": "ast",
       "id": "src_admin_api_routers_workerstopbody",
-      "community": 101,
+      "community": 3,
       "norm_label": "workerstopbody"
     },
     {
@@ -1726,7 +1726,7 @@
       "source_location": "L434",
       "_origin": "ast",
       "id": "src_admin_api_routers_worker_stop",
-      "community": 101,
+      "community": 3,
       "norm_label": "worker_stop()"
     },
     {
@@ -1736,7 +1736,7 @@
       "source_location": "L445",
       "_origin": "ast",
       "id": "src_admin_api_routers_migrations_list",
-      "community": 0,
+      "community": 3,
       "norm_label": "migrations_list()"
     },
     {
@@ -1746,7 +1746,7 @@
       "source_location": "L450",
       "_origin": "ast",
       "id": "src_admin_api_routers_migration_sql",
-      "community": 0,
+      "community": 3,
       "norm_label": "migration_sql()"
     },
     {
@@ -1756,7 +1756,7 @@
       "source_location": "L457",
       "_origin": "ast",
       "id": "src_admin_api_routers_markappliedbody",
-      "community": 101,
+      "community": 3,
       "norm_label": "markappliedbody"
     },
     {
@@ -1766,7 +1766,7 @@
       "source_location": "L463",
       "_origin": "ast",
       "id": "src_admin_api_routers_mark_applied",
-      "community": 101,
+      "community": 3,
       "norm_label": "mark_applied()"
     },
     {
@@ -1776,7 +1776,7 @@
       "source_location": "L476",
       "_origin": "ast",
       "id": "src_admin_api_routers_list_users",
-      "community": 0,
+      "community": 3,
       "norm_label": "list_users()"
     },
     {
@@ -1786,7 +1786,7 @@
       "source_location": "L486",
       "_origin": "ast",
       "id": "src_admin_api_routers_createuserbody",
-      "community": 115,
+      "community": 3,
       "norm_label": "createuserbody"
     },
     {
@@ -1796,7 +1796,7 @@
       "source_location": "L493",
       "_origin": "ast",
       "id": "src_admin_api_routers_create_user",
-      "community": 115,
+      "community": 3,
       "norm_label": "create_user()"
     },
     {
@@ -1806,7 +1806,7 @@
       "source_location": "L509",
       "_origin": "ast",
       "id": "src_admin_api_routers_setactivebody",
-      "community": 0,
+      "community": 3,
       "norm_label": "setactivebody"
     },
     {
@@ -1816,7 +1816,7 @@
       "source_location": "L514",
       "_origin": "ast",
       "id": "src_admin_api_routers_set_user_active",
-      "community": 0,
+      "community": 3,
       "norm_label": "set_user_active()"
     },
     {
@@ -1846,7 +1846,7 @@
       "source_location": "L367",
       "_origin": "ast",
       "id": "src_admin_api_routers_rationale_367",
-      "community": 116,
+      "community": 3,
       "norm_label": "honor the sse reconnect header so no event is missed across a drop."
     },
     {
@@ -1856,7 +1856,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_settings",
-      "community": 97,
+      "community": 3,
       "norm_label": "settings.py"
     },
     {
@@ -1866,7 +1866,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_admin_api_settings_require_session_secret",
-      "community": 97,
+      "community": 3,
       "norm_label": "require_session_secret()"
     },
     {
@@ -1876,7 +1876,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_settings_rationale_1",
-      "community": 97,
+      "community": 3,
       "norm_label": "environment-driven configuration for the admin api."
     },
     {
@@ -1886,7 +1886,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_connectors",
-      "community": 104,
+      "community": 2,
       "norm_label": "connectors.py"
     },
     {
@@ -1896,7 +1896,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_connectors_safe_identifier",
-      "community": 7,
+      "community": 0,
       "norm_label": "safe_identifier()"
     },
     {
@@ -1906,7 +1906,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_connectors_sort_clause",
-      "community": 7,
+      "community": 0,
       "norm_label": "_sort_clause()"
     },
     {
@@ -1916,7 +1916,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_connectors_clamp_mysql_dates",
-      "community": 7,
+      "community": 0,
       "norm_label": "_clamp_mysql_dates()"
     },
     {
@@ -1956,7 +1956,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "src_connectors_postgrescentralconnector_close",
-      "community": 7,
+      "community": 0,
       "norm_label": ".close()"
     },
     {
@@ -1966,7 +1966,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "src_connectors_postgrescentralconnector_count_rows",
-      "community": 7,
+      "community": 0,
       "norm_label": ".count_rows()"
     },
     {
@@ -1976,7 +1976,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "src_connectors_postgrescentralconnector_fetch_rows",
-      "community": 7,
+      "community": 0,
       "norm_label": ".fetch_rows()"
     },
     {
@@ -1986,7 +1986,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "src_connectors_postgrescentralconnector_fetch_row_by",
-      "community": 7,
+      "community": 0,
       "norm_label": ".fetch_row_by()"
     },
     {
@@ -2046,7 +2046,7 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_is_views_table",
-      "community": 7,
+      "community": 0,
       "norm_label": ".is_views_table()"
     },
     {
@@ -2056,7 +2056,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_qt",
-      "community": 7,
+      "community": 0,
       "norm_label": "._qt()"
     },
     {
@@ -2066,7 +2066,7 @@
       "source_location": "L149",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_ensure_pool",
-      "community": 7,
+      "community": 0,
       "norm_label": "._ensure_pool()"
     },
     {
@@ -2076,7 +2076,7 @@
       "source_location": "L159",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_connection",
-      "community": 7,
+      "community": 0,
       "norm_label": ".connection()"
     },
     {
@@ -2086,7 +2086,7 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_upsert",
-      "community": 7,
+      "community": 0,
       "norm_label": ".upsert()"
     },
     {
@@ -2096,7 +2096,7 @@
       "source_location": "L203",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_bulk_insert",
-      "community": 7,
+      "community": 0,
       "norm_label": ".bulk_insert()"
     },
     {
@@ -2106,7 +2106,7 @@
       "source_location": "L235",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_information_schema",
-      "community": 7,
+      "community": 0,
       "norm_label": ".information_schema()"
     },
     {
@@ -2116,7 +2116,7 @@
       "source_location": "L254",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_count_rows",
-      "community": 7,
+      "community": 0,
       "norm_label": ".count_rows()"
     },
     {
@@ -2126,7 +2126,7 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_fetch_rows",
-      "community": 7,
+      "community": 0,
       "norm_label": ".fetch_rows()"
     },
     {
@@ -2136,7 +2136,7 @@
       "source_location": "L276",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_fetch_row_by",
-      "community": 7,
+      "community": 0,
       "norm_label": ".fetch_row_by()"
     },
     {
@@ -2146,7 +2146,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_connectors_rationale_1",
-      "community": 104,
+      "community": 2,
       "norm_label": "database adapters for the authoritative postgresql db and lrmis mysql staging."
     },
     {
@@ -2156,7 +2156,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_connectors_rationale_18",
-      "community": 7,
+      "community": 0,
       "norm_label": "reject anything that is not a bare sql identifier.      callers must additionall"
     },
     {
@@ -2166,7 +2166,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "src_connectors_rationale_37",
-      "community": 7,
+      "community": 0,
       "norm_label": "replace out-of-range python date/datetime objects (year > 9999) with none."
     },
     {
@@ -2196,7 +2196,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "src_connectors_rationale_143",
-      "community": 7,
+      "community": 0,
       "norm_label": "return a qualified table name, optionally database-prefixed for views."
     },
     {
@@ -2206,7 +2206,7 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "src_connectors_rationale_204",
-      "community": 7,
+      "community": 0,
       "norm_label": "bulk insert using executemany for better performance."
     },
     {
@@ -2246,7 +2246,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_fast_refresh",
-      "community": 106,
+      "community": 5,
       "norm_label": "fast_refresh.py"
     },
     {
@@ -2256,7 +2256,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_fast_refresh_qt",
-      "community": 106,
+      "community": 5,
       "norm_label": "_qt()"
     },
     {
@@ -2266,7 +2266,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_fast_refresh_generate_refresh_sql",
-      "community": 106,
+      "community": 6,
       "norm_label": "generate_refresh_sql()"
     },
     {
@@ -2276,7 +2276,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "src_fast_refresh_fetch_and_bulk_insert",
-      "community": 106,
+      "community": 5,
       "norm_label": "fetch_and_bulk_insert()"
     },
     {
@@ -2286,7 +2286,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "src_fast_refresh_drop_staging_table",
-      "community": 106,
+      "community": 5,
       "norm_label": "drop_staging_table()"
     },
     {
@@ -2296,7 +2296,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_fast_refresh_rationale_1",
-      "community": 106,
+      "community": 5,
       "norm_label": "fast refresh module for dropping and recreating staging tables. bypasses the out"
     },
     {
@@ -2306,7 +2306,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_fast_refresh_rationale_36",
-      "community": 106,
+      "community": 6,
       "norm_label": "generate postgresql select statement for refresh."
     },
     {
@@ -2316,7 +2316,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "src_fast_refresh_rationale_105",
-      "community": 106,
+      "community": 5,
       "norm_label": "fetch from postgresql and bulk insert to mysql."
     },
     {
@@ -2326,7 +2326,7 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "src_fast_refresh_rationale_143",
-      "community": 106,
+      "community": 5,
       "norm_label": "drop staging table if it exists."
     },
     {
@@ -2486,7 +2486,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lrmis_delivery",
-      "community": 99,
+      "community": 2,
       "norm_label": "lrmis_delivery.py"
     },
     {
@@ -2496,7 +2496,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_lrmis_delivery_build_values_by_table",
-      "community": 99,
+      "community": 2,
       "norm_label": "build_values_by_table()"
     },
     {
@@ -2506,7 +2506,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "src_lrmis_delivery_record_delivery_audit",
-      "community": 99,
+      "community": 2,
       "norm_label": "_record_delivery_audit()"
     },
     {
@@ -2516,7 +2516,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "src_lrmis_delivery_deliver_event",
-      "community": 99,
+      "community": 2,
       "norm_label": "deliver_event()"
     },
     {
@@ -2526,7 +2526,7 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "src_lrmis_delivery_refresh_entity",
-      "community": 99,
+      "community": 2,
       "norm_label": "refresh_entity()"
     },
     {
@@ -2556,7 +2556,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_lrmis_delivery_rationale_1",
-      "community": 99,
+      "community": 2,
       "norm_label": "path b delivery: fan a source row out into the real lrmis tables (phases 4-5)."
     },
     {
@@ -2566,7 +2566,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_lrmis_delivery_rationale_24",
-      "community": 99,
+      "community": 2,
       "norm_label": "group transformed source values by their target table.      returns ({table: {ta"
     },
     {
@@ -2576,7 +2576,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_lrmis_delivery_rationale_51",
-      "community": 99,
+      "community": 2,
       "norm_label": "write the envelope row for this event into lrmis_target.delivery_audit."
     },
     {
@@ -2586,7 +2586,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_lrmis_delivery_rationale_84",
-      "community": 99,
+      "community": 2,
       "norm_label": "deliver one outbox event across the lrmis tables. returns a result dict.      a"
     },
     {
@@ -2596,7 +2596,7 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "src_lrmis_delivery_rationale_118",
-      "community": 99,
+      "community": 2,
       "norm_label": "rebuild an entity's lrmis rows from the current source rows.      deletes only t"
     },
     {
@@ -2706,7 +2706,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable",
-      "community": 21,
+      "community": 38,
       "norm_label": "lrmistable"
     },
     {
@@ -2716,7 +2716,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_primary_key",
-      "community": 21,
+      "community": 38,
       "norm_label": ".primary_key()"
     },
     {
@@ -2726,7 +2726,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_auto_increment_column",
-      "community": 21,
+      "community": 38,
       "norm_label": ".auto_increment_column()"
     },
     {
@@ -2736,7 +2736,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_get_column",
-      "community": 21,
+      "community": 38,
       "norm_label": ".get_column()"
     },
     {
@@ -2806,7 +2806,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_init",
-      "community": 21,
+      "community": 38,
       "norm_label": ".__init__()"
     },
     {
@@ -2836,7 +2836,7 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_from_information_schema",
-      "community": 21,
+      "community": 38,
       "norm_label": ".from_information_schema()"
     },
     {
@@ -2896,7 +2896,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_foreign_keys",
-      "community": 38,
+      "community": 21,
       "norm_label": ".foreign_keys()"
     },
     {
@@ -3026,7 +3026,7 @@
       "source_location": "L362",
       "_origin": "ast",
       "id": "src_lrmis_registry_ddl_path",
-      "community": 98,
+      "community": 101,
       "norm_label": "ddl_path()"
     },
     {
@@ -3116,7 +3116,7 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "src_lrmis_registry_rationale_194",
-      "community": 21,
+      "community": 38,
       "norm_label": "fallback when the ddl file is unavailable: read the live database."
     },
     {
@@ -3316,7 +3316,7 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "src_lrmis_writer_allocate_id",
-      "community": 99,
+      "community": 112,
       "norm_label": "allocate_id()"
     },
     {
@@ -3456,7 +3456,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_131",
-      "community": 99,
+      "community": 112,
       "norm_label": "atomically hand out the next app-assigned id for `table`.      a single insert ."
     },
     {
@@ -3566,7 +3566,7 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "src_mapping_engine_mapping_to_dicts",
-      "community": 104,
+      "community": 5,
       "norm_label": "mapping_to_dicts()"
     },
     {
@@ -3756,7 +3756,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "src_pipeline_generate_external_reference",
-      "community": 106,
+      "community": 5,
       "norm_label": "generate_external_reference()"
     },
     {
@@ -3766,7 +3766,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "uuid",
-      "community": 106,
+      "community": 5,
       "norm_label": "uuid"
     },
     {
@@ -4106,7 +4106,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "src_pipeline_rationale_64",
-      "community": 106,
+      "community": 5,
       "norm_label": "generate a deterministic uuidv5 from source system + schema + table + canonical"
     },
     {
@@ -4736,7 +4736,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_services_common_notfounderror",
-      "community": 16,
+      "community": 108,
       "norm_label": "notfounderror"
     },
     {
@@ -4756,7 +4756,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_services_common_validationerror",
-      "community": 108,
+      "community": 16,
       "norm_label": "validationerror"
     },
     {
@@ -4786,7 +4786,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_services_common_rationale_10",
-      "community": 16,
+      "community": 108,
       "norm_label": "requested entity/proposal/event does not exist."
     },
     {
@@ -4806,7 +4806,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_services_common_rationale_18",
-      "community": 108,
+      "community": 16,
       "norm_label": "input or state precondition failed (maps to http 422)."
     },
     {
@@ -5180,23 +5180,223 @@
       "norm_label": "record an entity's lrmis footprint (the distinct target tables it fans     out i"
     },
     {
+      "label": "lrmis_onboarding.py",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding",
+      "community": 109,
+      "norm_label": "lrmis_onboarding.py"
+    },
+    {
+      "label": "_load_proposal_mappings()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_load_proposal_mappings",
+      "community": 109,
+      "norm_label": "_load_proposal_mappings()"
+    },
+    {
+      "label": "_lrmis_schema_document()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L59",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_lrmis_schema_document",
+      "community": 104,
+      "norm_label": "_lrmis_schema_document()"
+    },
+    {
+      "label": "deploy_to_lrmis()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L73",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "community": 109,
+      "norm_label": "deploy_to_lrmis()"
+    },
+    {
+      "label": "_pipeline()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L148",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_pipeline",
+      "community": 109,
+      "norm_label": "_pipeline()"
+    },
+    {
+      "label": "Deploy an entity to the LRMIS target (Path B, Phase 6).  The legacy deploy() cre",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_rationale_1",
+      "community": 109,
+      "norm_label": "deploy an entity to the lrmis target (path b, phase 6).  the legacy deploy() cre"
+    },
+    {
+      "label": "Return (proposal_row, accepted mappings) for a proposal id.",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_rationale_25",
+      "community": 109,
+      "norm_label": "return (proposal_row, accepted mappings) for a proposal id."
+    },
+    {
+      "label": "A schema_models document for the entity's LRMIS footprint, so drift on     those",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L60",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_rationale_60",
+      "community": 104,
+      "norm_label": "a schema_models document for the entity's lrmis footprint, so drift on     those"
+    },
+    {
+      "label": "Validate and deploy a proposal against the LRMIS target schema.",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "src_services_lrmis_onboarding_rationale_76",
+      "community": 109,
+      "norm_label": "validate and deploy a proposal against the lrmis target schema."
+    },
+    {
+      "label": "lrmis_schema.py",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema",
+      "community": 101,
+      "norm_label": "lrmis_schema.py"
+    },
+    {
+      "label": "current_ddl_fingerprint()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L23",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_current_ddl_fingerprint",
+      "community": 101,
+      "norm_label": "current_ddl_fingerprint()"
+    },
+    {
+      "label": "stored_ddl_fingerprint()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_stored_ddl_fingerprint",
+      "community": 101,
+      "norm_label": "stored_ddl_fingerprint()"
+    },
+    {
+      "label": "record_ddl_fingerprint()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_record_ddl_fingerprint",
+      "community": 101,
+      "norm_label": "record_ddl_fingerprint()"
+    },
+    {
+      "label": "check_ddl_drift()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L64",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_check_ddl_drift",
+      "community": 101,
+      "norm_label": "check_ddl_drift()"
+    },
+    {
+      "label": "redeploy_plan()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L84",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_redeploy_plan",
+      "community": 101,
+      "norm_label": "redeploy_plan()"
+    },
+    {
+      "label": "_pipeline()",
+      "file_type": "code",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L121",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_pipeline",
+      "community": 101,
+      "norm_label": "_pipeline()"
+    },
+    {
+      "label": "LRMIS target-schema versioning and drift (Path B, Phase 7).  Records the fingerp",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_rationale_1",
+      "community": 101,
+      "norm_label": "lrmis target-schema versioning and drift (path b, phase 7).  records the fingerp"
+    },
+    {
+      "label": "Approve the current LRMIS DDL as the accepted target structure.",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L41",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_rationale_41",
+      "community": 101,
+      "norm_label": "approve the current lrmis ddl as the accepted target structure."
+    },
+    {
+      "label": "Compare the current lrmis.sql DDL against the last approved fingerprint.",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L66",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_rationale_66",
+      "community": 101,
+      "norm_label": "compare the current lrmis.sql ddl against the last approved fingerprint."
+    },
+    {
+      "label": "Describe what a target redeploy would do, without changing anything.      A rede",
+      "file_type": "rationale",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L86",
+      "_origin": "ast",
+      "id": "src_services_lrmis_schema_rationale_86",
+      "community": 101,
+      "norm_label": "describe what a target redeploy would do, without changing anything.      a rede"
+    },
+    {
       "label": "migrations.py",
       "file_type": "code",
       "source_file": "src/services/migrations.py",
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_migrations",
-      "community": 113,
+      "community": 16,
       "norm_label": "migrations.py"
     },
     {
       "label": "_checksum()",
       "file_type": "code",
       "source_file": "src/services/migrations.py",
-      "source_location": "L30",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "src_services_migrations_checksum",
-      "community": 113,
+      "community": 16,
       "norm_label": "_checksum()"
     },
     {
@@ -5206,34 +5406,34 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_migrations_py_path",
-      "community": 113,
+      "community": 16,
       "norm_label": "path"
     },
     {
       "label": "_ensure_tracker()",
       "file_type": "code",
       "source_file": "src/services/migrations.py",
-      "source_location": "L34",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "src_services_migrations_ensure_tracker",
-      "community": 113,
+      "community": 16,
       "norm_label": "_ensure_tracker()"
     },
     {
       "label": "list_migrations()",
       "file_type": "code",
       "source_file": "src/services/migrations.py",
-      "source_location": "L48",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "src_services_migrations_list_migrations",
-      "community": 113,
+      "community": 16,
       "norm_label": "list_migrations()"
     },
     {
       "label": "read_migration_sql()",
       "file_type": "code",
       "source_file": "src/services/migrations.py",
-      "source_location": "L80",
+      "source_location": "L81",
       "_origin": "ast",
       "id": "src_services_migrations_read_migration_sql",
       "community": 18,
@@ -5243,20 +5443,20 @@
       "label": "apply_migration()",
       "file_type": "code",
       "source_file": "src/services/migrations.py",
-      "source_location": "L89",
+      "source_location": "L90",
       "_origin": "ast",
       "id": "src_services_migrations_apply_migration",
-      "community": 113,
+      "community": 16,
       "norm_label": "apply_migration()"
     },
     {
       "label": "mark_applied()",
       "file_type": "code",
       "source_file": "src/services/migrations.py",
-      "source_location": "L141",
+      "source_location": "L142",
       "_origin": "ast",
       "id": "src_services_migrations_mark_applied",
-      "community": 113,
+      "community": 16,
       "norm_label": "mark_applied()"
     },
     {
@@ -5266,17 +5466,17 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_migrations_rationale_1",
-      "community": 113,
+      "community": 16,
       "norm_label": "tracked, checksummed, advisory-lock-guarded sql migration runner (central postgr"
     },
     {
       "label": "Record a file as applied without executing it (Docker-initialized databases).",
       "file_type": "rationale",
       "source_file": "src/services/migrations.py",
-      "source_location": "L143",
+      "source_location": "L144",
       "_origin": "ast",
-      "id": "src_services_migrations_rationale_143",
-      "community": 113,
+      "id": "src_services_migrations_rationale_144",
+      "community": 16,
       "norm_label": "record a file as applied without executing it (docker-initialized databases)."
     },
     {
@@ -5286,7 +5486,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_onboarding",
-      "community": 104,
+      "community": 108,
       "norm_label": "onboarding.py"
     },
     {
@@ -5296,7 +5496,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_services_onboarding_pipeline",
-      "community": 104,
+      "community": 108,
       "norm_label": "_pipeline()"
     },
     {
@@ -5306,7 +5506,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_services_onboarding_discover",
-      "community": 104,
+      "community": 108,
       "norm_label": "discover()"
     },
     {
@@ -5316,7 +5516,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_services_onboarding_propose",
-      "community": 104,
+      "community": 108,
       "norm_label": "propose()"
     },
     {
@@ -5326,7 +5526,7 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "src_services_onboarding_get_review",
-      "community": 3,
+      "community": 108,
       "norm_label": "get_review()"
     },
     {
@@ -5336,7 +5536,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "src_services_onboarding_resolve",
-      "community": 3,
+      "community": 108,
       "norm_label": "resolve()"
     },
     {
@@ -5346,7 +5546,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "src_services_onboarding_deploy",
-      "community": 104,
+      "community": 108,
       "norm_label": "deploy()"
     },
     {
@@ -5356,7 +5556,7 @@
       "source_location": "L381",
       "_origin": "ast",
       "id": "src_services_onboarding_onboard_bulk",
-      "community": 104,
+      "community": 108,
       "norm_label": "onboard_bulk()"
     },
     {
@@ -5366,7 +5566,7 @@
       "source_location": "L477",
       "_origin": "ast",
       "id": "src_services_onboarding_backfill",
-      "community": 104,
+      "community": 108,
       "norm_label": "backfill()"
     },
     {
@@ -5376,7 +5576,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_onboarding_rationale_1",
-      "community": 104,
+      "community": 108,
       "norm_label": "onboarding workflow services: discover, propose, review, resolve, deploy, backfi"
     },
     {
@@ -5386,7 +5586,7 @@
       "source_location": "L385",
       "_origin": "ast",
       "id": "src_services_onboarding_rationale_385",
-      "community": 104,
+      "community": 108,
       "norm_label": "onboard many tables in one guarded pass (bulk-onboarding spec).      conservativ"
     },
     {
@@ -5956,7 +6156,7 @@
       "source_location": "L548",
       "_origin": "ast",
       "id": "src_services_view_proposer_apply_view",
-      "community": 96,
+      "community": 16,
       "norm_label": "apply_view()"
     },
     {
@@ -6046,7 +6246,7 @@
       "source_location": "L553",
       "_origin": "ast",
       "id": "src_services_view_proposer_rationale_553",
-      "community": 96,
+      "community": 16,
       "norm_label": "execute the view sql and mark the proposal as applied."
     },
     {
@@ -6186,7 +6386,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_transform_engine",
-      "community": 104,
+      "community": 2,
       "norm_label": "transform_engine.py"
     },
     {
@@ -6196,7 +6396,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_transform_engine_apply_transform",
-      "community": 99,
+      "community": 2,
       "norm_label": "_apply_transform()"
     },
     {
@@ -6206,7 +6406,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_transform_engine_transform_row",
-      "community": 104,
+      "community": 2,
       "norm_label": "transform_row()"
     },
     {
@@ -6216,7 +6416,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "src_transform_engine_transform_batch",
-      "community": 104,
+      "community": 2,
       "norm_label": "transform_batch()"
     },
     {
@@ -6226,7 +6426,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_transform_engine_rationale_1",
-      "community": 104,
+      "community": 2,
       "norm_label": "takes one row from your central db + the active mapping config + the target sche"
     },
     {
@@ -6236,7 +6436,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_transform_engine_rationale_39",
-      "community": 104,
+      "community": 2,
       "norm_label": "returns (target_row, errors). if errors is non-empty, do not write     target_ro"
     },
     {
@@ -6246,7 +6446,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "src_transform_engine_rationale_97",
-      "community": 104,
+      "community": 2,
       "norm_label": "convenience wrapper: returns (good_rows, failed_rows_with_errors)."
     },
     {
@@ -6266,7 +6466,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "src_worker_target_schema",
-      "community": 104,
+      "community": 2,
       "norm_label": "_target_schema()"
     },
     {
@@ -6426,7 +6626,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "tests_test_admin_api_app",
-      "community": 16,
+      "community": 18,
       "norm_label": "app()"
     },
     {
@@ -6506,7 +6706,7 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_enqueue_validates_type_before_db",
-      "community": 108,
+      "community": 18,
       "norm_label": "test_enqueue_validates_type_before_db()"
     },
     {
@@ -6586,7 +6786,7 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_onboard_bulk_rejects_empty_table_list",
-      "community": 108,
+      "community": 17,
       "norm_label": "test_onboard_bulk_rejects_empty_table_list()"
     },
     {
@@ -6646,7 +6846,7 @@
       "source_location": "L213",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_worker_controller_stop_without_start_conflicts",
-      "community": 16,
+      "community": 18,
       "norm_label": "test_worker_controller_stop_without_start_conflicts()"
     },
     {
@@ -6696,7 +6896,7 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "tests_test_admin_api_rationale_158",
-      "community": 108,
+      "community": 17,
       "norm_label": "the handler must refuse an empty batch rather than 'succeed' on nothing."
     },
     {
@@ -6946,7 +7146,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_init_lrmis_target.py"
     },
     {
@@ -6956,7 +7156,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_strips_degenerate_self_fk",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_strips_degenerate_self_fk()"
     },
     {
@@ -6966,7 +7166,7 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_no_dangling_comma_after_strip",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_no_dangling_comma_after_strip()"
     },
     {
@@ -6976,7 +7176,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_keeps_legitimate_self_reference",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_keeps_legitimate_self_reference()"
     },
     {
@@ -6986,7 +7186,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_ddl_without_degenerate_fk_is_unchanged",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_ddl_without_degenerate_fk_is_unchanged()"
     },
     {
@@ -6996,7 +7196,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_extracts_only_wanted_tables",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_extracts_only_wanted_tables()"
     },
     {
@@ -7006,7 +7206,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_multiline_statement_captured_whole",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_multiline_statement_captured_whole()"
     },
     {
@@ -7016,7 +7216,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_seed_tables_are_derived_from_the_schema",
-      "community": 114,
+      "community": 98,
       "norm_label": "test_seed_tables_are_derived_from_the_schema()"
     },
     {
@@ -7026,7 +7226,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_rationale_1",
-      "community": 114,
+      "community": 98,
       "norm_label": "phase 1 setup helpers: degenerate-fk stripping and seed extraction.  pure-logic"
     },
     {
@@ -7036,7 +7236,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_integration_core",
-      "community": 104,
+      "community": 2,
       "norm_label": "test_integration_core.py"
     },
     {
@@ -7056,7 +7256,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_test_integration_core_test_mysql_information_schema_normalization",
-      "community": 104,
+      "community": 2,
       "norm_label": "test_mysql_information_schema_normalization()"
     },
     {
@@ -7486,7 +7686,7 @@
       "source_location": "L172",
       "_origin": "ast",
       "id": "tests_test_lrmis_mapping_test_store_target_tables_writes_distinct_sorted_footprint",
-      "community": 109,
+      "community": 110,
       "norm_label": "test_store_target_tables_writes_distinct_sorted_footprint()"
     },
     {
@@ -7518,6 +7718,96 @@
       "id": "tests_test_lrmis_mapping_rationale_1",
       "community": 110,
       "norm_label": "multi-table mapping validation (path b, phase 2).  inline ddl fixture shaped lik"
+    },
+    {
+      "label": "test_lrmis_onboarding.py",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding",
+      "community": 106,
+      "norm_label": "test_lrmis_onboarding.py"
+    },
+    {
+      "label": "_Central",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_central",
+      "community": 106,
+      "norm_label": "_central"
+    },
+    {
+      "label": ".connection()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_central_connection",
+      "community": 106,
+      "norm_label": ".connection()"
+    },
+    {
+      "label": ".close()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_central_close",
+      "community": 106,
+      "norm_label": ".close()"
+    },
+    {
+      "label": "_patch()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L33",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_patch",
+      "community": 106,
+      "norm_label": "_patch()"
+    },
+    {
+      "label": "test_rejects_unapproved_proposal()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_test_rejects_unapproved_proposal",
+      "community": 106,
+      "norm_label": "test_rejects_unapproved_proposal()"
+    },
+    {
+      "label": "test_rejects_when_no_mappings()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L45",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_test_rejects_when_no_mappings",
+      "community": 106,
+      "norm_label": "test_rejects_when_no_mappings()"
+    },
+    {
+      "label": "test_rejects_invalid_mapping()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_test_rejects_invalid_mapping",
+      "community": 106,
+      "norm_label": "test_rejects_invalid_mapping()"
+    },
+    {
+      "label": "Phase 6 deploy gating: status + coverage checks before an entity becomes Path B.",
+      "file_type": "rationale",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_onboarding_rationale_1",
+      "community": 106,
+      "norm_label": "phase 6 deploy gating: status + coverage checks before an entity becomes path b."
     },
     {
       "label": "test_lrmis_registry.py",
@@ -7740,6 +8030,136 @@
       "norm_label": "registry: ddl parsing, reference-table detection, self-loop-safe topo sort.  the"
     },
     {
+      "label": "test_lrmis_schema.py",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema",
+      "community": 97,
+      "norm_label": "test_lrmis_schema.py"
+    },
+    {
+      "label": "test_fingerprint_is_stable_and_content_sensitive()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_test_fingerprint_is_stable_and_content_sensitive",
+      "community": 97,
+      "norm_label": "test_fingerprint_is_stable_and_content_sensitive()"
+    },
+    {
+      "label": "_Central",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_central",
+      "community": 97,
+      "norm_label": "_central"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_central_init",
+      "community": 97,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".connection()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L23",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_central_connection",
+      "community": 97,
+      "norm_label": ".connection()"
+    },
+    {
+      "label": ".close()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_central_close",
+      "community": 97,
+      "norm_label": ".close()"
+    },
+    {
+      "label": "_Conn",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L30",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_conn",
+      "community": 97,
+      "norm_label": "_conn"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_conn_init",
+      "community": 97,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".cursor()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L34",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_conn_cursor",
+      "community": 97,
+      "norm_label": ".cursor()"
+    },
+    {
+      "label": "test_drift_unversioned_when_nothing_stored()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_test_drift_unversioned_when_nothing_stored",
+      "community": 97,
+      "norm_label": "test_drift_unversioned_when_nothing_stored()"
+    },
+    {
+      "label": "test_drift_false_when_stored_matches()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L60",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_test_drift_false_when_stored_matches",
+      "community": 97,
+      "norm_label": "test_drift_false_when_stored_matches()"
+    },
+    {
+      "label": "test_drift_true_when_stored_differs()",
+      "file_type": "code",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L69",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_test_drift_true_when_stored_differs",
+      "community": 97,
+      "norm_label": "test_drift_true_when_stored_differs()"
+    },
+    {
+      "label": "Phase 7: LRMIS DDL fingerprinting and drift detection (pure logic).",
+      "file_type": "rationale",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_test_lrmis_schema_rationale_1",
+      "community": 97,
+      "norm_label": "phase 7: lrmis ddl fingerprinting and drift detection (pure logic)."
+    },
+    {
       "label": "test_lrmis_writer.py",
       "file_type": "code",
       "source_file": "tests/test_lrmis_writer.py",
@@ -7886,7 +8306,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_sequence",
-      "community": 15,
+      "community": 112,
       "norm_label": "_sequence()"
     },
     {
@@ -7926,7 +8346,7 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_unresolvable_reference_row_raises_rather_than_inserting",
-      "community": 15,
+      "community": 117,
       "norm_label": "test_unresolvable_reference_row_raises_rather_than_inserting()"
     },
     {
@@ -7986,7 +8406,7 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_repeated_allocation_is_sequential",
-      "community": 15,
+      "community": 112,
       "norm_label": "test_repeated_allocation_is_sequential()"
     },
     {
@@ -8096,7 +8516,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_rationale_127",
-      "community": 15,
+      "community": 112,
       "norm_label": "a stateful counter mimicking allocate_id's atomic increment."
     },
     {
@@ -8136,7 +8556,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_response",
-      "community": 0,
+      "community": 3,
       "norm_label": "_response"
     },
     {
@@ -8166,7 +8586,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_models_generate_content",
-      "community": 104,
+      "community": 3,
       "norm_label": ".generate_content()"
     },
     {
@@ -20666,6 +21086,28 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_connectors",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_connectors",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
       "source_location": "L11",
       "weight": 1.0,
@@ -21164,6 +21606,72 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_connectors_postgrescentralconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "target": "src_connectors_postgrescentralconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_connectors_postgrescentralconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_check_ddl_drift",
+      "target": "src_connectors_postgrescentralconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_record_ddl_fingerprint",
+      "target": "src_connectors_postgrescentralconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "parameter_type",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_redeploy_plan",
+      "target": "src_connectors_postgrescentralconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
       "source_location": "L11",
       "weight": 1.0,
@@ -21176,7 +21684,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L89",
+      "source_location": "L90",
       "weight": 1.0,
       "source": "src_services_migrations_apply_migration",
       "target": "src_connectors_postgrescentralconnector",
@@ -21187,7 +21695,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0,
       "source": "src_services_migrations_list_migrations",
       "target": "src_connectors_postgrescentralconnector",
@@ -21198,7 +21706,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L141",
+      "source_location": "L142",
       "weight": 1.0,
       "source": "src_services_migrations_mark_applied",
       "target": "src_connectors_postgrescentralconnector",
@@ -23813,10 +24321,43 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_lrmis_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_lrmis_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "tests/test_lrmis_mapping.py",
       "source_location": "L11",
       "weight": 1.0,
       "source": "tests_test_lrmis_mapping",
+      "target": "src_lrmis_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
       "target": "src_lrmis_registry",
       "confidence_score": 1.0
     },
@@ -24158,6 +24699,17 @@
       "source_location": "L11",
       "weight": 1.0,
       "source": "tests_test_lrmis_mapping",
+      "target": "src_lrmis_registry_parse_ddl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
       "target": "src_lrmis_registry_parse_ddl",
       "confidence_score": 1.0
     },
@@ -24667,6 +25219,27 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "src_lrmis_registry_lrmisregistry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L10",
+      "weight": 0.8,
+      "source": "tests_test_lrmis_onboarding_central",
+      "target": "src_lrmis_registry_lrmisregistry",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "tests/test_lrmis_registry.py",
       "source_location": "L13",
       "weight": 1.0,
@@ -25016,6 +25589,39 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_lrmis_registry_ddl_path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_current_ddl_fingerprint",
+      "target": "src_lrmis_registry_ddl_path",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L56",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_record_ddl_fingerprint",
+      "target": "src_lrmis_registry_ddl_path",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/lrmis_registry.py",
@@ -25066,6 +25672,28 @@
       "source_location": "L27",
       "weight": 1.0,
       "source": "src_services_lrmis_mapping_reg",
+      "target": "src_lrmis_registry_get_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_lrmis_registry_get_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L77",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
       "target": "src_lrmis_registry_get_registry",
       "confidence_score": 1.0
     },
@@ -27411,6 +28039,28 @@
       "relation": "imports_from",
       "context": "submodule_import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L149",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_pipeline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L122",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_pipeline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/onboarding.py",
       "source_location": "L24",
       "weight": 1.0,
@@ -29165,6 +29815,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_schema_ingest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/onboarding.py",
       "source_location": "L16",
       "weight": 1.0,
@@ -29481,6 +30142,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_schema_ingest_schema_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L70",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_lrmis_schema_document",
+      "target": "src_schema_ingest_schema_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/onboarding.py",
       "source_location": "L16",
       "weight": 1.0,
@@ -29783,6 +30466,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_schema_models",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/onboarding.py",
       "source_location": "L17",
       "weight": 1.0,
@@ -29886,6 +30580,28 @@
       "source_location": "L35",
       "weight": 1.0,
       "source": "src_schema_models_table_get_column",
+      "target": "src_schema_models_column",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_schema_models_column",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_lrmis_schema_document",
       "target": "src_schema_models_column",
       "confidence_score": 1.0
     },
@@ -30091,6 +30807,28 @@
       "weight": 1.0,
       "source": "src_schema_models_table",
       "target": "src_schema_models_table_get_column",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_schema_models_table",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L63",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_lrmis_schema_document",
+      "target": "src_schema_models_table",
       "confidence_score": 1.0
     },
     {
@@ -30315,6 +31053,28 @@
       "weight": 1.0,
       "source": "src_schema_models_schema",
       "target": "src_schema_models_schema_to_json",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_schema_models_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_lrmis_schema_document",
+      "target": "src_schema_models_schema",
       "confidence_score": 1.0
     },
     {
@@ -30741,6 +31501,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_common",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
       "source_location": "L12",
       "weight": 1.0,
@@ -30811,6 +31582,17 @@
       "source_location": "L12",
       "weight": 1.0,
       "source": "tests_test_lrmis_mapping",
+      "target": "src_services_common",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
       "target": "src_services_common",
       "confidence_score": 1.0
     },
@@ -30911,6 +31693,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_common_notfounderror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_load_proposal_mappings",
+      "target": "src_services_common_notfounderror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
       "source_location": "L12",
       "weight": 1.0,
@@ -30923,7 +31727,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L92",
+      "source_location": "L93",
       "weight": 1.0,
       "source": "src_services_migrations_apply_migration",
       "target": "src_services_common_notfounderror",
@@ -30934,7 +31738,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L145",
+      "source_location": "L146",
       "weight": 1.0,
       "source": "src_services_migrations_mark_applied",
       "target": "src_services_common_notfounderror",
@@ -30945,7 +31749,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L82",
+      "source_location": "L83",
       "weight": 1.0,
       "source": "src_services_migrations_read_migration_sql",
       "target": "src_services_common_notfounderror",
@@ -31195,7 +31999,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L107",
+      "source_location": "L108",
       "weight": 1.0,
       "source": "src_services_migrations_apply_migration",
       "target": "src_services_common_conflicterror",
@@ -31367,6 +32171,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_common_validationerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "target": "src_services_common_validationerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
       "source_location": "L12",
       "weight": 1.0,
@@ -31379,7 +32205,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L114",
+      "source_location": "L115",
       "weight": 1.0,
       "source": "src_services_migrations_apply_migration",
       "target": "src_services_common_validationerror",
@@ -31621,6 +32447,60 @@
       "source_location": "L94",
       "weight": 1.0,
       "source": "tests_test_lrmis_mapping_test_unknown_target_table_blocks",
+      "target": "src_services_common_validationerror"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "src_services_common_validationerror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L12",
+      "weight": 0.8,
+      "source": "tests_test_lrmis_onboarding_central",
+      "target": "src_services_common_validationerror",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L58",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_invalid_mapping",
+      "target": "src_services_common_validationerror"
+    },
+    {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_unapproved_proposal",
+      "target": "src_services_common_validationerror"
+    },
+    {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L48",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_when_no_mappings",
       "target": "src_services_common_validationerror"
     },
     {
@@ -32051,6 +32931,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_mapping",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "tests/test_lrmis_mapping.py",
       "source_location": "L13",
       "weight": 1.0,
@@ -32087,6 +32978,28 @@
       "source_location": "L153",
       "weight": 1.0,
       "source": "src_services_lrmis_mapping_store_target_tables",
+      "target": "src_services_lrmis_mapping_target_tables_for",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_mapping_target_tables_for",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L95",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
       "target": "src_services_lrmis_mapping_target_tables_for",
       "confidence_score": 1.0
     },
@@ -32418,6 +33331,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_mapping_validate_deployment",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L92",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "target": "src_services_lrmis_mapping_validate_deployment",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "tests/test_lrmis_mapping.py",
       "source_location": "L13",
       "weight": 1.0,
@@ -32461,6 +33396,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_mapping_store_target_tables",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L96",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "target": "src_services_lrmis_mapping_store_target_tables",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "tests/test_lrmis_mapping.py",
       "source_location": "L13",
       "weight": 1.0,
@@ -32482,8 +33439,309 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_onboarding_load_proposal_mappings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_onboarding_lrmis_schema_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L148",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding",
+      "target": "src_services_lrmis_onboarding_pipeline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_rationale_1",
+      "target": "src_services_lrmis_onboarding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "src_services_lrmis_onboarding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L83",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "target": "src_services_lrmis_onboarding_load_proposal_mappings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_rationale_25",
+      "target": "src_services_lrmis_onboarding_load_proposal_mappings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L98",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "target": "src_services_lrmis_onboarding_lrmis_schema_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_rationale_60",
+      "target": "src_services_lrmis_onboarding_lrmis_schema_document",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L78",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "target": "src_services_lrmis_onboarding_pipeline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_onboarding.py",
+      "source_location": "L76",
+      "weight": 1.0,
+      "source": "src_services_lrmis_onboarding_rationale_76",
+      "target": "src_services_lrmis_onboarding_deploy_to_lrmis",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_services_lrmis_schema_check_ddl_drift",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_services_lrmis_schema_current_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L121",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_services_lrmis_schema_pipeline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_services_lrmis_schema_record_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_services_lrmis_schema_redeploy_plan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema",
+      "target": "src_services_lrmis_schema_stored_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_rationale_1",
+      "target": "src_services_lrmis_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema",
+      "target": "src_services_lrmis_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L67",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_check_ddl_drift",
+      "target": "src_services_lrmis_schema_current_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_record_ddl_fingerprint",
+      "target": "src_services_lrmis_schema_current_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L99",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_redeploy_plan",
+      "target": "src_services_lrmis_schema_current_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_check_ddl_drift",
+      "target": "src_services_lrmis_schema_stored_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L100",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_redeploy_plan",
+      "target": "src_services_lrmis_schema_stored_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_rationale_41",
+      "target": "src_services_lrmis_schema_record_ddl_fingerprint",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L66",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_rationale_66",
+      "target": "src_services_lrmis_schema_check_ddl_drift",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L86",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_rationale_86",
+      "target": "src_services_lrmis_schema_redeploy_plan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/lrmis_schema.py",
+      "source_location": "L93",
+      "weight": 1.0,
+      "source": "src_services_lrmis_schema_redeploy_plan",
+      "target": "src_services_lrmis_schema_pipeline",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L89",
+      "source_location": "L90",
       "weight": 1.0,
       "source": "src_services_migrations",
       "target": "src_services_migrations_apply_migration",
@@ -32493,7 +33751,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0,
       "source": "src_services_migrations",
       "target": "src_services_migrations_checksum",
@@ -32503,7 +33761,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L34",
+      "source_location": "L35",
       "weight": 1.0,
       "source": "src_services_migrations",
       "target": "src_services_migrations_ensure_tracker",
@@ -32513,7 +33771,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L48",
+      "source_location": "L49",
       "weight": 1.0,
       "source": "src_services_migrations",
       "target": "src_services_migrations_list_migrations",
@@ -32523,7 +33781,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L141",
+      "source_location": "L142",
       "weight": 1.0,
       "source": "src_services_migrations",
       "target": "src_services_migrations_mark_applied",
@@ -32533,7 +33791,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L80",
+      "source_location": "L81",
       "weight": 1.0,
       "source": "src_services_migrations",
       "target": "src_services_migrations_read_migration_sql",
@@ -32554,7 +33812,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L97",
+      "source_location": "L98",
       "weight": 1.0,
       "source": "src_services_migrations_apply_migration",
       "target": "src_services_migrations_checksum",
@@ -32565,7 +33823,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L30",
+      "source_location": "L31",
       "weight": 1.0,
       "source": "src_services_migrations_checksum",
       "target": "src_services_migrations_py_path",
@@ -32576,7 +33834,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0,
       "source": "src_services_migrations_list_migrations",
       "target": "src_services_migrations_checksum",
@@ -32587,7 +33845,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L149",
+      "source_location": "L150",
       "weight": 1.0,
       "source": "src_services_migrations_mark_applied",
       "target": "src_services_migrations_checksum",
@@ -32598,7 +33856,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L103",
+      "source_location": "L104",
       "weight": 1.0,
       "source": "src_services_migrations_apply_migration",
       "target": "src_services_migrations_ensure_tracker",
@@ -32609,7 +33867,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L53",
+      "source_location": "L54",
       "weight": 1.0,
       "source": "src_services_migrations_list_migrations",
       "target": "src_services_migrations_ensure_tracker",
@@ -32620,7 +33878,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L154",
+      "source_location": "L155",
       "weight": 1.0,
       "source": "src_services_migrations_mark_applied",
       "target": "src_services_migrations_ensure_tracker",
@@ -32685,9 +33943,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "src/services/migrations.py",
-      "source_location": "L143",
+      "source_location": "L144",
       "weight": 1.0,
-      "source": "src_services_migrations_rationale_143",
+      "source": "src_services_migrations_rationale_144",
       "target": "src_services_migrations_mark_applied",
       "confidence_score": 1.0
     },
@@ -36522,6 +37780,152 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "tests_test_lrmis_onboarding_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "tests_test_lrmis_onboarding_patch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L52",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "tests_test_lrmis_onboarding_test_rejects_invalid_mapping",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "tests_test_lrmis_onboarding_test_rejects_unapproved_proposal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding",
+      "target": "tests_test_lrmis_onboarding_test_rejects_when_no_mappings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_rationale_1",
+      "target": "tests_test_lrmis_onboarding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_central",
+      "target": "tests_test_lrmis_onboarding_central_close",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_central",
+      "target": "tests_test_lrmis_onboarding_central_connection",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_invalid_mapping",
+      "target": "tests_test_lrmis_onboarding_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_unapproved_proposal",
+      "target": "tests_test_lrmis_onboarding_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L49",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_when_no_mappings",
+      "target": "tests_test_lrmis_onboarding_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_invalid_mapping",
+      "target": "tests_test_lrmis_onboarding_patch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_unapproved_proposal",
+      "target": "tests_test_lrmis_onboarding_patch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_onboarding.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_onboarding_test_rejects_when_no_mappings",
+      "target": "tests_test_lrmis_onboarding_patch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "tests/test_lrmis_registry.py",
       "source_location": "L80",
       "weight": 1.0,
@@ -36727,6 +38131,170 @@
       "weight": 1.0,
       "source": "tests_test_lrmis_registry_rationale_1",
       "target": "tests_test_lrmis_registry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema",
+      "target": "tests_test_lrmis_schema_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema",
+      "target": "tests_test_lrmis_schema_conn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema",
+      "target": "tests_test_lrmis_schema_test_drift_false_when_stored_matches",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema",
+      "target": "tests_test_lrmis_schema_test_drift_true_when_stored_differs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L52",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema",
+      "target": "tests_test_lrmis_schema_test_drift_unversioned_when_nothing_stored",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema",
+      "target": "tests_test_lrmis_schema_test_fingerprint_is_stable_and_content_sensitive",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_rationale_1",
+      "target": "tests_test_lrmis_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_central",
+      "target": "tests_test_lrmis_schema_central_close",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_central",
+      "target": "tests_test_lrmis_schema_central_connection",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_central",
+      "target": "tests_test_lrmis_schema_central_init",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_test_drift_false_when_stored_matches",
+      "target": "tests_test_lrmis_schema_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_test_drift_true_when_stored_differs",
+      "target": "tests_test_lrmis_schema_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_test_drift_unversioned_when_nothing_stored",
+      "target": "tests_test_lrmis_schema_central",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_central_connection",
+      "target": "tests_test_lrmis_schema_conn",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L34",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_conn",
+      "target": "tests_test_lrmis_schema_conn_cursor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_lrmis_schema.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "tests_test_lrmis_schema_conn",
+      "target": "tests_test_lrmis_schema_conn_init",
       "confidence_score": 1.0
     },
     {
@@ -48372,5 +49940,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "3a1a49dc8dc68d4e03c4c0b3d6d9a9ccbc88c1d0"
+  "built_at_commit": "bf9206e2d6ced92a5431b09f7a13887750720ec4"
 }

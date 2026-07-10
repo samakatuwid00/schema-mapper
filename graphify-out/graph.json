@@ -340,6 +340,36 @@
       "norm_label": "minimal administrator/auditor cli; suitable for wrapping in a future web ui."
     },
     {
+      "label": "lrmis_cutover.py",
+      "file_type": "code",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_lrmis_cutover",
+      "community": 115,
+      "norm_label": "lrmis_cutover.py"
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "scripts_lrmis_cutover_main",
+      "community": 115,
+      "norm_label": "main()"
+    },
+    {
+      "label": "Read-only Path B cutover status (Phase 9 planning).  Reports where each entity s",
+      "file_type": "rationale",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "scripts_lrmis_cutover_rationale_1",
+      "community": 115,
+      "norm_label": "read-only path b cutover status (phase 9 planning).  reports where each entity s"
+    },
+    {
       "label": "rebaseline_entity_fingerprints.py",
       "file_type": "code",
       "source_file": "scripts/rebaseline_entity_fingerprints.py",
@@ -466,7 +496,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "fastapi",
-      "community": 3,
+      "community": 16,
       "norm_label": "fastapi"
     },
     {
@@ -696,7 +726,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_db",
-      "community": 7,
+      "community": 119,
       "norm_label": "db.py"
     },
     {
@@ -706,7 +736,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_admin_api_db_central",
-      "community": 7,
+      "community": 119,
       "norm_label": "central()"
     },
     {
@@ -716,7 +746,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_admin_api_db_staging",
-      "community": 7,
+      "community": 119,
       "norm_label": "staging()"
     },
     {
@@ -726,7 +756,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_admin_api_db_close_all",
-      "community": 7,
+      "community": 119,
       "norm_label": "close_all()"
     },
     {
@@ -736,7 +766,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_admin_api_db_rationale_1",
-      "community": 7,
+      "community": 119,
       "norm_label": "process-wide pooled connectors shared by all request handlers and jobs."
     },
     {
@@ -756,7 +786,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext",
-      "community": 17,
+      "community": 113,
       "norm_label": "jobcontext"
     },
     {
@@ -766,7 +796,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext_init",
-      "community": 17,
+      "community": 113,
       "norm_label": ".__init__()"
     },
     {
@@ -776,7 +806,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext_emit",
-      "community": 17,
+      "community": 113,
       "norm_label": ".emit()"
     },
     {
@@ -786,7 +816,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext_progress",
-      "community": 17,
+      "community": 113,
       "norm_label": ".progress()"
     },
     {
@@ -796,7 +826,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_schema_scan",
-      "community": 17,
+      "community": 113,
       "norm_label": "_h_schema_scan()"
     },
     {
@@ -826,7 +856,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_deploy",
-      "community": 108,
+      "community": 7,
       "norm_label": "_h_deploy()"
     },
     {
@@ -846,7 +876,7 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "src_admin_api_jobs_normalize_tables",
-      "community": 17,
+      "community": 113,
       "norm_label": "_normalize_tables()"
     },
     {
@@ -856,7 +886,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_onboard_bulk",
-      "community": 17,
+      "community": 113,
       "norm_label": "_h_onboard_bulk()"
     },
     {
@@ -886,7 +916,7 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_refresh",
-      "community": 17,
+      "community": 113,
       "norm_label": "_h_refresh()"
     },
     {
@@ -896,7 +926,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_refresh_all",
-      "community": 17,
+      "community": 113,
       "norm_label": "_h_refresh_all()"
     },
     {
@@ -1106,7 +1136,7 @@
       "source_location": "L383",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_run",
-      "community": 17,
+      "community": 113,
       "norm_label": "._run()"
     },
     {
@@ -1346,7 +1376,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "src_admin_api_routers_proposal",
-      "community": 3,
+      "community": 108,
       "norm_label": "proposal()"
     },
     {
@@ -1886,7 +1916,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_connectors",
-      "community": 2,
+      "community": 0,
       "norm_label": "connectors.py"
     },
     {
@@ -1996,7 +2026,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector",
-      "community": 7,
+      "community": 0,
       "norm_label": "mysqlstagingconnector"
     },
     {
@@ -2006,7 +2036,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_init",
-      "community": 7,
+      "community": 115,
       "norm_label": ".__init__()"
     },
     {
@@ -2016,7 +2046,7 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_environment_config",
-      "community": 7,
+      "community": 115,
       "norm_label": "._environment_config()"
     },
     {
@@ -2026,7 +2056,7 @@
       "source_location": "L125",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_for_database",
-      "community": 7,
+      "community": 115,
       "norm_label": ".for_database()"
     },
     {
@@ -2036,7 +2066,7 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "src_connectors_mysqlstagingconnector_for_target",
-      "community": 7,
+      "community": 115,
       "norm_label": ".for_target()"
     },
     {
@@ -2146,7 +2176,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_connectors_rationale_1",
-      "community": 2,
+      "community": 0,
       "norm_label": "database adapters for the authoritative postgresql db and lrmis mysql staging."
     },
     {
@@ -2176,7 +2206,7 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "src_connectors_rationale_107",
-      "community": 7,
+      "community": 0,
       "norm_label": "least-privilege writer. it never creates or alters lrmis tables."
     },
     {
@@ -2186,7 +2216,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "src_connectors_rationale_126",
-      "community": 7,
+      "community": 115,
       "norm_label": "a connector to a different database on the same server (same creds).          us"
     },
     {
@@ -2266,7 +2296,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "src_fast_refresh_generate_refresh_sql",
-      "community": 6,
+      "community": 5,
       "norm_label": "generate_refresh_sql()"
     },
     {
@@ -2306,7 +2336,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_fast_refresh_rationale_36",
-      "community": 6,
+      "community": 5,
       "norm_label": "generate postgresql select statement for refresh."
     },
     {
@@ -2706,7 +2736,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable",
-      "community": 38,
+      "community": 21,
       "norm_label": "lrmistable"
     },
     {
@@ -2716,7 +2746,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_primary_key",
-      "community": 38,
+      "community": 21,
       "norm_label": ".primary_key()"
     },
     {
@@ -2726,7 +2756,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_auto_increment_column",
-      "community": 38,
+      "community": 21,
       "norm_label": ".auto_increment_column()"
     },
     {
@@ -2736,7 +2766,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_get_column",
-      "community": 38,
+      "community": 21,
       "norm_label": ".get_column()"
     },
     {
@@ -2806,7 +2836,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_init",
-      "community": 38,
+      "community": 21,
       "norm_label": ".__init__()"
     },
     {
@@ -2836,7 +2866,7 @@
       "source_location": "L193",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_from_information_schema",
-      "community": 38,
+      "community": 21,
       "norm_label": ".from_information_schema()"
     },
     {
@@ -2896,7 +2926,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_foreign_keys",
-      "community": 21,
+      "community": 38,
       "norm_label": ".foreign_keys()"
     },
     {
@@ -3026,7 +3056,7 @@
       "source_location": "L362",
       "_origin": "ast",
       "id": "src_lrmis_registry_ddl_path",
-      "community": 101,
+      "community": 98,
       "norm_label": "ddl_path()"
     },
     {
@@ -3116,7 +3146,7 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "src_lrmis_registry_rationale_194",
-      "community": 38,
+      "community": 21,
       "norm_label": "fallback when the ddl file is unavailable: read the live database."
     },
     {
@@ -3216,7 +3246,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_lrmis_writer_writererror",
-      "community": 105,
+      "community": 117,
       "norm_label": "writererror"
     },
     {
@@ -3226,7 +3256,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_lrmis_writer_py_runtimeerror",
-      "community": 105,
+      "community": 117,
       "norm_label": "runtimeerror"
     },
     {
@@ -3246,7 +3276,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "src_lrmis_writer_unknowntargettable",
-      "community": 105,
+      "community": 15,
       "norm_label": "unknowntargettable"
     },
     {
@@ -3256,7 +3286,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_lrmis_writer_group_by_table",
-      "community": 118,
+      "community": 99,
       "norm_label": "group_by_table()"
     },
     {
@@ -3316,7 +3346,7 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "src_lrmis_writer_allocate_id",
-      "community": 112,
+      "community": 99,
       "norm_label": "allocate_id()"
     },
     {
@@ -3376,7 +3406,7 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "src_lrmis_writer_write_source_row",
-      "community": 99,
+      "community": 15,
       "norm_label": "write_source_row()"
     },
     {
@@ -3406,7 +3436,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_52",
-      "community": 105,
+      "community": 117,
       "norm_label": "base class for multi-table write failures."
     },
     {
@@ -3426,7 +3456,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_60",
-      "community": 105,
+      "community": 15,
       "norm_label": "a mapping names a table that is not part of the lrmis schema."
     },
     {
@@ -3436,7 +3466,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_64",
-      "community": 118,
+      "community": 99,
       "norm_label": "group column mappings by their `target_table`."
     },
     {
@@ -3456,7 +3486,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_131",
-      "community": 112,
+      "community": 99,
       "norm_label": "atomically hand out the next app-assigned id for `table`.      a single insert ."
     },
     {
@@ -3496,7 +3526,7 @@
       "source_location": "L273",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_273",
-      "community": 99,
+      "community": 15,
       "norm_label": "write one source row across n lrmis tables; return {table: target_id}."
     },
     {
@@ -4756,7 +4786,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_services_common_validationerror",
-      "community": 16,
+      "community": 106,
       "norm_label": "validationerror"
     },
     {
@@ -4806,7 +4836,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_services_common_rationale_18",
-      "community": 16,
+      "community": 106,
       "norm_label": "input or state precondition failed (maps to http 422)."
     },
     {
@@ -5096,7 +5126,7 @@
       "source_location": "L137",
       "_origin": "ast",
       "id": "src_services_lrmis_mapping_validate_deployment",
-      "community": 110,
+      "community": 109,
       "norm_label": "validate_deployment()"
     },
     {
@@ -5166,7 +5196,7 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "src_services_lrmis_mapping_rationale_139",
-      "community": 110,
+      "community": 109,
       "norm_label": "raise validationerror if the mapping is not deployable; else return the     cove"
     },
     {
@@ -5386,7 +5416,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_migrations",
-      "community": 16,
+      "community": 112,
       "norm_label": "migrations.py"
     },
     {
@@ -5396,7 +5426,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_services_migrations_checksum",
-      "community": 16,
+      "community": 112,
       "norm_label": "_checksum()"
     },
     {
@@ -5406,7 +5436,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_services_migrations_py_path",
-      "community": 16,
+      "community": 112,
       "norm_label": "path"
     },
     {
@@ -5416,7 +5446,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_services_migrations_ensure_tracker",
-      "community": 16,
+      "community": 112,
       "norm_label": "_ensure_tracker()"
     },
     {
@@ -5426,7 +5456,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_services_migrations_list_migrations",
-      "community": 16,
+      "community": 112,
       "norm_label": "list_migrations()"
     },
     {
@@ -5436,7 +5466,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "src_services_migrations_read_migration_sql",
-      "community": 18,
+      "community": 112,
       "norm_label": "read_migration_sql()"
     },
     {
@@ -5446,7 +5476,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "src_services_migrations_apply_migration",
-      "community": 16,
+      "community": 112,
       "norm_label": "apply_migration()"
     },
     {
@@ -5456,7 +5486,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "src_services_migrations_mark_applied",
-      "community": 16,
+      "community": 112,
       "norm_label": "mark_applied()"
     },
     {
@@ -5466,7 +5496,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_migrations_rationale_1",
-      "community": 16,
+      "community": 112,
       "norm_label": "tracked, checksummed, advisory-lock-guarded sql migration runner (central postgr"
     },
     {
@@ -5476,7 +5506,7 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_services_migrations_rationale_144",
-      "community": 16,
+      "community": 112,
       "norm_label": "record a file as applied without executing it (docker-initialized databases)."
     },
     {
@@ -5546,7 +5576,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "src_services_onboarding_deploy",
-      "community": 108,
+      "community": 7,
       "norm_label": "deploy()"
     },
     {
@@ -5866,7 +5896,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_scan",
-      "community": 104,
+      "community": 118,
       "norm_label": "scan.py"
     },
     {
@@ -5876,7 +5906,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_services_scan_observe_target",
-      "community": 104,
+      "community": 118,
       "norm_label": "observe_target()"
     },
     {
@@ -5886,7 +5916,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_services_scan_scan",
-      "community": 104,
+      "community": 118,
       "norm_label": "scan()"
     },
     {
@@ -5896,7 +5926,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_scan_rationale_1",
-      "community": 104,
+      "community": 118,
       "norm_label": "schema scanning: fingerprint source + target, record drift, report paused entiti"
     },
     {
@@ -5906,7 +5936,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_services_scan_rationale_22",
-      "community": 104,
+      "community": 118,
       "norm_label": "fingerprint the mysql staging contract and record drift against the last version"
     },
     {
@@ -5916,7 +5946,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "src_services_scan_rationale_66",
-      "community": 104,
+      "community": 118,
       "norm_label": "full scan: observe the target contract, then drift-check every deployed entity."
     },
     {
@@ -6156,7 +6186,7 @@
       "source_location": "L548",
       "_origin": "ast",
       "id": "src_services_view_proposer_apply_view",
-      "community": 16,
+      "community": 96,
       "norm_label": "apply_view()"
     },
     {
@@ -6246,7 +6276,7 @@
       "source_location": "L553",
       "_origin": "ast",
       "id": "src_services_view_proposer_rationale_553",
-      "community": 16,
+      "community": 96,
       "norm_label": "execute the view sql and mark the proposal as applied."
     },
     {
@@ -6416,7 +6446,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "src_transform_engine_transform_batch",
-      "community": 2,
+      "community": 104,
       "norm_label": "transform_batch()"
     },
     {
@@ -6446,7 +6476,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "src_transform_engine_rationale_97",
-      "community": 2,
+      "community": 104,
       "norm_label": "convenience wrapper: returns (good_rows, failed_rows_with_errors)."
     },
     {
@@ -6786,7 +6816,7 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_onboard_bulk_rejects_empty_table_list",
-      "community": 17,
+      "community": 113,
       "norm_label": "test_onboard_bulk_rejects_empty_table_list()"
     },
     {
@@ -6866,7 +6896,7 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_unmanaged_migration_file_rejected",
-      "community": 18,
+      "community": 112,
       "norm_label": "test_unmanaged_migration_file_rejected()"
     },
     {
@@ -6876,7 +6906,7 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_migration_sql_readable_for_managed_files",
-      "community": 18,
+      "community": 112,
       "norm_label": "test_migration_sql_readable_for_managed_files()"
     },
     {
@@ -6896,7 +6926,7 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "tests_test_admin_api_rationale_158",
-      "community": 17,
+      "community": 113,
       "norm_label": "the handler must refuse an empty batch rather than 'succeed' on nothing."
     },
     {
@@ -6916,7 +6946,7 @@
       "source_location": "L238",
       "_origin": "ast",
       "id": "tests_test_admin_api_rationale_238",
-      "community": 18,
+      "community": 112,
       "norm_label": "assert on named files; keyed off migration_files[-1] this broke whenever     a n"
     },
     {
@@ -7146,7 +7176,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_init_lrmis_target.py"
     },
     {
@@ -7156,7 +7186,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_strips_degenerate_self_fk",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_strips_degenerate_self_fk()"
     },
     {
@@ -7166,7 +7196,7 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_no_dangling_comma_after_strip",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_no_dangling_comma_after_strip()"
     },
     {
@@ -7176,7 +7206,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_keeps_legitimate_self_reference",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_keeps_legitimate_self_reference()"
     },
     {
@@ -7186,7 +7216,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_ddl_without_degenerate_fk_is_unchanged",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_ddl_without_degenerate_fk_is_unchanged()"
     },
     {
@@ -7196,7 +7226,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_extracts_only_wanted_tables",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_extracts_only_wanted_tables()"
     },
     {
@@ -7206,7 +7236,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_multiline_statement_captured_whole",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_multiline_statement_captured_whole()"
     },
     {
@@ -7216,7 +7246,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_test_seed_tables_are_derived_from_the_schema",
-      "community": 98,
+      "community": 114,
       "norm_label": "test_seed_tables_are_derived_from_the_schema()"
     },
     {
@@ -7226,7 +7256,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_init_lrmis_target_rationale_1",
-      "community": 98,
+      "community": 114,
       "norm_label": "phase 1 setup helpers: degenerate-fk stripping and seed extraction.  pure-logic"
     },
     {
@@ -7236,7 +7266,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_integration_core",
-      "community": 2,
+      "community": 104,
       "norm_label": "test_integration_core.py"
     },
     {
@@ -7256,7 +7286,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_test_integration_core_test_mysql_information_schema_normalization",
-      "community": 2,
+      "community": 104,
       "norm_label": "test_mysql_information_schema_normalization()"
     },
     {
@@ -7286,7 +7316,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "tests_test_integration_core_test_mysql_identifier_validation_happens_before_connection",
-      "community": 7,
+      "community": 0,
       "norm_label": "test_mysql_identifier_validation_happens_before_connection()"
     },
     {
@@ -8306,7 +8336,7 @@
       "source_location": "L126",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_sequence",
-      "community": 112,
+      "community": 15,
       "norm_label": "_sequence()"
     },
     {
@@ -8316,7 +8346,7 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_group_by_table_splits_columns",
-      "community": 118,
+      "community": 99,
       "norm_label": "test_group_by_table_splits_columns()"
     },
     {
@@ -8406,7 +8436,7 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_repeated_allocation_is_sequential",
-      "community": 112,
+      "community": 15,
       "norm_label": "test_repeated_allocation_is_sequential()"
     },
     {
@@ -8516,7 +8546,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_rationale_127",
-      "community": 112,
+      "community": 15,
       "norm_label": "a stateful counter mimicking allocate_id's atomic increment."
     },
     {
@@ -12790,6 +12820,66 @@
       "norm_label": "verification"
     },
     {
+      "label": "PATH_B.md",
+      "file_type": "document",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_path_b",
+      "community": 116,
+      "norm_label": "path_b.md"
+    },
+    {
+      "label": "Path B \u2014 direct delivery into the real LRMIS schema",
+      "file_type": "document",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_path_b_path_b_direct_delivery_into_the_real_lrmis_schema",
+      "community": 116,
+      "norm_label": "path b \u2014 direct delivery into the real lrmis schema"
+    },
+    {
+      "label": "What exists (Phases 0\u20137, done)",
+      "file_type": "document",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "docs_path_b_what_exists_phases_0_7_done",
+      "community": 116,
+      "norm_label": "what exists (phases 0\u20137, done)"
+    },
+    {
+      "label": "Key decisions (verified against real data)",
+      "file_type": "document",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "docs_path_b_key_decisions_verified_against_real_data",
+      "community": 116,
+      "norm_label": "key decisions (verified against real data)"
+    },
+    {
+      "label": "Setup",
+      "file_type": "document",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "docs_path_b_setup",
+      "community": 116,
+      "norm_label": "setup"
+    },
+    {
+      "label": "Remaining (Phases 8\u20139, deferred \u2014 destructive)",
+      "file_type": "document",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L55",
+      "_origin": "ast",
+      "id": "docs_path_b_remaining_phases_8_9_deferred_destructive",
+      "community": 116,
+      "norm_label": "remaining (phases 8\u20139, deferred \u2014 destructive)"
+    },
+    {
       "label": "design.md",
       "file_type": "document",
       "source_file": "openspec/changes/archive/2026-07-10-add-admin-database-dashboard/design.md",
@@ -16530,6 +16620,92 @@
       "weight": 1.0,
       "source": "scripts_integration_admin_main",
       "target": "src_mapping_repository_approve",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover",
+      "target": "scripts_lrmis_cutover_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover",
+      "target": "src_connectors",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover",
+      "target": "src_connectors_mysqlstagingconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover",
+      "target": "src_connectors_postgrescentralconnector",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "submodule_import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover",
+      "target": "src_services_lrmis_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover_rationale_1",
+      "target": "scripts_lrmis_cutover",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover_main",
+      "target": "src_connectors_mysqlstagingconnector_for_target"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/lrmis_cutover.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "scripts_lrmis_cutover_main",
+      "target": "src_connectors_postgrescentralconnector",
       "confidence_score": 1.0
     },
     {
@@ -47651,6 +47827,56 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "docs_path_b",
+      "target": "docs_path_b_path_b_direct_delivery_into_the_real_lrmis_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L55",
+      "weight": 1.0,
+      "source": "docs_path_b_path_b_direct_delivery_into_the_real_lrmis_schema",
+      "target": "docs_path_b_remaining_phases_8_9_deferred_destructive",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "docs_path_b_path_b_direct_delivery_into_the_real_lrmis_schema",
+      "target": "docs_path_b_setup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "docs_path_b_path_b_direct_delivery_into_the_real_lrmis_schema",
+      "target": "docs_path_b_what_exists_phases_0_7_done",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/PATH_B.md",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "docs_path_b_what_exists_phases_0_7_done",
+      "target": "docs_path_b_key_decisions_verified_against_real_data",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "openspec/changes/archive/2026-07-10-add-admin-database-dashboard/design.md",
       "source_location": "L1",
       "weight": 1.0,
@@ -49940,5 +50166,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "bf9206e2d6ced92a5431b09f7a13887750720ec4"
+  "built_at_commit": "0e16f819272681323b0395297d08b5d8feecd9d8"
 }
