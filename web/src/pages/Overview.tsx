@@ -1,12 +1,23 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createJob, getSnapshots, getStatus, restoreSnapshot, toggleEntity } from "../api/client";
+import {
+  createJob,
+  getSnapshots,
+  getStatus,
+  getWorkerStatus,
+  restoreSnapshot,
+  toggleEntity,
+} from "../api/client";
 import type { OnboardingEntity, StatusResponse } from "../api/types";
 import GuardedActionModal from "../components/GuardedActionModal";
 import HealthCard from "../components/HealthCard";
+import PipelineDiagram from "../components/PipelineDiagram";
+import Sparkline from "../components/Sparkline";
 import StatusChip from "../components/StatusChip";
 import { errMsg, fmtAgo, fmtDate } from "../utils";
+
+const HISTORY_LEN = 30;
 
 function queueCount(status: StatusResponse | undefined, key: string): number {
   return status?.queues.find((q) => q.status === key)?.events ?? 0;
@@ -101,6 +112,30 @@ export default function Overview() {
     refetchInterval: 5000,
   });
 
+  const { data: worker } = useQuery({
+    queryKey: ["worker-status"],
+    queryFn: getWorkerStatus,
+    refetchInterval: 5000,
+  });
+
+  // Rolling in-memory history of queue depth + delivered, sampled each poll.
+  // Purely client-side (the API exposes point-in-time counts, not a series).
+  const [pendingHistory, setPendingHistory] = useState<number[]>([]);
+  const [deliveredHistory, setDeliveredHistory] = useState<number[]>([]);
+  const lastSample = useRef<number>(-1);
+  const pendingNow = status?.queues.find((q) => q.status === "pending")?.events ?? 0;
+  const deliveredNow = status?.queues.find((q) => q.status === "delivered")?.events ?? 0;
+
+  useEffect(() => {
+    if (!status) return;
+    // updated_at-free dedupe: sample once per distinct render of fresh data.
+    const stamp = pendingNow * 1e6 + deliveredNow;
+    if (stamp === lastSample.current) return;
+    lastSample.current = stamp;
+    setPendingHistory((h) => [...h, pendingNow].slice(-HISTORY_LEN));
+    setDeliveredHistory((h) => [...h, deliveredNow].slice(-HISTORY_LEN));
+  }, [status, pendingNow, deliveredNow]);
+
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["status"] });
 
   const toggle = useMutation({
@@ -123,9 +158,9 @@ export default function Overview() {
 
       {status && status.unresolved_drift > 0 && (
         <div className="alert alert-danger">
-          <strong>Schema drift detected.</strong> {status.unresolved_drift} unresolved drift report
-          {status.unresolved_drift === 1 ? "" : "s"} — review before deploying or backfilling.{" "}
-          <Link to="/drift">Open drift reports →</Link>
+          <strong>Schema change detected.</strong> {status.unresolved_drift} unresolved schema change
+          {status.unresolved_drift === 1 ? "" : "s"} — review before deploying or copying rows.{" "}
+          <Link to="/schema">Open schema changes →</Link>
         </div>
       )}
       {actionError && (
@@ -136,6 +171,34 @@ export default function Overview() {
           </button>
         </div>
       )}
+
+      <PipelineDiagram
+        pending={queueCount(status, "pending")}
+        retry={queueCount(status, "retry")}
+        blocked={queueCount(status, "quarantined") + queueCount(status, "dead_letter")}
+        delivered={queueCount(status, "delivered")}
+        workerRunning={Boolean(worker?.running)}
+      />
+
+      <div className="trend-grid">
+        <div className="panel trend-card">
+          <div className="trend-head">
+            <span className="trend-label">Queue depth</span>
+            <span className="trend-value mono">{pendingNow}</span>
+          </div>
+          <Sparkline data={pendingHistory} width={220} height={40} stroke="var(--st-waiting)"
+            ariaLabel={`Queue depth trend, now ${pendingNow}`} />
+        </div>
+        <div className="panel trend-card">
+          <div className="trend-head">
+            <span className="trend-label">Delivered</span>
+            <span className="trend-value mono">{deliveredNow}</span>
+          </div>
+          <Sparkline data={deliveredHistory} width={220} height={40} stroke="var(--st-flowing)"
+            fill="color-mix(in srgb, var(--st-flowing) 18%, transparent)"
+            ariaLabel={`Delivered trend, now ${deliveredNow}`} />
+        </div>
+      </div>
 
       <div className="health-grid">
         <HealthCard
@@ -158,8 +221,8 @@ export default function Overview() {
           label="Unresolved drift"
           tone={status && status.unresolved_drift > 0 ? "red" : "green"}
           value={status?.unresolved_drift ?? "—"}
-          sub="open drift reports"
-          to="/drift"
+          sub="open schema changes"
+          to="/schema"
         />
       </div>
 
@@ -241,7 +304,7 @@ export default function Overview() {
             {status && status.entities.length === 0 && (
               <tr>
                 <td colSpan={7} className="dim">
-                  No entities yet — run discovery from the Onboarding Wizard.
+                  No tables connected yet — go to <Link to="/tables">Tables</Link> to onboard them.
                 </td>
               </tr>
             )}

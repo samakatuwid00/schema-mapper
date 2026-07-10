@@ -35,12 +35,12 @@
 - [x] 5.4 New `Tables.tsx`: table list with one state + one action each, checkbox multi-select, "Onboard selected", result buckets
 - [x] 5.5 Mapping review: proposal picker list (no typed ids) and inline review drawer
 - [x] 5.6 Merge `SchemaScanner.tsx` + `DriftReports.tsx` into `SchemaChanges.tsx`; collapse raw JSON behind details
-- [ ] 5.7 Overview: animated source → queue → staging pipeline diagram + inline SVG sparklines
+- [x] 5.7 Overview: animated source → queue → staging pipeline diagram + inline SVG sparklines
 - [x] 5.8 Frontend tests: nav groups render, labels map internal → presented, status colors unique, guarded tiers still enforced
 
 ## 6. Verification and docs
 
-- [ ] 6.1 `npm run build` and `npm test -- --run` clean
+- [x] 6.1 `npm run build` and `npm test -- --run` clean
 - [ ] 6.2 E2E on the Docker stack: log in, bulk onboard all tables, verify the four buckets, open Data Browser, verify staging rows match source via Compare
 - [ ] 6.3 Prove non-destructiveness: after bulk onboard over an already-deployed table, its staging rows survive and no unexpected snapshot/drop occurred
 - [ ] 6.4 Accessibility pass: body text ≥ 4.5:1 contrast, visible focus rings, usable under `prefers-reduced-motion: reduce`
