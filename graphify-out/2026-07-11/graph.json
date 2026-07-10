@@ -10,7 +10,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "example_run_demo",
-      "community": 104,
+      "community": 106,
       "norm_label": "run_demo.py"
     },
     {
@@ -20,7 +20,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "example_run_demo_our_central_schema",
-      "community": 104,
+      "community": 106,
       "norm_label": "our_central_schema()"
     },
     {
@@ -30,7 +30,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "example_run_demo_load_their_schema",
-      "community": 104,
+      "community": 106,
       "norm_label": "load_their_schema()"
     },
     {
@@ -40,7 +40,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "example_run_demo_get_mapping",
-      "community": 104,
+      "community": 106,
       "norm_label": "get_mapping()"
     },
     {
@@ -50,7 +50,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "example_run_demo_main",
-      "community": 104,
+      "community": 106,
       "norm_label": "main()"
     },
     {
@@ -60,7 +60,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "example_run_demo_rationale_1",
-      "community": 104,
+      "community": 106,
       "norm_label": "end-to-end demo of the pipeline using fake data, so you can see the whole flow b"
     },
     {
@@ -70,7 +70,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "example_run_demo_rationale_24",
-      "community": 104,
+      "community": 106,
       "norm_label": "this is your schema -- stable, never changes per target system."
     },
     {
@@ -158,86 +158,6 @@
       "id": "scripts_create_admin_user_rationale_1",
       "community": 3,
       "norm_label": "bootstrap or update an admin ui user.  usage: python scripts/create_admin_user.p"
-    },
-    {
-      "label": "init_lrmis_target.py",
-      "file_type": "code",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target",
-      "community": 98,
-      "norm_label": "init_lrmis_target.py"
-    },
-    {
-      "label": "sanitize_ddl()",
-      "file_type": "code",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L71",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target_sanitize_ddl",
-      "community": 98,
-      "norm_label": "sanitize_ddl()"
-    },
-    {
-      "label": "_root_config()",
-      "file_type": "code",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L101",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target_root_config",
-      "community": 98,
-      "norm_label": "_root_config()"
-    },
-    {
-      "label": "iter_seed_statements()",
-      "file_type": "code",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L111",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target_iter_seed_statements",
-      "community": 98,
-      "norm_label": "iter_seed_statements()"
-    },
-    {
-      "label": "main()",
-      "file_type": "code",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L137",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target_main",
-      "community": 98,
-      "norm_label": "main()"
-    },
-    {
-      "label": "Path B, Phase 1: create and seed the `lrmis_target` database.  Builds a parallel",
-      "file_type": "rationale",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target_rationale_1",
-      "community": 98,
-      "norm_label": "path b, phase 1: create and seed the `lrmis_target` database.  builds a parallel"
-    },
-    {
-      "label": "Drop degenerate self-referential FKs (a column referencing itself).      e.g. `C",
-      "file_type": "rationale",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L72",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target_rationale_72",
-      "community": 98,
-      "norm_label": "drop degenerate self-referential fks (a column referencing itself).      e.g. `c"
-    },
-    {
-      "label": "Yield complete `INSERT INTO <wanted>` statements from a mysqldump.      Streams",
-      "file_type": "rationale",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L112",
-      "_origin": "ast",
-      "id": "scripts_init_lrmis_target_rationale_112",
-      "community": 98,
-      "norm_label": "yield complete `insert into <wanted>` statements from a mysqldump.      streams"
     },
     {
       "label": "insert_sample_row.py",
@@ -356,7 +276,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_schema_monitor",
-      "community": 104,
+      "community": 0,
       "norm_label": "schema_monitor.py"
     },
     {
@@ -366,7 +286,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "scripts_schema_monitor_observe",
-      "community": 104,
+      "community": 0,
       "norm_label": "observe()"
     },
     {
@@ -376,7 +296,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "scripts_schema_monitor_main",
-      "community": 104,
+      "community": 0,
       "norm_label": "main()"
     },
     {
@@ -386,7 +306,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_schema_monitor_rationale_1",
-      "community": 104,
+      "community": 0,
       "norm_label": "observe lrmis staging metadata, record drift, and selectively pause mappings."
     },
     {
@@ -476,7 +396,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_admin_api_audit_write_audit",
-      "community": 17,
+      "community": 3,
       "norm_label": "write_audit()"
     },
     {
@@ -736,7 +656,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext",
-      "community": 17,
+      "community": 111,
       "norm_label": "jobcontext"
     },
     {
@@ -746,7 +666,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext_init",
-      "community": 17,
+      "community": 111,
       "norm_label": ".__init__()"
     },
     {
@@ -756,7 +676,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext_emit",
-      "community": 17,
+      "community": 111,
       "norm_label": ".emit()"
     },
     {
@@ -766,7 +686,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobcontext_progress",
-      "community": 17,
+      "community": 111,
       "norm_label": ".progress()"
     },
     {
@@ -776,7 +696,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_schema_scan",
-      "community": 17,
+      "community": 111,
       "norm_label": "_h_schema_scan()"
     },
     {
@@ -826,7 +746,7 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "src_admin_api_jobs_normalize_tables",
-      "community": 17,
+      "community": 111,
       "norm_label": "_normalize_tables()"
     },
     {
@@ -836,7 +756,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_onboard_bulk",
-      "community": 17,
+      "community": 111,
       "norm_label": "_h_onboard_bulk()"
     },
     {
@@ -866,7 +786,7 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_refresh",
-      "community": 17,
+      "community": 111,
       "norm_label": "_h_refresh()"
     },
     {
@@ -876,7 +796,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_refresh_all",
-      "community": 16,
+      "community": 111,
       "norm_label": "_h_refresh_all()"
     },
     {
@@ -916,7 +836,7 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_admin_api_jobs_h_cancel_queue",
-      "community": 16,
+      "community": 17,
       "norm_label": "_h_cancel_queue()"
     },
     {
@@ -936,7 +856,7 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "src_admin_api_jobs_scope",
-      "community": 17,
+      "community": 97,
       "norm_label": "_scope()"
     },
     {
@@ -946,7 +866,7 @@
       "source_location": "L207",
       "_origin": "ast",
       "id": "src_admin_api_jobs_enqueue",
-      "community": 17,
+      "community": 97,
       "norm_label": "enqueue()"
     },
     {
@@ -956,7 +876,7 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "src_admin_api_jobs_get_job",
-      "community": 38,
+      "community": 17,
       "norm_label": "get_job()"
     },
     {
@@ -996,7 +916,7 @@
       "source_location": "L292",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner",
-      "community": 17,
+      "community": 97,
       "norm_label": "jobrunner"
     },
     {
@@ -1006,7 +926,7 @@
       "source_location": "L293",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_init",
-      "community": 17,
+      "community": 97,
       "norm_label": ".__init__()"
     },
     {
@@ -1016,7 +936,7 @@
       "source_location": "L304",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_start",
-      "community": 17,
+      "community": 97,
       "norm_label": ".start()"
     },
     {
@@ -1026,7 +946,7 @@
       "source_location": "L308",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_stop",
-      "community": 17,
+      "community": 97,
       "norm_label": ".stop()"
     },
     {
@@ -1036,7 +956,7 @@
       "source_location": "L312",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_wake",
-      "community": 17,
+      "community": 97,
       "norm_label": ".wake()"
     },
     {
@@ -1046,7 +966,7 @@
       "source_location": "L315",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_claim",
-      "community": 17,
+      "community": 97,
       "norm_label": "._claim()"
     },
     {
@@ -1056,7 +976,7 @@
       "source_location": "L333",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_reap",
-      "community": 17,
+      "community": 97,
       "norm_label": "._reap()"
     },
     {
@@ -1066,7 +986,7 @@
       "source_location": "L349",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_dispatch_loop",
-      "community": 17,
+      "community": 97,
       "norm_label": "._dispatch_loop()"
     },
     {
@@ -1076,7 +996,7 @@
       "source_location": "L366",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_heartbeat_loop",
-      "community": 17,
+      "community": 97,
       "norm_label": "._heartbeat_loop()"
     },
     {
@@ -1086,7 +1006,7 @@
       "source_location": "L383",
       "_origin": "ast",
       "id": "src_admin_api_jobs_jobrunner_run",
-      "community": 17,
+      "community": 111,
       "norm_label": "._run()"
     },
     {
@@ -1096,7 +1016,7 @@
       "source_location": "L420",
       "_origin": "ast",
       "id": "src_admin_api_jobs_runner",
-      "community": 17,
+      "community": 97,
       "norm_label": "runner()"
     },
     {
@@ -1106,7 +1026,7 @@
       "source_location": "L432",
       "_origin": "ast",
       "id": "src_admin_api_jobs_workercontroller",
-      "community": 17,
+      "community": 97,
       "norm_label": "workercontroller"
     },
     {
@@ -1116,7 +1036,7 @@
       "source_location": "L433",
       "_origin": "ast",
       "id": "src_admin_api_jobs_workercontroller_init",
-      "community": 17,
+      "community": 97,
       "norm_label": ".__init__()"
     },
     {
@@ -1126,7 +1046,7 @@
       "source_location": "L439",
       "_origin": "ast",
       "id": "src_admin_api_jobs_workercontroller_start",
-      "community": 17,
+      "community": 97,
       "norm_label": ".start()"
     },
     {
@@ -1136,7 +1056,7 @@
       "source_location": "L460",
       "_origin": "ast",
       "id": "src_admin_api_jobs_workercontroller_stop",
-      "community": 17,
+      "community": 97,
       "norm_label": ".stop()"
     },
     {
@@ -1146,7 +1066,7 @@
       "source_location": "L468",
       "_origin": "ast",
       "id": "src_admin_api_jobs_workercontroller_status",
-      "community": 17,
+      "community": 97,
       "norm_label": ".status()"
     },
     {
@@ -2476,7 +2396,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable",
-      "community": 21,
+      "community": 98,
       "norm_label": "lrmistable"
     },
     {
@@ -2486,7 +2406,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_primary_key",
-      "community": 21,
+      "community": 98,
       "norm_label": ".primary_key()"
     },
     {
@@ -2496,7 +2416,7 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_auto_increment_column",
-      "community": 21,
+      "community": 98,
       "norm_label": ".auto_increment_column()"
     },
     {
@@ -2506,7 +2426,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmistable_get_column",
-      "community": 21,
+      "community": 98,
       "norm_label": ".get_column()"
     },
     {
@@ -2526,7 +2446,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "src_lrmis_registry_parse_ddl",
-      "community": 85,
+      "community": 98,
       "norm_label": "parse_ddl()"
     },
     {
@@ -2566,7 +2486,7 @@
       "source_location": "L148",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_init",
-      "community": 21,
+      "community": 98,
       "norm_label": ".__init__()"
     },
     {
@@ -2596,7 +2516,7 @@
       "source_location": "L167",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_from_information_schema",
-      "community": 21,
+      "community": 98,
       "norm_label": ".from_information_schema()"
     },
     {
@@ -2656,7 +2576,7 @@
       "source_location": "L211",
       "_origin": "ast",
       "id": "src_lrmis_registry_lrmisregistry_foreign_keys",
-      "community": 98,
+      "community": 21,
       "norm_label": ".foreign_keys()"
     },
     {
@@ -2796,7 +2716,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "src_lrmis_registry_rationale_105",
-      "community": 85,
+      "community": 98,
       "norm_label": "parse create table blocks out of a mysql dump."
     },
     {
@@ -2816,7 +2736,7 @@
       "source_location": "L168",
       "_origin": "ast",
       "id": "src_lrmis_registry_rationale_168",
-      "community": 21,
+      "community": 98,
       "norm_label": "fallback when the ddl file is unavailable: read the live database."
     },
     {
@@ -2876,7 +2796,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "src_lrmis_writer_writererror",
-      "community": 105,
+      "community": 110,
       "norm_label": "writererror"
     },
     {
@@ -2886,7 +2806,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "src_lrmis_writer_py_runtimeerror",
-      "community": 105,
+      "community": 110,
       "norm_label": "runtimeerror"
     },
     {
@@ -2896,7 +2816,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "src_lrmis_writer_referencerownotfound",
-      "community": 15,
+      "community": 110,
       "norm_label": "referencerownotfound"
     },
     {
@@ -2906,7 +2826,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "src_lrmis_writer_unknowntargettable",
-      "community": 105,
+      "community": 15,
       "norm_label": "unknowntargettable"
     },
     {
@@ -2916,7 +2836,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_lrmis_writer_group_by_table",
-      "community": 110,
+      "community": 99,
       "norm_label": "group_by_table()"
     },
     {
@@ -2986,7 +2906,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "src_lrmis_writer_resolve_reference_id",
-      "community": 99,
+      "community": 110,
       "norm_label": "resolve_reference_id()"
     },
     {
@@ -2996,7 +2916,7 @@
       "source_location": "L200",
       "_origin": "ast",
       "id": "src_lrmis_writer_apply_foreign_keys",
-      "community": 99,
+      "community": 21,
       "norm_label": "_apply_foreign_keys()"
     },
     {
@@ -3036,7 +2956,7 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "src_lrmis_writer_write_source_row",
-      "community": 99,
+      "community": 15,
       "norm_label": "write_source_row()"
     },
     {
@@ -3066,7 +2986,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_52",
-      "community": 105,
+      "community": 110,
       "norm_label": "base class for multi-table write failures."
     },
     {
@@ -3076,7 +2996,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_56",
-      "community": 15,
+      "community": 110,
       "norm_label": "a read-only reference row (e.g. psgc) could not be resolved."
     },
     {
@@ -3086,7 +3006,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_60",
-      "community": 105,
+      "community": 15,
       "norm_label": "a mapping names a table that is not part of the lrmis schema."
     },
     {
@@ -3096,7 +3016,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_64",
-      "community": 110,
+      "community": 99,
       "norm_label": "group column mappings by their `target_table`."
     },
     {
@@ -3126,7 +3046,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_156",
-      "community": 99,
+      "community": 110,
       "norm_label": "find an existing row's primary key; never insert.      if the mapping already su"
     },
     {
@@ -3136,7 +3056,7 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_202",
-      "community": 99,
+      "community": 21,
       "norm_label": "fill fk columns from parents written earlier in this row's fan-out."
     },
     {
@@ -3156,7 +3076,7 @@
       "source_location": "L273",
       "_origin": "ast",
       "id": "src_lrmis_writer_rationale_273",
-      "community": 99,
+      "community": 15,
       "norm_label": "write one source row across n lrmis tables; return {table: target_id}."
     },
     {
@@ -3176,7 +3096,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_mapping_engine",
-      "community": 104,
+      "community": 109,
       "norm_label": "mapping_engine.py"
     },
     {
@@ -3186,7 +3106,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "src_mapping_engine_fieldmapping",
-      "community": 104,
+      "community": 106,
       "norm_label": "fieldmapping"
     },
     {
@@ -3196,7 +3116,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "src_mapping_engine_format_columns",
-      "community": 104,
+      "community": 109,
       "norm_label": "_format_columns()"
     },
     {
@@ -3206,7 +3126,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "src_mapping_engine_format_target_tables",
-      "community": 104,
+      "community": 109,
       "norm_label": "_format_target_tables()"
     },
     {
@@ -3216,7 +3136,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "src_mapping_engine_propose_mapping",
-      "community": 104,
+      "community": 109,
       "norm_label": "propose_mapping()"
     },
     {
@@ -3226,7 +3146,7 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "src_mapping_engine_mapping_to_dicts",
-      "community": 104,
+      "community": 5,
       "norm_label": "mapping_to_dicts()"
     },
     {
@@ -3236,7 +3156,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_mapping_engine_rationale_1",
-      "community": 104,
+      "community": 109,
       "norm_label": "calls google gemini to propose a field-to-field mapping between one of your cent"
     },
     {
@@ -3246,7 +3166,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "src_mapping_engine_rationale_97",
-      "community": 104,
+      "community": 109,
       "norm_label": "returns one fieldmapping per source column. requires gemini_api_key (or     goog"
     },
     {
@@ -3296,7 +3216,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_mapping_store",
-      "community": 104,
+      "community": 106,
       "norm_label": "mapping_store.py"
     },
     {
@@ -3306,7 +3226,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_mapping_store_split_by_confidence",
-      "community": 104,
+      "community": 106,
       "norm_label": "split_by_confidence()"
     },
     {
@@ -3316,7 +3236,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "src_mapping_store_load_active_config",
-      "community": 104,
+      "community": 106,
       "norm_label": "load_active_config()"
     },
     {
@@ -3326,7 +3246,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_mapping_store_save_active_config",
-      "community": 104,
+      "community": 106,
       "norm_label": "save_active_config()"
     },
     {
@@ -3336,7 +3256,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_mapping_store_apply_auto_matches",
-      "community": 104,
+      "community": 106,
       "norm_label": "apply_auto_matches()"
     },
     {
@@ -3346,7 +3266,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "src_mapping_store_push_to_review_queue",
-      "community": 104,
+      "community": 106,
       "norm_label": "push_to_review_queue()"
     },
     {
@@ -3356,7 +3276,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_mapping_store_resolve_review_item",
-      "community": 104,
+      "community": 106,
       "norm_label": "resolve_review_item()"
     },
     {
@@ -3366,7 +3286,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_mapping_store_rationale_1",
-      "community": 104,
+      "community": 106,
       "norm_label": "owns the \"active mapping config\" -- the json file the transform engine actually"
     },
     {
@@ -3376,7 +3296,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_mapping_store_rationale_35",
-      "community": 104,
+      "community": 106,
       "norm_label": "merges newly auto-approved matches into the active config, bumping     the versi"
     },
     {
@@ -3386,7 +3306,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "src_mapping_store_rationale_60",
-      "community": 104,
+      "community": 106,
       "norm_label": "appends low-confidence / unmatched columns to a human review queue.     a human"
     },
     {
@@ -3396,7 +3316,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "src_mapping_store_rationale_86",
-      "community": 104,
+      "community": 106,
       "norm_label": "a human confirms/corrects a pending item; promotes it into the active config."
     },
     {
@@ -3436,7 +3356,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "src_pipeline_get_connection",
-      "community": 0,
+      "community": 5,
       "norm_label": "_get_connection()"
     },
     {
@@ -3446,7 +3366,7 @@
       "source_location": "",
       "_origin": "ast",
       "id": "connection",
-      "community": 0,
+      "community": 5,
       "norm_label": "connection"
     },
     {
@@ -3496,7 +3416,7 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "src_pipeline_detect_collation",
-      "community": 0,
+      "community": 5,
       "norm_label": "_detect_collation()"
     },
     {
@@ -3506,7 +3426,7 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "src_pipeline_infer_column_type",
-      "community": 97,
+      "community": 5,
       "norm_label": "_infer_column_type()"
     },
     {
@@ -3536,7 +3456,7 @@
       "source_location": "L274",
       "_origin": "ast",
       "id": "src_pipeline_target_schema",
-      "community": 5,
+      "community": 0,
       "norm_label": "_target_schema()"
     },
     {
@@ -3566,7 +3486,7 @@
       "source_location": "L319",
       "_origin": "ast",
       "id": "src_pipeline_rank_target_tables",
-      "community": 109,
+      "community": 5,
       "norm_label": "_rank_target_tables()"
     },
     {
@@ -3576,7 +3496,7 @@
       "source_location": "L345",
       "_origin": "ast",
       "id": "src_pipeline_get_or_create_entity",
-      "community": 109,
+      "community": 5,
       "norm_label": "_get_or_create_entity()"
     },
     {
@@ -3596,7 +3516,7 @@
       "source_location": "L429",
       "_origin": "ast",
       "id": "src_pipeline_cmd_discover",
-      "community": 109,
+      "community": 5,
       "norm_label": "cmd_discover()"
     },
     {
@@ -3616,7 +3536,7 @@
       "source_location": "L585",
       "_origin": "ast",
       "id": "src_pipeline_cmd_review",
-      "community": 0,
+      "community": 5,
       "norm_label": "cmd_review()"
     },
     {
@@ -3636,7 +3556,7 @@
       "source_location": "L725",
       "_origin": "ast",
       "id": "src_pipeline_cmd_deploy",
-      "community": 0,
+      "community": 5,
       "norm_label": "cmd_deploy()"
     },
     {
@@ -3646,7 +3566,7 @@
       "source_location": "L747",
       "_origin": "ast",
       "id": "src_pipeline_create_staging_table",
-      "community": 0,
+      "community": 5,
       "norm_label": "_create_staging_table()"
     },
     {
@@ -3686,7 +3606,7 @@
       "source_location": "L981",
       "_origin": "ast",
       "id": "src_pipeline_cmd_reconcile",
-      "community": 0,
+      "community": 5,
       "norm_label": "cmd_reconcile()"
     },
     {
@@ -3706,7 +3626,7 @@
       "source_location": "L1111",
       "_origin": "ast",
       "id": "src_pipeline_cmd_status",
-      "community": 0,
+      "community": 5,
       "norm_label": "cmd_status()"
     },
     {
@@ -3716,7 +3636,7 @@
       "source_location": "L1143",
       "_origin": "ast",
       "id": "src_pipeline_cmd_refresh",
-      "community": 0,
+      "community": 5,
       "norm_label": "cmd_refresh()"
     },
     {
@@ -3726,7 +3646,7 @@
       "source_location": "L1171",
       "_origin": "ast",
       "id": "src_pipeline_onboard_single_table",
-      "community": 97,
+      "community": 5,
       "norm_label": "_onboard_single_table()"
     },
     {
@@ -3736,7 +3656,7 @@
       "source_location": "L1476",
       "_origin": "ast",
       "id": "src_pipeline_cmd_onboard",
-      "community": 97,
+      "community": 5,
       "norm_label": "cmd_onboard()"
     },
     {
@@ -3746,7 +3666,7 @@
       "source_location": "L1508",
       "_origin": "ast",
       "id": "src_pipeline_main",
-      "community": 0,
+      "community": 5,
       "norm_label": "main()"
     },
     {
@@ -3776,7 +3696,7 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "src_pipeline_rationale_77",
-      "community": 0,
+      "community": 5,
       "norm_label": "extract raw connection from connector context manager."
     },
     {
@@ -3796,7 +3716,7 @@
       "source_location": "L137",
       "_origin": "ast",
       "id": "src_pipeline_rationale_137",
-      "community": 0,
+      "community": 5,
       "norm_label": "query target mysql for default collation."
     },
     {
@@ -3806,7 +3726,7 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "src_pipeline_rationale_152",
-      "community": 97,
+      "community": 5,
       "norm_label": "map target column type to mysql ddl type."
     },
     {
@@ -3836,7 +3756,7 @@
       "source_location": "L275",
       "_origin": "ast",
       "id": "src_pipeline_rationale_275",
-      "community": 5,
+      "community": 0,
       "norm_label": "get target schema from schema_version table."
     },
     {
@@ -3866,7 +3786,7 @@
       "source_location": "L320",
       "_origin": "ast",
       "id": "src_pipeline_rationale_320",
-      "community": 109,
+      "community": 5,
       "norm_label": "rank target tables by name similarity to source table."
     },
     {
@@ -3876,7 +3796,7 @@
       "source_location": "L353",
       "_origin": "ast",
       "id": "src_pipeline_rationale_353",
-      "community": 109,
+      "community": 5,
       "norm_label": "get existing or create new onboarding entity."
     },
     {
@@ -3896,7 +3816,7 @@
       "source_location": "L430",
       "_origin": "ast",
       "id": "src_pipeline_rationale_430",
-      "community": 109,
+      "community": 5,
       "norm_label": "discover source tables and suggest target candidates."
     },
     {
@@ -3916,7 +3836,7 @@
       "source_location": "L586",
       "_origin": "ast",
       "id": "src_pipeline_rationale_586",
-      "community": 0,
+      "community": 5,
       "norm_label": "review a proposal's mappings."
     },
     {
@@ -3936,7 +3856,7 @@
       "source_location": "L726",
       "_origin": "ast",
       "id": "src_pipeline_rationale_726",
-      "community": 0,
+      "community": 5,
       "norm_label": "deploy a proposal: create staging table, trigger, and enable entity."
     },
     {
@@ -3946,7 +3866,7 @@
       "source_location": "L749",
       "_origin": "ast",
       "id": "src_pipeline_rationale_749",
-      "community": 0,
+      "community": 5,
       "norm_label": "create the mysql staging table with proper schema."
     },
     {
@@ -3976,7 +3896,7 @@
       "source_location": "L982",
       "_origin": "ast",
       "id": "src_pipeline_rationale_982",
-      "community": 0,
+      "community": 5,
       "norm_label": "reconcile external references and payload checksums between central and staging."
     },
     {
@@ -3996,7 +3916,7 @@
       "source_location": "L1112",
       "_origin": "ast",
       "id": "src_pipeline_rationale_1112",
-      "community": 0,
+      "community": 5,
       "norm_label": "show onboarding status for all entities."
     },
     {
@@ -4006,7 +3926,7 @@
       "source_location": "L1144",
       "_origin": "ast",
       "id": "src_pipeline_rationale_1144",
-      "community": 0,
+      "community": 5,
       "norm_label": "refresh staging tables by dropping and recreating with fresh data."
     },
     {
@@ -4016,7 +3936,7 @@
       "source_location": "L1182",
       "_origin": "ast",
       "id": "src_pipeline_rationale_1182",
-      "community": 97,
+      "community": 5,
       "norm_label": "onboard a single table end-to-end. returns result dict."
     },
     {
@@ -4026,7 +3946,7 @@
       "source_location": "L1477",
       "_origin": "ast",
       "id": "src_pipeline_rationale_1477",
-      "community": 97,
+      "community": 5,
       "norm_label": "onboard one or more tables end-to-end."
     },
     {
@@ -4036,7 +3956,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_schema_drift",
-      "community": 104,
+      "community": 0,
       "norm_label": "schema_drift.py"
     },
     {
@@ -4046,7 +3966,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_schema_drift_diff_schemas",
-      "community": 104,
+      "community": 0,
       "norm_label": "diff_schemas()"
     },
     {
@@ -4056,7 +3976,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "src_schema_drift_impacted_entities",
-      "community": 104,
+      "community": 0,
       "norm_label": "impacted_entities()"
     },
     {
@@ -4066,7 +3986,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "src_schema_drift_record_drift",
-      "community": 104,
+      "community": 0,
       "norm_label": "record_drift()"
     },
     {
@@ -4076,7 +3996,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_schema_drift_rationale_1",
-      "community": 104,
+      "community": 0,
       "norm_label": "schema comparison and selective pause policy."
     },
     {
@@ -4126,7 +4046,7 @@
       "source_location": "L115",
       "_origin": "ast",
       "id": "src_schema_ingest_from_information_schema",
-      "community": 104,
+      "community": 0,
       "norm_label": "from_information_schema()"
     },
     {
@@ -4196,7 +4116,7 @@
       "source_location": "L116",
       "_origin": "ast",
       "id": "src_schema_ingest_rationale_116",
-      "community": 104,
+      "community": 0,
       "norm_label": "normalize postgresql/mysql information_schema.columns rows."
     },
     {
@@ -4236,7 +4156,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_schema_models_column",
-      "community": 104,
+      "community": 0,
       "norm_label": "column"
     },
     {
@@ -4246,7 +4166,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_schema_models_table",
-      "community": 104,
+      "community": 109,
       "norm_label": "table"
     },
     {
@@ -4256,7 +4176,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "src_schema_models_table_column_names",
-      "community": 104,
+      "community": 109,
       "norm_label": ".column_names()"
     },
     {
@@ -4266,7 +4186,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_schema_models_table_get_column",
-      "community": 104,
+      "community": 0,
       "norm_label": ".get_column()"
     },
     {
@@ -4286,7 +4206,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "src_schema_models_schema_get_table",
-      "community": 104,
+      "community": 109,
       "norm_label": ".get_table()"
     },
     {
@@ -4316,7 +4236,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "src_schema_models_schema_from_dict",
-      "community": 104,
+      "community": 0,
       "norm_label": ".from_dict()"
     },
     {
@@ -4326,7 +4246,7 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "src_schema_models_schema_from_json",
-      "community": 104,
+      "community": 0,
       "norm_label": ".from_json()"
     },
     {
@@ -4396,7 +4316,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_services_common_notfounderror",
-      "community": 38,
+      "community": 17,
       "norm_label": "notfounderror"
     },
     {
@@ -4416,7 +4336,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_services_common_validationerror",
-      "community": 16,
+      "community": 29,
       "norm_label": "validationerror"
     },
     {
@@ -4446,7 +4366,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_services_common_rationale_10",
-      "community": 38,
+      "community": 17,
       "norm_label": "requested entity/proposal/event does not exist."
     },
     {
@@ -4466,7 +4386,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_services_common_rationale_18",
-      "community": 16,
+      "community": 29,
       "norm_label": "input or state precondition failed (maps to http 422)."
     },
     {
@@ -4756,7 +4676,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_onboarding",
-      "community": 104,
+      "community": 17,
       "norm_label": "onboarding.py"
     },
     {
@@ -4766,7 +4686,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "src_services_onboarding_pipeline",
-      "community": 104,
+      "community": 17,
       "norm_label": "_pipeline()"
     },
     {
@@ -4776,7 +4696,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "src_services_onboarding_discover",
-      "community": 104,
+      "community": 17,
       "norm_label": "discover()"
     },
     {
@@ -4786,7 +4706,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_services_onboarding_propose",
-      "community": 104,
+      "community": 17,
       "norm_label": "propose()"
     },
     {
@@ -4806,7 +4726,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "src_services_onboarding_resolve",
-      "community": 104,
+      "community": 17,
       "norm_label": "resolve()"
     },
     {
@@ -4816,7 +4736,7 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "src_services_onboarding_deploy",
-      "community": 100,
+      "community": 17,
       "norm_label": "deploy()"
     },
     {
@@ -4826,7 +4746,7 @@
       "source_location": "L381",
       "_origin": "ast",
       "id": "src_services_onboarding_onboard_bulk",
-      "community": 104,
+      "community": 17,
       "norm_label": "onboard_bulk()"
     },
     {
@@ -4836,7 +4756,7 @@
       "source_location": "L477",
       "_origin": "ast",
       "id": "src_services_onboarding_backfill",
-      "community": 104,
+      "community": 17,
       "norm_label": "backfill()"
     },
     {
@@ -4846,7 +4766,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_onboarding_rationale_1",
-      "community": 104,
+      "community": 17,
       "norm_label": "onboarding workflow services: discover, propose, review, resolve, deploy, backfi"
     },
     {
@@ -4856,7 +4776,7 @@
       "source_location": "L385",
       "_origin": "ast",
       "id": "src_services_onboarding_rationale_385",
-      "community": 104,
+      "community": 17,
       "norm_label": "onboard many tables in one guarded pass (bulk-onboarding spec).      conservativ"
     },
     {
@@ -5036,7 +4956,7 @@
       "source_location": "L533",
       "_origin": "ast",
       "id": "src_services_ops_refresh",
-      "community": 6,
+      "community": 112,
       "norm_label": "refresh()"
     },
     {
@@ -5126,7 +5046,7 @@
       "source_location": "L539",
       "_origin": "ast",
       "id": "src_services_ops_rationale_539",
-      "community": 6,
+      "community": 112,
       "norm_label": "drop + recreate + reload staging tables, snapshotting each before the drop."
     },
     {
@@ -5136,7 +5056,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_scan",
-      "community": 104,
+      "community": 0,
       "norm_label": "scan.py"
     },
     {
@@ -5146,7 +5066,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "src_services_scan_observe_target",
-      "community": 104,
+      "community": 0,
       "norm_label": "observe_target()"
     },
     {
@@ -5156,7 +5076,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_services_scan_scan",
-      "community": 104,
+      "community": 0,
       "norm_label": "scan()"
     },
     {
@@ -5166,7 +5086,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_scan_rationale_1",
-      "community": 104,
+      "community": 0,
       "norm_label": "schema scanning: fingerprint source + target, record drift, report paused entiti"
     },
     {
@@ -5176,7 +5096,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_services_scan_rationale_22",
-      "community": 104,
+      "community": 0,
       "norm_label": "fingerprint the mysql staging contract and record drift against the last version"
     },
     {
@@ -5186,7 +5106,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "src_services_scan_rationale_66",
-      "community": 104,
+      "community": 0,
       "norm_label": "full scan: observe the target contract, then drift-check every deployed entity."
     },
     {
@@ -5526,7 +5446,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_terminal_ui",
-      "community": 97,
+      "community": 5,
       "norm_label": "terminal_ui.py"
     },
     {
@@ -5536,7 +5456,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_terminal_ui_print_header",
-      "community": 97,
+      "community": 5,
       "norm_label": "print_header()"
     },
     {
@@ -5546,7 +5466,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_terminal_ui_print_field_mapping_table",
-      "community": 97,
+      "community": 5,
       "norm_label": "print_field_mapping_table()"
     },
     {
@@ -5556,7 +5476,7 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "src_terminal_ui_prompt_yes_no",
-      "community": 97,
+      "community": 5,
       "norm_label": "prompt_yes_no()"
     },
     {
@@ -5566,7 +5486,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "src_terminal_ui_prompt_choice",
-      "community": 97,
+      "community": 5,
       "norm_label": "prompt_choice()"
     },
     {
@@ -5576,7 +5496,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "src_terminal_ui_prompt_text",
-      "community": 97,
+      "community": 5,
       "norm_label": "prompt_text()"
     },
     {
@@ -5586,7 +5506,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "src_terminal_ui_print_progress",
-      "community": 97,
+      "community": 5,
       "norm_label": "print_progress()"
     },
     {
@@ -5596,7 +5516,7 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "src_terminal_ui_print_deployment_summary",
-      "community": 97,
+      "community": 5,
       "norm_label": "print_deployment_summary()"
     },
     {
@@ -5606,7 +5526,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "src_terminal_ui_print_cross_table_candidates",
-      "community": 97,
+      "community": 5,
       "norm_label": "print_cross_table_candidates()"
     },
     {
@@ -5616,7 +5536,7 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "src_terminal_ui_print_final_summary",
-      "community": 97,
+      "community": 5,
       "norm_label": "print_final_summary()"
     },
     {
@@ -5626,7 +5546,7 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_terminal_ui_print_onboarding_status",
-      "community": 0,
+      "community": 5,
       "norm_label": "print_onboarding_status()"
     },
     {
@@ -5636,7 +5556,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_terminal_ui_rationale_1",
-      "community": 97,
+      "community": 5,
       "norm_label": "terminal ui helpers for interactive schema mapper.  uses rich library for beauti"
     },
     {
@@ -5646,7 +5566,7 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "src_terminal_ui_rationale_158",
-      "community": 0,
+      "community": 5,
       "norm_label": "print onboarding status tables."
     },
     {
@@ -5906,7 +5826,7 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_enqueue_validates_type_before_db",
-      "community": 16,
+      "community": 18,
       "norm_label": "test_enqueue_validates_type_before_db()"
     },
     {
@@ -5986,7 +5906,7 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_onboard_bulk_rejects_empty_table_list",
-      "community": 18,
+      "community": 111,
       "norm_label": "test_onboard_bulk_rejects_empty_table_list()"
     },
     {
@@ -6076,7 +5996,7 @@
       "source_location": "L237",
       "_origin": "ast",
       "id": "tests_test_admin_api_test_migration_sql_readable_for_managed_files",
-      "community": 18,
+      "community": 38,
       "norm_label": "test_migration_sql_readable_for_managed_files()"
     },
     {
@@ -6096,7 +6016,7 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "tests_test_admin_api_rationale_158",
-      "community": 18,
+      "community": 111,
       "norm_label": "the handler must refuse an empty batch rather than 'succeed' on nothing."
     },
     {
@@ -6116,7 +6036,7 @@
       "source_location": "L238",
       "_origin": "ast",
       "id": "tests_test_admin_api_rationale_238",
-      "community": 18,
+      "community": 38,
       "norm_label": "assert on named files; keyed off migration_files[-1] this broke whenever     a n"
     },
     {
@@ -6340,96 +6260,6 @@
       "norm_label": "data browser: allowlisting, clamping, and identifier safety.  runs without a dat"
     },
     {
-      "label": "test_init_lrmis_target.py",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target",
-      "community": 106,
-      "norm_label": "test_init_lrmis_target.py"
-    },
-    {
-      "label": "test_strips_degenerate_self_fk()",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L41",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_test_strips_degenerate_self_fk",
-      "community": 106,
-      "norm_label": "test_strips_degenerate_self_fk()"
-    },
-    {
-      "label": "test_no_dangling_comma_after_strip()",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L47",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_test_no_dangling_comma_after_strip",
-      "community": 106,
-      "norm_label": "test_no_dangling_comma_after_strip()"
-    },
-    {
-      "label": "test_keeps_legitimate_self_reference()",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L54",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_test_keeps_legitimate_self_reference",
-      "community": 106,
-      "norm_label": "test_keeps_legitimate_self_reference()"
-    },
-    {
-      "label": "test_ddl_without_degenerate_fk_is_unchanged()",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L60",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_test_ddl_without_degenerate_fk_is_unchanged",
-      "community": 106,
-      "norm_label": "test_ddl_without_degenerate_fk_is_unchanged()"
-    },
-    {
-      "label": "test_extracts_only_wanted_tables()",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L79",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_test_extracts_only_wanted_tables",
-      "community": 106,
-      "norm_label": "test_extracts_only_wanted_tables()"
-    },
-    {
-      "label": "test_multiline_statement_captured_whole()",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L89",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_test_multiline_statement_captured_whole",
-      "community": 106,
-      "norm_label": "test_multiline_statement_captured_whole()"
-    },
-    {
-      "label": "test_seed_tables_are_all_in_the_schema()",
-      "file_type": "code",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L97",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_test_seed_tables_are_all_in_the_schema",
-      "community": 106,
-      "norm_label": "test_seed_tables_are_all_in_the_schema()"
-    },
-    {
-      "label": "Phase 1 setup helpers: degenerate-FK stripping and seed extraction.  Pure-logic",
-      "file_type": "rationale",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "tests_test_init_lrmis_target_rationale_1",
-      "community": 106,
-      "norm_label": "phase 1 setup helpers: degenerate-fk stripping and seed extraction.  pure-logic"
-    },
-    {
       "label": "test_integration_core.py",
       "file_type": "code",
       "source_file": "tests/test_integration_core.py",
@@ -6456,7 +6286,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_test_integration_core_test_mysql_information_schema_normalization",
-      "community": 104,
+      "community": 0,
       "norm_label": "test_mysql_information_schema_normalization()"
     },
     {
@@ -6506,7 +6336,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "tests_test_lrmis_registry_registry",
-      "community": 85,
+      "community": 98,
       "norm_label": "registry()"
     },
     {
@@ -6836,7 +6666,7 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_group_by_table_splits_columns",
-      "community": 110,
+      "community": 99,
       "norm_label": "test_group_by_table_splits_columns()"
     },
     {
@@ -6866,7 +6696,7 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_unresolvable_reference_row_raises_rather_than_inserting",
-      "community": 15,
+      "community": 110,
       "norm_label": "test_unresolvable_reference_row_raises_rather_than_inserting()"
     },
     {
@@ -6876,7 +6706,7 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_reference_row_with_missing_pk_raises",
-      "community": 15,
+      "community": 110,
       "norm_label": "test_reference_row_with_missing_pk_raises()"
     },
     {
@@ -6886,7 +6716,7 @@
       "source_location": "L183",
       "_origin": "ast",
       "id": "tests_test_lrmis_writer_test_reference_row_without_any_lookup_value_raises",
-      "community": 15,
+      "community": 110,
       "norm_label": "test_reference_row_without_any_lookup_value_raises()"
     },
     {
@@ -7066,7 +6896,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_mapping_engine",
-      "community": 104,
+      "community": 109,
       "norm_label": "test_mapping_engine.py"
     },
     {
@@ -7086,7 +6916,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_models",
-      "community": 104,
+      "community": 109,
       "norm_label": "_models"
     },
     {
@@ -7096,7 +6926,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_models_init",
-      "community": 104,
+      "community": 109,
       "norm_label": ".__init__()"
     },
     {
@@ -7106,7 +6936,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_models_generate_content",
-      "community": 104,
+      "community": 109,
       "norm_label": ".generate_content()"
     },
     {
@@ -7116,7 +6946,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_client",
-      "community": 104,
+      "community": 109,
       "norm_label": "_client"
     },
     {
@@ -7126,7 +6956,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_client_init",
-      "community": 104,
+      "community": 109,
       "norm_label": ".__init__()"
     },
     {
@@ -7136,7 +6966,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "tests_test_mapping_engine_test_gemini_mapping_uses_structured_json",
-      "community": 104,
+      "community": 109,
       "norm_label": "test_gemini_mapping_uses_structured_json()"
     },
     {
@@ -7386,7 +7216,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_schema_drift",
-      "community": 104,
+      "community": 0,
       "norm_label": "test_schema_drift.py"
     },
     {
@@ -7396,7 +7226,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_test_schema_drift_schema",
-      "community": 104,
+      "community": 0,
       "norm_label": "schema()"
     },
     {
@@ -7406,7 +7236,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_test_schema_drift_test_optional_column_is_non_breaking",
-      "community": 104,
+      "community": 0,
       "norm_label": "test_optional_column_is_non_breaking()"
     },
     {
@@ -7416,7 +7246,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "tests_test_schema_drift_test_required_column_is_breaking",
-      "community": 104,
+      "community": 0,
       "norm_label": "test_required_column_is_breaking()"
     },
     {
@@ -7426,7 +7256,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "tests_test_schema_drift_test_type_change_and_removal_are_breaking",
-      "community": 104,
+      "community": 0,
       "norm_label": "test_type_change_and_removal_are_breaking()"
     },
     {
@@ -13762,7 +13592,7 @@
       "author": null,
       "contributor": null,
       "rationale": "AI output may create draft mapping proposals only; an administrator must approve them. No process automatically alters LRMIS staging or activates an AI-proposed mapping \u2014 human approval is the hard gate on AI-generated schema mappings.",
-      "community": 104,
+      "community": 109,
       "norm_label": "ai draft mapping proposals",
       "id": "readme_ai_mapping_proposals"
     },
@@ -13988,7 +13818,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 104,
+      "community": 109,
       "norm_label": "google-genai (official gemini sdk)",
       "id": "requirements_google_genai"
     },
@@ -14516,164 +14346,6 @@
       "weight": 1.0,
       "source": "scripts_create_admin_user_main",
       "target": "src_connectors_postgrescentralconnector",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L111",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target",
-      "target": "scripts_init_lrmis_target_iter_seed_statements",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L137",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target",
-      "target": "scripts_init_lrmis_target_main",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L101",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target",
-      "target": "scripts_init_lrmis_target_root_config",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L71",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target",
-      "target": "scripts_init_lrmis_target_sanitize_ddl",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L29",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target",
-      "target": "src_lrmis_registry",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L29",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target",
-      "target": "src_lrmis_registry_ddl_path",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L29",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target",
-      "target": "src_lrmis_registry_get_registry",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_rationale_1",
-      "target": "scripts_init_lrmis_target",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L178",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_main",
-      "target": "scripts_init_lrmis_target_sanitize_ddl",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L72",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_rationale_72",
-      "target": "scripts_init_lrmis_target_sanitize_ddl",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L163",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_main",
-      "target": "scripts_init_lrmis_target_root_config",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L191",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_main",
-      "target": "scripts_init_lrmis_target_iter_seed_statements",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L112",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_rationale_112",
-      "target": "scripts_init_lrmis_target_iter_seed_statements",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L152",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_main",
-      "target": "src_lrmis_registry_ddl_path",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/init_lrmis_target.py",
-      "source_location": "L143",
-      "weight": 1.0,
-      "source": "scripts_init_lrmis_target_main",
-      "target": "src_lrmis_registry_get_registry",
       "confidence_score": 1.0
     },
     {
@@ -22964,28 +22636,6 @@
       "source_location": "L79",
       "weight": 1.0,
       "source": "src_lrmis_writer_reg",
-      "target": "src_lrmis_registry_get_registry",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L98",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "src_lrmis_registry_get_registry",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L99",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target_test_seed_tables_are_all_in_the_schema",
       "target": "src_lrmis_registry_get_registry",
       "confidence_score": 1.0
     },
@@ -32661,86 +32311,6 @@
       "weight": 1.0,
       "source": "tests_test_data_browser_test_valid_sort_reaches_the_connector",
       "target": "tests_test_data_browser_fakestaging_fetch_rows",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L60",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "tests_test_init_lrmis_target_test_ddl_without_degenerate_fk_is_unchanged",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L79",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "tests_test_init_lrmis_target_test_extracts_only_wanted_tables",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L54",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "tests_test_init_lrmis_target_test_keeps_legitimate_self_reference",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L89",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "tests_test_init_lrmis_target_test_multiline_statement_captured_whole",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L47",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "tests_test_init_lrmis_target_test_no_dangling_comma_after_strip",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L97",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "tests_test_init_lrmis_target_test_seed_tables_are_all_in_the_schema",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L41",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target",
-      "target": "tests_test_init_lrmis_target_test_strips_degenerate_self_fk",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/test_init_lrmis_target.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "source": "tests_test_init_lrmis_target_rationale_1",
-      "target": "tests_test_init_lrmis_target",
       "confidence_score": 1.0
     },
     {
@@ -44451,5 +44021,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "676020139c89dfc94638aca58e237df0d7da3cf6"
+  "built_at_commit": "998e6e8aa538d1ec75044ca8ad744892307f5a71"
 }

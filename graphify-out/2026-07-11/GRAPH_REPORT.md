@@ -1,16 +1,16 @@
-# Graph Report - schema_mapper  (2026-07-11)
+# Graph Report - schema_mapper  (2026-07-10)
 
 ## Corpus Check
-- 151 files · ~85,317 words
+- 149 files · ~84,107 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1390 nodes · 2880 edges · 112 communities (86 shown, 26 thin omitted)
+- 1373 nodes · 2855 edges · 113 communities (87 shown, 26 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 107 edges (avg confidence: 0.61)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `67602013`
+- Built from commit: `998e6e8a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -114,6 +114,7 @@
 - labels.ts
 - group_by_table
 - WriterError
+- _h_onboard_bulk
 - refresh
 
 ## God Nodes (most connected - your core abstractions)
@@ -131,23 +132,23 @@
 ## Surprising Connections (you probably didn't know these)
 - `real_source_db (PostgreSQL 17 Real-Test Service)` --semantically_similar_to--> `central_db (PostgreSQL 16 Service)`  [INFERRED] [semantically similar]
   docker-compose.real-test.yml → docker-compose.yml
+- `test_enqueue_validates_type_before_db()` --indirect_call--> `ValidationError`  [INFERRED]
+  tests/test_admin_api.py → src/services/common.py
 - `real_target_db (MySQL 8.0.40 Real-Test Service)` --semantically_similar_to--> `lrmis_staging_db (MySQL 8.4 Service)`  [INFERRED] [semantically similar]
   docker-compose.real-test.yml → docker-compose.yml
 - `_Cursor` --uses--> `LrmisRegistry`  [INFERRED]
   tests/test_lrmis_writer.py → src/lrmis_registry.py
 - `FakeConn` --uses--> `LrmisRegistry`  [INFERRED]
   tests/test_lrmis_writer.py → src/lrmis_registry.py
-- `test_seed_tables_are_all_in_the_schema()` --calls--> `get_registry()`  [EXTRACTED]
-  tests/test_init_lrmis_target.py → src/lrmis_registry.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (112 total, 26 thin omitted)
+## Communities (113 total, 26 thin omitted)
 
 ### Community 0 - "Schema Drift Monitoring"
-Cohesion: 0.12
-Nodes (20): connection, cmd_deploy(), cmd_reconcile(), cmd_refresh(), cmd_review(), cmd_status(), _create_staging_table(), _detect_collation() (+12 more)
+Cohesion: 0.14
+Nodes (22): main(), observe(), Observe LRMIS staging metadata, record drift, and selectively pause mappings., Get target schema from schema_version table., _target_schema(), diff_schemas(), impacted_entities(), Schema comparison and selective pause policy. (+14 more)
 
 ### Community 1 - "Architecture & Deployment Docs"
 Cohesion: 0.33
@@ -159,19 +160,19 @@ Nodes (24): Event, approved_mapping(), canonical_json(), checksum(), claim_event
 
 ### Community 3 - "AI Mapping Engine"
 Cohesion: 0.05
-Nodes (83): AdminUser, BaseModel, main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, audited(), list_audit(), Uniform admin_action_audit writer for every mutating endpoint and job., Audit success or failure of the wrapped block (failure re-raises). (+75 more)
+Nodes (84): AdminUser, BaseModel, main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, audited(), list_audit(), Uniform admin_action_audit writer for every mutating endpoint and job., Audit success or failure of the wrapped block (failure re-raises). (+76 more)
 
 ### Community 4 - "Pipeline Commands & Central DB"
 Cohesion: 0.08
 Nodes (38): ApiError, getJob(), ViewProposal, AdminUser, AuditRow, CompareField, CompareResponse, CreateJobPayload (+30 more)
 
 ### Community 5 - "Terminal UI & Pipeline Entry"
-Cohesion: 0.13
-Nodes (28): cmd_backfill(), cmd_monitor(), cmd_propose(), cmd_resolve(), _create_proposal(), _create_source_trigger(), _detect_cross_table_candidates(), _discover_source_schema() (+20 more)
+Cohesion: 0.06
+Nodes (68): connection, mapping_to_dicts(), cmd_backfill(), cmd_deploy(), cmd_discover(), cmd_monitor(), cmd_onboard(), cmd_propose() (+60 more)
 
 ### Community 6 - "MySQL Staging Connector"
-Cohesion: 0.14
-Nodes (27): main(), Preview or apply the one-time entity fingerprint scope migration., PostgresCentralConnector, approve_mapping(), approve_schema(), cancel_queue(), _entity_fingerprints(), get_schema_trees() (+19 more)
+Cohesion: 0.15
+Nodes (25): main(), Preview or apply the one-time entity fingerprint scope migration., PostgresCentralConnector, approve_mapping(), approve_schema(), cancel_queue(), _entity_fingerprints(), get_schema_trees() (+17 more)
 
 ### Community 7 - "Staging Fast Refresh"
 Cohesion: 0.14
@@ -194,20 +195,20 @@ Cohesion: 0.07
 Nodes (26): dependencies, lucide-react, react, react-dom, react-router-dom, @tanstack/react-query, devDependencies, jsdom (+18 more)
 
 ### Community 15 - "Package Init"
-Cohesion: 0.17
-Nodes (27): A read-only reference row (e.g. psgc) could not be resolved., ReferenceRowNotFound, FakeConn, _mysql(), Writer: parent-first order, read-only reference tables, app-assigned ids for `st, Records SQL. `responses` is an ordered list of (marker, row) pairs;     the firs, A stateful counter mimicking allocate_id's atomic increment., The pipeline must never mint new geographic codes. (+19 more)
+Cohesion: 0.18
+Nodes (26): Write one source row across N LRMIS tables; return {table: target_id}., A mapping names a table that is not part of the LRMIS schema., UnknownTargetTable, write_source_row(), FakeConn, _mysql(), Writer: parent-first order, read-only reference tables, app-assigned ids for `st, Records SQL. `responses` is an ordered list of (marker, row) pairs;     the firs (+18 more)
 
 ### Community 16 - "ValidationError"
-Cohesion: 0.16
-Nodes (17): FastAPI, create_app(), FastAPI app factory and entrypoint (python -m src.admin_api.app)., _h_cancel_queue(), _h_refresh_all(), ConflictError, Exception, Typed exceptions shared by all services; the API maps them to HTTP codes. (+9 more)
+Cohesion: 0.21
+Nodes (12): FastAPI, create_app(), FastAPI app factory and entrypoint (python -m src.admin_api.app)., ConflictError, Exception, Typed exceptions shared by all services; the API maps them to HTTP codes., A concurrent operation holds the resource (maps to HTTP 409)., Base class for service-level failures. (+4 more)
 
 ### Community 17 - "JobRunner"
-Cohesion: 0.07
-Nodes (18): write_audit(), enqueue(), _h_backfill(), _h_deploy(), _h_discover(), _h_onboard_bulk(), _h_propose(), _h_refresh() (+10 more)
+Cohesion: 0.12
+Nodes (20): get_job(), _h_backfill(), _h_cancel_queue(), _h_deploy(), _h_discover(), _h_propose(), latest_event_id(), Durable allowlisted job orchestration (job-orchestration spec).  Jobs live in in (+12 more)
 
 ### Community 18 - "test_admin_api.py"
-Cohesion: 0.08
-Nodes (10): admin_client(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, The handler must refuse an empty batch rather than 'succeed' on nothing., Spoofed actor/by fields are ignored - identity comes from the session., Assert on named files; keyed off MIGRATION_FILES[-1] this broke whenever     a n, test_action_bodies_do_not_accept_actor_fields() (+2 more)
+Cohesion: 0.09
+Nodes (7): admin_client(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, Spoofed actor/by fields are ignored - identity comes from the session., test_action_bodies_do_not_accept_actor_fields(), test_enqueue_validates_type_before_db()
 
 ### Community 19 - "Overview.tsx"
 Cohesion: 0.19
@@ -218,8 +219,8 @@ Cohesion: 0.11
 Nodes (17): compilerOptions, isolatedModules, jsx, lib, module, moduleDetection, moduleResolution, noEmit (+9 more)
 
 ### Community 21 - "Decisions"
-Cohesion: 0.12
-Nodes (6): LrmisRegistry, LrmisTable, Fallback when the DDL file is unavailable: read the live database., The column on `table` that points at `ref_table` (first match)., True when the pipeline must not INSERT into this table.          A table whose p, Parent-first ordering. Self-loops are ignored; real cycles raise.          `subs
+Cohesion: 0.15
+Nodes (6): LrmisRegistry, The column on `table` that points at `ref_table` (first match)., True when the pipeline must not INSERT into this table.          A table whose p, Parent-first ordering. Self-loops are ignored; real cycles raise.          `subs, _apply_foreign_keys(), Fill FK columns from parents written earlier in this row's fan-out.
 
 ### Community 22 - "WorkerQueues.tsx"
 Cohesion: 0.22
@@ -250,8 +251,8 @@ Cohesion: 0.25
 Nodes (13): approveSchema(), getAudit(), getDriftReports(), SchemaSystem, CopyButton(), SchemaTree(), SchemaTreeProps, AuditLog() (+5 more)
 
 ### Community 29 - "Onboarding.tsx"
-Cohesion: 0.20
-Nodes (17): _columns_for(), compare_row(), fetch_rows(), list_browsable_tables(), _pipeline(), Read-only row access to the source and target databases (data-browser spec).  Se, Both sides' tables with column and row counts, plus the entity link., One page of rows. Size is clamped, never rejected, so a UI cannot wedge. (+9 more)
+Cohesion: 0.18
+Nodes (19): Input or state precondition failed (maps to HTTP 422)., ValidationError, _columns_for(), compare_row(), fetch_rows(), list_browsable_tables(), _pipeline(), Read-only row access to the source and target databases (data-browser spec).  Se (+11 more)
 
 ### Community 30 - "SKILL.md"
 Cohesion: 0.18
@@ -286,8 +287,8 @@ Cohesion: 0.22
 Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
 ### Community 38 - "migrations.py"
-Cohesion: 0.26
-Nodes (13): get_job(), NotFoundError, Requested entity/proposal/event does not exist., apply_migration(), _checksum(), _ensure_tracker(), list_migrations(), mark_applied() (+5 more)
+Cohesion: 0.24
+Nodes (12): apply_migration(), _checksum(), _ensure_tracker(), list_migrations(), mark_applied(), Path, Tracked, checksummed, advisory-lock-guarded SQL migration runner (central Postgr, Record a file as applied without executing it (Docker-initialized databases). (+4 more)
 
 ### Community 39 - "Add Admin Database Dashboard"
 Cohesion: 0.14
@@ -346,8 +347,8 @@ Cohesion: 0.17
 Nodes (11): migration-management Specification, Purpose, Requirement: Idempotent foundation SQL, Requirement: Safe migration apply, Requirement: Tracked migration state, Requirements, Scenario: Concurrent applies serialized, Scenario: Edited already-applied file is rejected (+3 more)
 
 ### Community 85 - "Migrations.tsx"
-Cohesion: 0.10
-Nodes (8): parse_ddl(), RuntimeError, Parse CREATE TABLE blocks out of a MySQL dump., The FK graph has a cycle that is not a simple self-reference., SchemaCycleError, Registry: DDL parsing, reference-table detection, self-loop-safe topo sort.  The, registry(), test_real_cycle_raises()
+Cohesion: 0.11
+Nodes (5): RuntimeError, The FK graph has a cycle that is not a simple self-reference., SchemaCycleError, Registry: DDL parsing, reference-table detection, self-loop-safe topo sort.  The, test_real_cycle_raises()
 
 ### Community 86 - "ADDED Requirements"
 Cohesion: 0.18
@@ -386,20 +387,20 @@ Cohesion: 0.15
 Nodes (22): _all_columns(), _all_tables(), apply_view(), _discover_fks(), _ensure_table(), _fetchval(), _find_join_path(), _generate_view_sql() (+14 more)
 
 ### Community 97 - "JobRunner"
-Cohesion: 0.16
-Nodes (15): cmd_onboard(), _infer_column_type(), _onboard_single_table(), Onboard a single table end-to-end. Returns result dict., Onboard one or more tables end-to-end., Map target column type to MySQL DDL type., print_cross_table_candidates(), print_deployment_summary() (+7 more)
+Cohesion: 0.15
+Nodes (5): enqueue(), JobRunner, runner(), _scope(), WorkerController
 
 ### Community 98 - "lrmis_registry.py"
-Cohesion: 0.12
-Nodes (19): iter_seed_statements(), main(), Path B, Phase 1: create and seed the `lrmis_target` database.  Builds a parallel, Yield complete `INSERT INTO <wanted>` statements from a mysqldump.      Streams, Drop degenerate self-referential FKs (a column referencing itself).      e.g. `C, _root_config(), sanitize_ddl(), ddl_path() (+11 more)
+Cohesion: 0.11
+Nodes (17): ddl_path(), get_registry(), _iter_create_blocks(), LrmisColumn, LrmisForeignKey, LrmisTable, _parse_block(), _parse_column() (+9 more)
 
 ### Community 99 - "lrmis_writer.py"
-Cohesion: 0.18
-Nodes (21): allocate_id(), _apply_foreign_keys(), _crosswalk_lookup(), _crosswalk_record(), crosswalk_rows_for_entity(), delete_entity_rows(), _insert(), _quote() (+13 more)
+Cohesion: 0.16
+Nodes (18): allocate_id(), _crosswalk_lookup(), _crosswalk_record(), crosswalk_rows_for_entity(), delete_entity_rows(), group_by_table(), _insert(), _quote() (+10 more)
 
 ### Community 100 - "snapshots.py"
-Cohesion: 0.22
-Nodes (16): MySQLStagingConnector, Least-privilege writer. It never creates or alters LRMIS tables., deploy(), restore_staging_snapshot(), staging_snapshots(), list_snapshots(), prune_snapshots(), _qt() (+8 more)
+Cohesion: 0.23
+Nodes (15): MySQLStagingConnector, Least-privilege writer. It never creates or alters LRMIS tables., restore_staging_snapshot(), staging_snapshots(), list_snapshots(), prune_snapshots(), _qt(), Staging-table snapshots taken before destructive drop/recreate operations. (+7 more)
 
 ### Community 101 - "JobDrawer.tsx"
 Cohesion: 0.23
@@ -414,12 +415,12 @@ Cohesion: 0.31
 Nodes (7): main(), Minimal administrator/auditor CLI; suitable for wrapping in a future web UI., set_enabled(), status(), replay(), approve(), Immutable, reviewed database-backed mapping versions.
 
 ### Community 104 - "onboarding.py"
-Cohesion: 0.06
-Nodes (80): get_mapping(), load_their_schema(), main(), our_central_schema(), End-to-end demo of the pipeline using fake data, so you can see the whole flow b, This is YOUR schema -- stable, never changes per target system., AI Draft Mapping Proposals, google-genai (Official Gemini SDK) (+72 more)
+Cohesion: 0.14
+Nodes (23): from_json_export(), _normalize_type(), parse_ddl(), Turns whatever the other system gives you (a CREATE TABLE dump, a JSON export fr, Return a stable schema document containing only the named tables.      Entity dr, Return the single-table contract used for an entity fingerprint., Lightweight parser for a static DDL dump, e.g.:          CREATE TABLE customers, Use this when the other system hands you a structured export instead     of raw (+15 more)
 
-### Community 105 - "_Cursor"
-Cohesion: 0.15
-Nodes (6): RuntimeError, Base class for multi-table write failures., A mapping names a table that is not part of the LRMIS schema., UnknownTargetTable, WriterError, _Cursor
+### Community 106 - "rebaseline_entity_fingerprints"
+Cohesion: 0.21
+Nodes (17): get_mapping(), load_their_schema(), main(), our_central_schema(), End-to-end demo of the pipeline using fake data, so you can see the whole flow b, This is YOUR schema -- stable, never changes per target system., FieldMapping, apply_auto_matches() (+9 more)
 
 ### Community 107 - "db.py"
 Cohesion: 0.40
@@ -430,16 +431,20 @@ Cohesion: 0.70
 Nodes (3): DESCRIPTIONS, label(), LABELS
 
 ### Community 109 - "group_by_table"
-Cohesion: 0.33
-Nodes (6): cmd_discover(), _get_or_create_entity(), _rank_target_tables(), Rank target tables by name similarity to source table., Get existing or create new onboarding entity., Discover source tables and suggest target candidates.
+Cohesion: 0.20
+Nodes (11): AI Draft Mapping Proposals, google-genai (Official Gemini SDK), _format_columns(), _format_target_tables(), propose_mapping(), Calls Google Gemini to propose a field-to-field mapping between one of your cent, Returns one FieldMapping per source column. Requires GEMINI_API_KEY (or     GOOG, Table (+3 more)
 
 ### Community 110 - "WriterError"
-Cohesion: 0.67
-Nodes (3): group_by_table(), Group column mappings by their `target_table`., test_group_by_table_splits_columns()
+Cohesion: 0.27
+Nodes (10): RuntimeError, Find an existing row's primary key; never insert.      If the mapping already su, Base class for multi-table write failures., A read-only reference row (e.g. psgc) could not be resolved., ReferenceRowNotFound, resolve_reference_id(), WriterError, test_reference_row_with_missing_pk_raises() (+2 more)
+
+### Community 111 - "_h_onboard_bulk"
+Cohesion: 0.21
+Nodes (8): _h_onboard_bulk(), _h_refresh(), _h_refresh_all(), _h_schema_scan(), JobContext, _normalize_tables(), The handler must refuse an empty batch rather than 'succeed' on nothing., test_onboard_bulk_rejects_empty_table_list()
 
 ### Community 112 - "refresh"
-Cohesion: 0.28
-Nodes (8): drop_staging_table(), fetch_and_bulk_insert(), generate_refresh_sql(), _qt(), Fast refresh module for dropping and recreating staging tables. Bypasses the out, Fetch from PostgreSQL and bulk insert to MySQL., Drop staging table if it exists., Generate PostgreSQL SELECT statement for refresh.
+Cohesion: 0.24
+Nodes (10): drop_staging_table(), fetch_and_bulk_insert(), generate_refresh_sql(), _qt(), Fast refresh module for dropping and recreating staging tables. Bypasses the out, Fetch from PostgreSQL and bulk insert to MySQL., Drop staging table if it exists., Generate PostgreSQL SELECT statement for refresh. (+2 more)
 
 ## Knowledge Gaps
 - **310 isolated node(s):** `import_irimsv_data.sh script`, `import_lrmis_schema.sh script`, `name`, `private`, `version` (+305 more)
@@ -449,12 +454,12 @@ Nodes (8): drop_staging_table(), fetch_and_bulk_insert(), generate_refresh_sql()
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PostgresCentralConnector` connect `MySQL Staging Connector` to `Schema Drift Monitoring`, `JobRunner`, `Outbox & Delivery Store`, `AI Mapping Engine`, `snapshots.py`, `Terminal UI & Pipeline Entry`, `migrations.py`, `Staging Fast Refresh`, `onboarding.py`, `integration_admin.py`, `view_proposer.py`, `db.py`, `group_by_table`, `Onboarding.tsx`?**
-  _High betweenness centrality (0.046) - this node is a cross-community bridge._
-- **Why does `MySQLStagingConnector` connect `snapshots.py` to `Schema Drift Monitoring`, `JobRunner`, `Outbox & Delivery Store`, `Terminal UI & Pipeline Entry`, `MySQL Staging Connector`, `Staging Fast Refresh`, `onboarding.py`, `db.py`, `Onboarding.tsx`?**
+- **Why does `PostgresCentralConnector` connect `MySQL Staging Connector` to `Schema Drift Monitoring`, `view_proposer.py`, `Outbox & Delivery Store`, `AI Mapping Engine`, `Terminal UI & Pipeline Entry`, `migrations.py`, `Staging Fast Refresh`, `integration_admin.py`, `db.py`, `refresh`, `JobRunner`, `Onboarding.tsx`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **Why does `MySQLStagingConnector` connect `snapshots.py` to `Schema Drift Monitoring`, `Outbox & Delivery Store`, `Terminal UI & Pipeline Entry`, `MySQL Staging Connector`, `Staging Fast Refresh`, `onboarding.py`, `db.py`, `refresh`, `JobRunner`, `Onboarding.tsx`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Why does `LrmisRegistry` connect `Decisions` to `lrmis_registry.py`, `lrmis_writer.py`, `_Cursor`, `WriterError`, `Package Init`, `Migrations.tsx`?**
   _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Why does `Schema` connect `onboarding.py` to `JobRunner`, `Outbox & Delivery Store`, `AI Mapping Engine`, `snapshots.py`, `Terminal UI & Pipeline Entry`, `group_by_table`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `Schema` (e.g. with `FieldMapping` and `_Client`) actually correct?**
   _`Schema` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 8 inferred relationships involving `ValidationError` (e.g. with `create_app()` and `test_enqueue_validates_type_before_db()`) actually correct?**
@@ -462,4 +467,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Are the 5 inferred relationships involving `LrmisRegistry` (e.g. with `ReferenceRowNotFound` and `UnknownTargetTable`) actually correct?**
   _`LrmisRegistry` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `End-to-end demo of the pipeline using fake data, so you can see the whole flow b`, `This is YOUR schema -- stable, never changes per target system.`, `import_irimsv_data.sh script` to the rest of the system?**
-  _469 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _465 weakly-connected nodes found - possible documentation gaps or missing edges._
