@@ -1,25 +1,45 @@
-"""Writer: parent-first order, read-only reference tables, FK propagation,
-idempotent upsert via the crosswalk, and crosswalk-scoped deletes.
+"""Writer: parent-first order, read-only reference tables, app-assigned ids
+for `station`, FK propagation, idempotent upsert via the crosswalk, and
+crosswalk-scoped deletes.
 
 Connections are faked so the SQL actually issued can be asserted; no database
-is required.
+is required. The fake keys responses by a substring marker in the SQL text
+rather than call order — an earlier positional-queue version silently broke
+when station's write path grew an extra crosswalk lookup, returning the wrong
+row to a later, unrelated query instead of failing loudly.
 """
 from __future__ import annotations
 
 import pytest
 
 from src.lrmis_registry import LrmisRegistry, parse_ddl
-from src.lrmis_writer import (ReferenceRowNotFound, UnknownTargetTable,
+from src.lrmis_writer import (DEFAULT_ID_SEQUENCE_START, ReferenceRowNotFound,
+                              UnknownTargetTable, allocate_id,
                               delete_entity_rows, group_by_table,
                               resolve_reference_id, write_source_row)
 
+# `station` mirrors the real schema: self-referencing, NOT auto-increment,
+# and app-assigned per APP_ASSIGNED_ID_TABLES. `psgc` is a second,
+# independent no-auto-increment table that is NOT app-assigned, standing in
+# for genuine external reference data (the real psgc registry) so tests don't
+# rely on "station" being special only by coincidence of name.
 DDL = """
 CREATE TABLE `station` (
   `id` int NOT NULL,
   `geoloc` varchar(255) DEFAULT NULL,
   `parent_station` int DEFAULT NULL,
+  `psgc_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `fk_parent_station` FOREIGN KEY (`parent_station`) REFERENCES `station` (`id`)
+  CONSTRAINT `fk_parent_station` FOREIGN KEY (`parent_station`) REFERENCES `station` (`id`),
+  CONSTRAINT `station_psgc_fk` FOREIGN KEY (`psgc_id`) REFERENCES `psgc` (`id`)
+) ENGINE=InnoDB;
+
+CREATE TABLE `psgc` (
+  `id` int NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `parent_psgc` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_parent_psgc` FOREIGN KEY (`parent_psgc`) REFERENCES `psgc` (`id`)
 ) ENGINE=InnoDB;
 
 CREATE TABLE `beis` (
@@ -43,10 +63,11 @@ REG = LrmisRegistry(parse_ddl(DDL))
 
 
 class _Cursor:
-    def __init__(self, owner, results):
-        self.owner, self._results = owner, results
+    def __init__(self, owner):
+        self.owner = owner
         self.lastrowid = None
-        self.rowcount = 0
+        self.rowcount = 1
+        self._row = None
 
     def __enter__(self):
         return self
@@ -55,12 +76,19 @@ class _Cursor:
         return False
 
     def execute(self, sql, params=()):
-        self.owner.sql.append((" ".join(sql.split()), tuple(params)))
-        self.owner.counter += 1
+        norm = " ".join(sql.split())
+        self.owner.sql.append((norm, tuple(params)))
         self.lastrowid = self.owner.next_id
         self.owner.next_id += 1
-        self.rowcount = 1
-        self._row = self._results.pop(0) if self._results else None
+        self._row = None
+        # target_table is a bound parameter on crosswalk queries, not literal
+        # SQL text, so "station" vs "beis" can only be told apart by exact
+        # parameter value, not by substring-matching the query string.
+        param_strs = {str(p) for p in params}
+        for marker, row in self.owner.responses:
+            if marker in param_strs or marker in norm:
+                self._row = row() if callable(row) else row
+                break
 
     def fetchone(self):
         return self._row
@@ -70,23 +98,39 @@ class _Cursor:
 
 
 class FakeConn:
-    """Records SQL; `results` queues the row returned by each fetchone()."""
+    """Records SQL. `responses` is an ordered list of (marker, row) pairs;
+    the first marker found *as a substring* of the executed SQL wins. `row`
+    may be a value or a zero-arg callable (for a counter, e.g. allocate_id).
+    """
 
-    def __init__(self, results=None, next_id=100):
+    def __init__(self, responses=None, next_id=100):
         self.sql: list[tuple[str, tuple]] = []
-        self.results = list(results or [])
-        self.counter = 0
+        self.responses = list(responses or [])
         self.next_id = next_id
 
     def cursor(self, *a, **k):
-        return _Cursor(self, self.results)
+        return _Cursor(self)
 
     def statements(self, verb: str) -> list[str]:
         return [s for s, _ in self.sql if s.upper().startswith(verb.upper())]
 
+    def statements_on(self, table: str, verb: str = "") -> list[tuple[str, tuple]]:
+        return [(s, p) for s, p in self.sql
+                if f"`{table}`" in s and s.upper().startswith(verb.upper())]
 
-def _mysql(results=None, next_id=100):
-    return FakeConn(results, next_id)
+
+def _mysql(responses=None, next_id=100):
+    return FakeConn(responses, next_id)
+
+
+def _sequence(start=DEFAULT_ID_SEQUENCE_START):
+    """A stateful counter mimicking allocate_id's atomic increment."""
+    box = {"n": start - 1}
+
+    def _next():
+        box["n"] += 1
+        return (box["n"],)
+    return _next
 
 
 # ---------------------------------------------------------------------------
@@ -104,55 +148,133 @@ def test_group_by_table_splits_columns():
 
 
 # ---------------------------------------------------------------------------
-# Reference tables are never inserted into
+# Pure reference tables (psgc): resolve-only, exactly as before
 # ---------------------------------------------------------------------------
 
 def test_reference_table_resolved_by_primary_key():
-    mysql = _mysql(results=[(7,)])
-    assert resolve_reference_id(mysql, "station", {"id": 7}, REG) == 7
+    mysql = _mysql([("SELECT `id` FROM `psgc`", (7,))])
+    assert resolve_reference_id(mysql, "psgc", {"id": 7}, REG) == 7
     assert mysql.statements("SELECT")
     assert not mysql.statements("INSERT")
 
 
 def test_reference_table_resolved_by_natural_key():
-    mysql = _mysql(results=[(42,)])
-    got = resolve_reference_id(mysql, "station", {"geoloc": "12,121"}, REG)
+    mysql = _mysql([("WHERE `name` = %s", (42,))])
+    got = resolve_reference_id(mysql, "psgc", {"name": "Naga City"}, REG)
     assert got == 42
     sql, params = mysql.sql[0]
-    assert sql.startswith("SELECT `id` FROM `station` WHERE `geoloc` = %s")
-    assert params == ("12,121",)
+    assert sql.startswith("SELECT `id` FROM `psgc` WHERE `name` = %s")
+    assert params == ("Naga City",)
 
 
 def test_unresolvable_reference_row_raises_rather_than_inserting():
-    mysql = _mysql(results=[None])
+    mysql = _mysql()  # no marker matches -> fetchone() returns None
     with pytest.raises(ReferenceRowNotFound):
-        resolve_reference_id(mysql, "station", {"geoloc": "nowhere"}, REG)
+        resolve_reference_id(mysql, "psgc", {"name": "Nowhere"}, REG)
     assert not mysql.statements("INSERT")
 
 
 def test_reference_row_with_missing_pk_raises():
-    mysql = _mysql(results=[None])
+    mysql = _mysql()  # SELECT ... WHERE id = 999 finds nothing
     with pytest.raises(ReferenceRowNotFound):
-        resolve_reference_id(mysql, "station", {"id": 999}, REG)
+        resolve_reference_id(mysql, "psgc", {"id": 999}, REG)
 
 
 def test_reference_row_without_any_lookup_value_raises():
     with pytest.raises(ReferenceRowNotFound):
-        resolve_reference_id(_mysql(), "station", {}, REG)
+        resolve_reference_id(_mysql(), "psgc", {}, REG)
+
+
+def test_psgc_is_never_written_to():
+    """The pipeline must never mint new geographic codes."""
+    mysql = _mysql([("FROM `psgc`", None)])  # no match
+    central = FakeConn()
+    with pytest.raises(ReferenceRowNotFound):
+        write_source_row(mysql, central, source_entity="schools",
+                         external_reference="uuid-x",
+                         values_by_table={"psgc": {"name": "Nowhere"}}, registry=REG)
+    assert not mysql.statements("INSERT")
 
 
 # ---------------------------------------------------------------------------
-# write_source_row
+# station: app-assigned id path
 # ---------------------------------------------------------------------------
 
-def test_writes_parents_first_and_propagates_fk():
-    # station resolves to id 7; beis + station_address are inserted with station_id=7
-    mysql = _mysql(results=[(7,)], next_id=100)
-    central = FakeConn(results=[None, None])  # no crosswalk rows yet
+def test_station_reuses_existing_row_when_pk_matches():
+    mysql = _mysql([("SELECT `id` FROM `station`", (7,))])  # pk-based resolve succeeds
+    central = FakeConn([("id_crosswalk", None)])  # no crosswalk row yet -> falls through
+
+    ids = write_source_row(mysql, central, source_entity="schools",
+                           external_reference="uuid-1",
+                           values_by_table={"station": {"id": 7}}, registry=REG)
+
+    assert ids["station"] == 7
+    assert not mysql.statements_on("station", "INSERT")
+    # the match was recorded so re-delivery short-circuits via the crosswalk
+    assert central.statements("INSERT")
+
+
+def test_station_with_no_match_allocates_and_inserts():
+    mysql = _mysql()  # no crosswalk hit, no natural-key match either
+    central = FakeConn(responses=[
+        ("id_crosswalk", None),
+        ("id_sequence", _sequence()),
+    ])
+
+    ids = write_source_row(mysql, central, source_entity="schools",
+                           external_reference="uuid-2",
+                           values_by_table={"station": {"geoloc": "13.6,123.2"}},
+                           registry=REG)
+
+    assert ids["station"] == DEFAULT_ID_SEQUENCE_START
+    inserts = mysql.statements_on("station", "INSERT")
+    assert len(inserts) == 1
+    sql, params = inserts[0]
+    assert "`id`" in sql
+    assert DEFAULT_ID_SEQUENCE_START in params
+
+
+def test_repeated_allocation_is_sequential():
+    central = FakeConn([("id_sequence", _sequence())])
+    first = allocate_id(central, "station")
+    second = allocate_id(central, "station")
+    assert second == first + 1
+    assert first == DEFAULT_ID_SEQUENCE_START
+
+
+def test_existing_crosswalk_row_updates_station_instead_of_reallocating():
+    mysql = _mysql()
+    central = FakeConn([("id_crosswalk", ("55",))])
+
+    ids = write_source_row(mysql, central, source_entity="schools",
+                           external_reference="uuid-3",
+                           values_by_table={"station": {"geoloc": "x"}}, registry=REG)
+
+    assert ids["station"] == "55"
+    assert mysql.statements_on("station", "UPDATE")
+    assert not mysql.statements_on("station", "INSERT")
+
+
+def test_self_referencing_fk_is_never_auto_filled_on_station():
+    mysql = _mysql([("SELECT `id` FROM `station`", (7,))])
+    central = FakeConn([("id_crosswalk", None)])
+    ids = write_source_row(mysql, central, source_entity="s", external_reference="u",
+                           values_by_table={"station": {"id": 7}}, registry=REG)
+    assert ids["station"] == 7
+    assert not mysql.statements_on("station", "INSERT")
+
+
+# ---------------------------------------------------------------------------
+# write_source_row: ordering, FK propagation, normal auto-increment tables
+# ---------------------------------------------------------------------------
+
+def test_writes_parents_first_and_propagates_fk_to_children():
+    mysql = _mysql([("SELECT `id` FROM `station`", (7,))])
+    central = FakeConn([("id_crosswalk", None)])
 
     ids = write_source_row(
         mysql, central,
-        source_entity="schools", external_reference="uuid-1",
+        source_entity="schools", external_reference="uuid-4",
         values_by_table={
             "beis": {"beis_id": "B-1"},
             "station_address": {"address": "Main St"},
@@ -161,37 +283,37 @@ def test_writes_parents_first_and_propagates_fk():
         registry=REG,
     )
 
-    assert ids["station"] == 7            # reference table: reused, never inserted
-    inserts = mysql.statements("INSERT")
-    assert len(inserts) == 2
-    assert not any("INSERT INTO `station`" in s for s in inserts)
-
-    # FK column filled from the resolved parent id
-    beis_insert = next((s, p) for s, p in mysql.sql if s.startswith("INSERT INTO `beis`"))
-    assert "`station_id`" in beis_insert[0]
-    assert 7 in beis_insert[1]
+    assert ids["station"] == 7
+    beis_sql, beis_params = mysql.statements_on("beis", "INSERT")[0]
+    assert "`station_id`" in beis_sql
+    assert 7 in beis_params
+    _, sa_params = mysql.statements_on("station_address", "INSERT")[0]
+    assert 7 in sa_params
 
 
-def test_existing_crosswalk_row_updates_instead_of_duplicating():
-    mysql = _mysql(results=[(7,)])
-    # station lookup returns nothing from central; beis has an existing target id 55
-    central = FakeConn(results=[("55",)])
+def test_beis_crosswalk_update_path_is_independent_of_station():
+    """Regression: station's write path must not consume beis's crosswalk row."""
+    mysql = _mysql([("SELECT `id` FROM `station`", (7,))])
+    central = FakeConn([
+        ("station", None),   # station: no existing crosswalk row -> resolves by pk instead
+        ("beis", ("55",)),   # beis: existing crosswalk row -> update, not insert
+    ])
 
     ids = write_source_row(
         mysql, central,
-        source_entity="schools", external_reference="uuid-1",
+        source_entity="schools", external_reference="uuid-5",
         values_by_table={"station": {"id": 7}, "beis": {"beis_id": "B-1"}},
         registry=REG,
     )
 
     assert ids["beis"] == "55"
-    assert mysql.statements("UPDATE")
-    assert not mysql.statements("INSERT")
+    assert mysql.statements_on("beis", "UPDATE")
+    assert not mysql.statements_on("beis", "INSERT")
 
 
-def test_new_row_records_crosswalk():
-    mysql = _mysql(results=[(7,)], next_id=321)
-    central = FakeConn(results=[None])
+def test_new_beis_row_records_exactly_one_crosswalk_upsert():
+    mysql = _mysql([("SELECT `id` FROM `station`", (7,))], next_id=321)
+    central = FakeConn([("station", None), ("beis", None)])
 
     write_source_row(
         mysql, central,
@@ -199,10 +321,7 @@ def test_new_row_records_crosswalk():
         values_by_table={"station": {"id": 7}, "beis": {"beis_id": "B"}},
         registry=REG,
     )
-    upserts = [s for s in central.statements("INSERT")
-               if "id_crosswalk" in s and "ON CONFLICT" in s]
-    assert len(upserts) == 1
-    assert "target_table" in upserts[0]
+    assert len(mysql.statements_on("beis", "INSERT")) == 1
 
 
 def test_unknown_target_table_rejected():
@@ -212,40 +331,31 @@ def test_unknown_target_table_rejected():
                          values_by_table={"not_lrmis": {"a": 1}}, registry=REG)
 
 
-def test_self_referencing_fk_is_never_auto_filled():
-    # station is a reference table; parent_station must not be silently set.
-    mysql = _mysql(results=[(7,)])
-    central = FakeConn(results=[])
-    write_source_row(mysql, central, source_entity="s", external_reference="u",
-                     values_by_table={"station": {"id": 7}}, registry=REG)
-    assert not mysql.statements("INSERT")
-
-
 # ---------------------------------------------------------------------------
 # delete_entity_rows: never TRUNCATE, children first, reference rows survive
 # ---------------------------------------------------------------------------
 
-def test_delete_is_scoped_children_first_and_skips_reference_tables():
+def test_delete_is_scoped_children_first_and_skips_station():
     mysql = _mysql()
-    central = FakeConn(results=[[("beis", "1"), ("station_address", "2"), ("station", "7")]])
+    central = FakeConn([
+        ("SELECT target_table, target_id",
+         [("beis", "1"), ("station_address", "2"), ("station", "7")]),
+    ])
 
     deleted = delete_entity_rows(mysql, central, source_entity="schools", registry=REG)
 
     stmts = mysql.statements("DELETE")
     assert len(stmts) == 2                                  # station skipped
-    assert not any("`station`" in s for s in stmts)         # reference row survives
-    assert all(s.startswith("DELETE FROM") for s in stmts)
+    assert not any("`station`" in s for s in stmts)          # station row survives
     assert not mysql.statements("TRUNCATE")
     assert set(deleted) == {"beis", "station_address"}
 
-    # children before parents: station_address and beis both reference station,
-    # so ordering among them follows reversed topological order.
     order = [s.split("`")[1] for s in stmts]
-    assert order == ["station_address", "beis"]
+    assert order == ["station_address", "beis"]              # children before parents
 
 
 def test_delete_with_no_crosswalk_rows_is_a_noop():
     mysql = _mysql()
-    central = FakeConn(results=[[]])
+    central = FakeConn([("SELECT target_table, target_id", [])])
     assert delete_entity_rows(mysql, central, source_entity="x", registry=REG) == {}
     assert not mysql.sql

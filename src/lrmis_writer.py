@@ -6,13 +6,24 @@ Rules this module enforces, decided against the real LRMIS schema:
   FK-aware topological sort, so a child's FK column can be filled from the id
   its parent just produced.
 * **Reference tables are read-only.** `station` and `psgc` have no
-  AUTO_INCREMENT primary key, so MySQL cannot generate their ids. The writer
-  resolves an existing row and reuses its id; it never inserts one. If no row
-  matches, the record is rejected rather than silently pointing a foreign key
-  at id 0.
-* **Never TRUNCATE.** A refresh deletes only rows this pipeline recorded in
-  `integration.id_crosswalk`, children first, so LRMIS-owned and seeded
-  reference rows survive.
+  AUTO_INCREMENT primary key, so MySQL cannot generate their ids by itself.
+  For a genuine external lookup table (`psgc` — the national PSGC geographic
+  registry, which IRIMSV carries no form of) the writer resolves an existing
+  row and never inserts one; an unmatched row is rejected rather than
+  silently pointing a foreign key at id 0.
+* **`station` is the one exception: writable with an app-assigned id.**
+  Verified against real data: 0 of IRIMSV's 145 schools match an existing
+  `station`/`beis` row by any natural key, so treating `station` as
+  resolve-only would block onboarding entirely — IRIMSV is the authoritative
+  source and almost every school is new to LRMIS. The writer first tries to
+  join an existing station (a real match should never be duplicated); only
+  when nothing matches does it allocate a new id from a reserved range
+  (`integration.id_sequence`, starting at 10,000,000 — LRMIS's own ids are
+  1..3921) and insert with that id explicit.
+* **Never TRUNCATE.** A refresh deletes only rows this pipeline itself
+  *inserted*, recorded in `integration.id_crosswalk`, children first, so
+  LRMIS-owned and seeded reference rows survive. A `station` row the writer
+  only matched (never inserted) is never deleted.
 * **Idempotent.** The crosswalk keys `(external_reference, target_table)` to a
   target id, so re-delivering an event updates the same rows instead of
   duplicating them.
@@ -25,13 +36,24 @@ from __future__ import annotations
 from .connectors import safe_identifier
 from .lrmis_registry import LrmisRegistry, get_registry
 
+# Tables with no AUTO_INCREMENT primary key that this pipeline is nonetheless
+# authorized to CREATE rows in, because IRIMSV is the authoritative source for
+# them. Every other no-AUTO_INCREMENT table (e.g. psgc) stays resolve-only —
+# see resolve_reference_id. New ids come from DEFAULT_ID_SEQUENCE_START up.
+APP_ASSIGNED_ID_TABLES = frozenset({"station"})
+
+# LRMIS's own station ids run 1..3921 today; this leaves enormous headroom
+# before a real collision could occur, and is deliberately round/inspectable
+# in the database rather than derived.
+DEFAULT_ID_SEQUENCE_START = 10_000_000
+
 
 class WriterError(RuntimeError):
     """Base class for multi-table write failures."""
 
 
 class ReferenceRowNotFound(WriterError):
-    """A read-only reference row (station/psgc) could not be resolved."""
+    """A read-only reference row (e.g. psgc) could not be resolved."""
 
 
 class UnknownTargetTable(WriterError):
@@ -103,6 +125,26 @@ def crosswalk_rows_for_entity(central_conn, source_entity: str,
             WHERE source_entity = %s AND target_system = %s
         """, (source_entity, target_system))
         return [(r[0], r[1]) for r in cur.fetchall()]
+
+
+def allocate_id(central_conn, table: str, start_at: int = DEFAULT_ID_SEQUENCE_START) -> int:
+    """Atomically hand out the next app-assigned id for `table`.
+
+    A single INSERT .. ON CONFLICT .. RETURNING statement, so two concurrent
+    callers (a worker batch and a bulk onboard, say) can never be handed the
+    same id — Postgres serializes the conflicting upsert at the row level.
+    `start_at` only takes effect the first time a table is allocated for;
+    later calls always continue from the stored next_value.
+    """
+    with central_conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO integration.id_sequence (table_name, next_value)
+            VALUES (%s, %s)
+            ON CONFLICT (table_name) DO UPDATE
+                SET next_value = integration.id_sequence.next_value + 1
+            RETURNING next_value
+        """, (table, start_at))
+        return cur.fetchone()[0]
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +231,40 @@ def _update(mysql_conn, table: str, pk: str, pk_value, values: dict) -> None:
         cur.execute(sql, (*assignable.values(), pk_value))
 
 
+def _write_app_assigned_row(mysql_conn, central_conn, table: str, values: dict,
+                            registry: LrmisRegistry, *, source_system: str,
+                            source_entity: str, external_reference: str,
+                            target_system: str, event_id=None) -> object:
+    """Write path for APP_ASSIGNED_ID_TABLES (today: only `station`)."""
+    meta = registry.get_table(table)
+    pk = meta.primary_key[0]
+
+    existing = _crosswalk_lookup(central_conn, source_system, source_entity,
+                                 external_reference, target_system, table)
+    if existing is not None:
+        _update(mysql_conn, table, pk, existing, values)
+        return existing
+
+    # A real match must never be duplicated: two IRIMSV schools resolving to
+    # the same physical station is exactly the case natural-key matching
+    # exists to catch, before minting a second id for the same place.
+    try:
+        matched = resolve_reference_id(mysql_conn, table, values, registry)
+    except ReferenceRowNotFound:
+        matched = None
+    if matched is not None:
+        _crosswalk_record(central_conn, source_system, source_entity,
+                          external_reference, target_system, table,
+                          matched, event_id)
+        return matched
+
+    new_id = allocate_id(central_conn, table)
+    _insert(mysql_conn, table, {**values, pk: new_id})
+    _crosswalk_record(central_conn, source_system, source_entity,
+                      external_reference, target_system, table, new_id, event_id)
+    return new_id
+
+
 def write_source_row(mysql_conn, central_conn, *, source_entity: str,
                      external_reference: str, values_by_table: dict[str, dict],
                      source_system: str = "IRIMSV_REGION_V",
@@ -206,6 +282,14 @@ def write_source_row(mysql_conn, central_conn, *, source_entity: str,
 
     for table in order:
         values = _apply_foreign_keys(registry, table, values_by_table[table], target_ids)
+
+        if table in APP_ASSIGNED_ID_TABLES:
+            target_ids[table] = _write_app_assigned_row(
+                mysql_conn, central_conn, table, values, registry,
+                source_system=source_system, source_entity=source_entity,
+                external_reference=external_reference, target_system=target_system,
+                event_id=event_id)
+            continue
 
         if registry.is_reference_table(table):
             target_ids[table] = resolve_reference_id(mysql_conn, table, values, registry)
@@ -237,7 +321,16 @@ def delete_entity_rows(mysql_conn, central_conn, *, source_entity: str,
                        registry: LrmisRegistry | None = None) -> dict[str, int]:
     """Remove pipeline-written rows for an entity. Never truncates.
 
-    Reference tables are skipped: the pipeline never wrote them.
+    Tables `registry.is_reference_table()` flags are skipped entirely,
+    including `station`. For `psgc` that's exactly right: the pipeline never
+    wrote it. For `station` it is deliberately conservative rather than
+    correct: a station this pipeline *created* (app-assigned id, no natural
+    match) is safe to remove, but one it only *matched* (a real pre-existing
+    LRMIS station) must never be deleted, and the crosswalk alone can't tell
+    the two apart cheaply. Until that distinction is added (e.g. by only
+    deleting station ids >= DEFAULT_ID_SEQUENCE_START), any station rows a
+    refresh creates are left behind on delete rather than risk deleting a
+    station this pipeline doesn't own.
     """
     registry = _reg(registry)
     rows = crosswalk_rows_for_entity(central_conn, source_entity, target_system)

@@ -1,16 +1,16 @@
-# Graph Report - schema_mapper  (2026-07-09)
+# Graph Report - schema_mapper  (2026-07-10)
 
 ## Corpus Check
-- 113 files · ~57,378 words
+- 148 files · ~82,912 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 880 nodes · 1881 edges · 78 communities (53 shown, 25 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 74 edges (avg confidence: 0.61)
+- 1359 nodes · 2810 edges · 111 communities (85 shown, 26 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 106 edges (avg confidence: 0.61)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `89ae59d5`
+- Built from commit: `998e6e8a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -83,67 +83,98 @@
 - scripts/backfill_customers.py
 - scripts/create_pilot_mapping.py
 - scripts/reconcile.py
+- Requirements
+- Requirements
+- ADDED Requirements
+- ADDED Requirements
+- Requirements
+- ADDED Requirements
+- Requirement: Safe migration apply
+- Migrations.tsx
+- ADDED Requirements
+- Requirements
+- ADDED Requirements
+- Tasks: Add Admin Database Dashboard
+- Requirement: Durable allowlisted jobs
+- Add Admin Database Dashboard
+- Tasks: Simplify the Database Manager Experience
+- PipelineDiagram.tsx
+- view_proposer.py
+- JobRunner
+- lrmis_registry.py
+- lrmis_writer.py
+- snapshots.py
+- JobDrawer.tsx
+- Onboarding.tsx
+- integration_admin.py
+- onboarding.py
+- _Cursor
+- rebaseline_entity_fingerprints
+- db.py
+- labels.ts
+- group_by_table
+- WriterError
 
 ## God Nodes (most connected - your core abstractions)
-1. `PostgresCentralConnector` - 54 edges
-2. `Schema` - 46 edges
-3. `MySQLStagingConnector` - 44 edges
-4. `Table` - 31 edges
-5. `_onboard_single_table()` - 30 edges
-6. `NotFoundError` - 24 edges
-7. `AdminUser` - 23 edges
-8. `Column` - 23 edges
-9. `errMsg()` - 22 edges
-10. `ValidationError` - 21 edges
+1. `PostgresCentralConnector` - 70 edges
+2. `MySQLStagingConnector` - 58 edges
+3. `Schema` - 51 edges
+4. `ValidationError` - 39 edges
+5. `NotFoundError` - 35 edges
+6. `LrmisRegistry` - 34 edges
+7. `Table` - 34 edges
+8. `_onboard_single_table()` - 30 edges
+9. `Column` - 26 edges
+10. `AdminUser` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `real_source_db (PostgreSQL 17 Real-Test Service)` --semantically_similar_to--> `central_db (PostgreSQL 16 Service)`  [INFERRED] [semantically similar]
   docker-compose.real-test.yml → docker-compose.yml
 - `real_target_db (MySQL 8.0.40 Real-Test Service)` --semantically_similar_to--> `lrmis_staging_db (MySQL 8.4 Service)`  [INFERRED] [semantically similar]
   docker-compose.real-test.yml → docker-compose.yml
-- `test_unmanaged_migration_file_rejected()` --indirect_call--> `NotFoundError`  [INFERRED]
-  tests/test_admin_api.py → src/services/common.py
-- `test_worker_controller_stop_without_start_conflicts()` --indirect_call--> `ConflictError`  [INFERRED]
-  tests/test_admin_api.py → src/services/common.py
-- `test_enqueue_validates_type_before_db()` --indirect_call--> `ValidationError`  [INFERRED]
-  tests/test_admin_api.py → src/services/common.py
+- `_Cursor` --uses--> `LrmisRegistry`  [INFERRED]
+  tests/test_lrmis_writer.py → src/lrmis_registry.py
+- `FakeConn` --uses--> `LrmisRegistry`  [INFERRED]
+  tests/test_lrmis_writer.py → src/lrmis_registry.py
+- `_Cursor` --uses--> `ReferenceRowNotFound`  [INFERRED]
+  tests/test_lrmis_writer.py → src/lrmis_writer.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (78 total, 25 thin omitted)
+## Communities (111 total, 26 thin omitted)
 
 ### Community 0 - "Schema Drift Monitoring"
 Cohesion: 0.06
-Nodes (73): get_mapping(), load_their_schema(), main(), our_central_schema(), End-to-end demo of the pipeline using fake data, so you can see the whole flow b, This is YOUR schema -- stable, never changes per target system., AI Draft Mapping Proposals, google-genai (Official Gemini SDK) (+65 more)
+Nodes (70): get_mapping(), load_their_schema(), main(), our_central_schema(), End-to-end demo of the pipeline using fake data, so you can see the whole flow b, This is YOUR schema -- stable, never changes per target system., AI Draft Mapping Proposals, google-genai (Official Gemini SDK) (+62 more)
 
 ### Community 1 - "Architecture & Deployment Docs"
 Cohesion: 0.33
 Nodes (6): central_db (PostgreSQL 16 Service), real_source_db (PostgreSQL 17 Real-Test Service), psycopg2-binary (PostgreSQL Driver), sql/001_integration_foundation.sql, sql/002_onboarding_metadata.sql, sql/central_db_init.sql
 
 ### Community 2 - "Outbox & Delivery Store"
-Cohesion: 0.12
-Nodes (25): Event, main(), Minimal administrator/auditor CLI; suitable for wrapping in a future web UI., set_enabled(), status(), canonical_json(), checksum(), claim_events() (+17 more)
+Cohesion: 0.14
+Nodes (27): Event, approved_mapping(), canonical_json(), checksum(), claim_events(), delivered(), Exception, quarantine() (+19 more)
 
 ### Community 3 - "AI Mapping Engine"
-Cohesion: 0.06
-Nodes (71): AdminUser, BaseModel, Request, main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, audited(), list_audit(), Uniform admin_action_audit writer for every mutating endpoint and job. (+63 more)
+Cohesion: 0.05
+Nodes (84): AdminUser, BaseModel, main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, audited(), list_audit(), Uniform admin_action_audit writer for every mutating endpoint and job., Audit success or failure of the wrapped block (failure re-raises). (+76 more)
 
 ### Community 4 - "Pipeline Commands & Central DB"
-Cohesion: 0.10
-Nodes (29): ApiError, AdminUser, AuditRow, CreateJobPayload, CreateJobResponse, DeadLetterRow, DriftReport, EntityControl (+21 more)
+Cohesion: 0.08
+Nodes (38): ApiError, getJob(), ViewProposal, AdminUser, AuditRow, CompareField, CompareResponse, CreateJobPayload (+30 more)
 
 ### Community 5 - "Terminal UI & Pipeline Entry"
 Cohesion: 0.06
-Nodes (69): connection, drop_staging_table(), Drop staging table if it exists., mapping_to_dicts(), cmd_backfill(), cmd_deploy(), cmd_discover(), cmd_monitor() (+61 more)
+Nodes (74): connection, drop_staging_table(), fetch_and_bulk_insert(), _qt(), Fast refresh module for dropping and recreating staging tables. Bypasses the out, Fetch from PostgreSQL and bulk insert to MySQL., Drop staging table if it exists., mapping_to_dicts() (+66 more)
 
 ### Community 6 - "MySQL Staging Connector"
-Cohesion: 0.12
-Nodes (17): central(), Process-wide pooled connectors shared by all request handlers and jobs., staging(), MySQLStagingConnector, Bulk insert using executemany for better performance., Least-privilege writer. It never creates or alters LRMIS tables., restore_staging_snapshot(), staging_snapshots() (+9 more)
+Cohesion: 0.15
+Nodes (25): PostgresCentralConnector, generate_refresh_sql(), Generate PostgreSQL SELECT statement for refresh., approve_mapping(), approve_schema(), cancel_queue(), _entity_fingerprints(), get_schema_trees() (+17 more)
 
 ### Community 7 - "Staging Fast Refresh"
-Cohesion: 0.15
-Nodes (23): PostgresCentralConnector, fetch_and_bulk_insert(), generate_refresh_sql(), Fast refresh module for dropping and recreating staging tables. Bypasses the out, Generate PostgreSQL SELECT statement for refresh., Fetch from PostgreSQL and bulk insert to MySQL., approved_mapping(), Look for approved mapping in both mapping_version and onboarding_proposal tables (+15 more)
+Cohesion: 0.13
+Nodes (11): _clamp_mysql_dates(), MySQLStagingConnector, Database adapters for the authoritative PostgreSQL DB and LRMIS MySQL staging., Least-privilege writer. It never creates or alters LRMIS tables., Return a qualified table name, optionally database-prefixed for views., Reject anything that is not a bare SQL identifier.      Callers must additionall, Bulk insert using executemany for better performance., Replace out-of-range Python date/datetime objects (year > 9999) with None. (+3 more)
 
 ### Community 8 - "Deployment & Staging DDL"
 Cohesion: 0.07
@@ -154,96 +185,96 @@ Cohesion: 0.47
 Nodes (4): insert_customer(), Simulates your real application writing a new customer. The trigger on `customer, central_conn(), Backward-compatible central connection helper.  New integration code uses pooled
 
 ### Community 10 - "Mapping Proposals"
-Cohesion: 0.21
-Nodes (18): approveSchema(), getDriftReports(), getJob(), listMigrations(), markMigrationApplied(), NAV_ITEMS, Shell(), useAuth() (+10 more)
+Cohesion: 0.13
+Nodes (20): listMigrations(), login(), logout(), markMigrationApplied(), me(), setUnauthorizedHandler(), User, NAV_GROUPS (+12 more)
 
 ### Community 11 - "Schema Discovery"
-Cohesion: 0.08
-Nodes (25): dependencies, react, react-dom, react-router-dom, @tanstack/react-query, devDependencies, jsdom, @testing-library/jest-dom (+17 more)
+Cohesion: 0.07
+Nodes (26): dependencies, lucide-react, react, react-dom, react-router-dom, @tanstack/react-query, devDependencies, jsdom (+18 more)
 
 ### Community 15 - "Package Init"
-Cohesion: 0.13
-Nodes (16): get_job(), _h_backfill(), _h_deploy(), _h_discover(), _h_propose(), Durable allowlisted job orchestration (job-orchestration spec).  Jobs live in in, NotFoundError, Requested entity/proposal/event does not exist. (+8 more)
+Cohesion: 0.21
+Nodes (22): Find an existing row's primary key; never insert.      If the mapping already su, A read-only reference row (station/psgc) could not be resolved., A mapping names a table that is not part of the LRMIS schema., ReferenceRowNotFound, resolve_reference_id(), UnknownTargetTable, FakeConn, _mysql() (+14 more)
 
 ### Community 16 - "ValidationError"
-Cohesion: 0.16
-Nodes (17): FastAPI, create_app(), FastAPI app factory and entrypoint (python -m src.admin_api.app)., enqueue(), _scope(), ConflictError, Exception, Typed exceptions shared by all services; the API maps them to HTTP codes. (+9 more)
+Cohesion: 0.18
+Nodes (16): FastAPI, create_app(), FastAPI app factory and entrypoint (python -m src.admin_api.app)., _h_cancel_queue(), ConflictError, Exception, Typed exceptions shared by all services; the API maps them to HTTP codes., A concurrent operation holds the resource (maps to HTTP 409). (+8 more)
 
 ### Community 17 - "JobRunner"
-Cohesion: 0.13
-Nodes (6): _h_refresh(), _h_schema_scan(), JobContext, JobRunner, runner(), WorkerController
+Cohesion: 0.09
+Nodes (14): get_job(), _h_backfill(), _h_deploy(), _h_discover(), _h_onboard_bulk(), _h_propose(), _h_refresh(), _h_refresh_all() (+6 more)
 
 ### Community 18 - "test_admin_api.py"
-Cohesion: 0.11
-Nodes (9): read_migration_sql(), admin_client(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, Spoofed actor/by fields are ignored - identity comes from the session., test_action_bodies_do_not_accept_actor_fields(), test_migration_sql_readable_for_managed_files() (+1 more)
+Cohesion: 0.08
+Nodes (10): admin_client(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, The handler must refuse an empty batch rather than 'succeed' on nothing., Spoofed actor/by fields are ignored - identity comes from the session., Assert on named files; keyed off MIGRATION_FILES[-1] this broke whenever     a n, test_action_bodies_do_not_accept_actor_fields() (+2 more)
 
 ### Community 19 - "Overview.tsx"
-Cohesion: 0.16
-Nodes (17): createJob(), createUser(), getSnapshots(), login(), logout(), post(), request(), restoreSnapshot() (+9 more)
+Cohesion: 0.19
+Nodes (14): createJob(), getSnapshots(), getWorkerStatus(), restoreSnapshot(), toggleEntity(), HealthCard(), HealthCardProps, Sparkline() (+6 more)
 
 ### Community 20 - "compilerOptions"
 Cohesion: 0.11
 Nodes (17): compilerOptions, isolatedModules, jsx, lib, module, moduleDetection, moduleResolution, noEmit (+9 more)
 
 ### Community 21 - "Decisions"
-Cohesion: 0.13
-Nodes (14): Context, D1. In-process services, not subprocesses, D2. FastAPI + SSE, D3. Durable jobs: `admin_job` + `admin_job_event`, D4. Concurrency guards live in Postgres, D5. Migration tracking, home-grown, D6. Auth and audit, D7. Guarded one-click contract (+6 more)
+Cohesion: 0.12
+Nodes (6): LrmisRegistry, LrmisTable, Fallback when the DDL file is unavailable: read the live database., The column on `table` that points at `ref_table` (first match)., True when the pipeline must not INSERT into this table.          A table whose p, Parent-first ordering. Self-loops are ignored; real cycles raise.          `subs
 
 ### Community 22 - "WorkerQueues.tsx"
-Cohesion: 0.24
-Nodes (14): get(), getAudit(), getDeadLetter(), getMigrationSql(), getQuarantine(), getSchemas(), getWorkerStatus(), listUsers() (+6 more)
+Cohesion: 0.22
+Nodes (11): getDeadLetter(), getQuarantine(), replayEvent(), startWorker(), stopWorker(), Semantic, SEMANTIC_BY_STATUS, StatusChip() (+3 more)
 
 ### Community 23 - "ADDED Requirements"
-Cohesion: 0.15
-Nodes (12): ADDED Requirements, admin-dashboard Specification (Delta), Requirement: Centralized admin web UI, Requirement: Database-focused presentation, Requirement: Live overview of integration health, Requirement: One-click workflow launch with guarded tiers, Scenario: Admin reaches all workflows from one place, Scenario: Destructive action demands typed confirmation (+4 more)
+Cohesion: 0.20
+Nodes (15): _FakeCentral, _proposal(), onboard_bulk: conservative bucketing, non-destructiveness, resilience.  The serv, Stand-in for the service functions, recording what bulk actually calls., _Recorder, _run(), test_already_deployed_table_is_skipped_untouched(), test_confident_table_is_deployed_and_backfilled() (+7 more)
 
 ### Community 24 - "ADDED Requirements"
-Cohesion: 0.15
-Nodes (12): ADDED Requirements, audit-and-approval Specification (Delta), Requirement: Approval remains a human gate, Requirement: Per-admin authentication with roles, Requirement: Reversibility affordances for dangerous actions, Requirement: Uniform audit trail on every mutation, Scenario: Audit log is browsable, Scenario: Kill switch toggle audited (+4 more)
+Cohesion: 0.12
+Nodes (19): compareRow(), get(), getDataRows(), getDataTables(), getMigrationSql(), getSchemas(), getViewProposals(), listUsers() (+11 more)
 
 ### Community 25 - "JobDrawer.tsx"
-Cohesion: 0.23
-Nodes (9): listJobs(), EVENT_TYPES, JobEvent, JobEventPayload, JobEventType, SseHandle, subscribeJobEvents(), JobDrawer() (+1 more)
+Cohesion: 0.13
+Nodes (18): applyView(), cancelQueue(), createUser(), generateView(), post(), request(), setUserActive(), EntityControl (+10 more)
 
 ### Community 26 - "StatusChip.tsx"
-Cohesion: 0.22
-Nodes (9): ProposalField, confidenceClass(), GROUP_ORDER, MappingLanes(), MappingLanesProps, TRANSFORM_OPTIONS, COLOR_BY_STATUS, StatusChip() (+1 more)
+Cohesion: 0.23
+Nodes (11): approveMapping(), getProposal(), getProposals(), resolveMapping(), ProposalField, confidenceClass(), GROUP_ORDER, MappingLanes() (+3 more)
 
 ### Community 27 - "ADDED Requirements"
-Cohesion: 0.17
-Nodes (11): ADDED Requirements, job-orchestration Specification (Delta), Requirement: Concurrent execution guards, Requirement: Controllable delivery worker, Requirement: Durable allowlisted jobs, Requirement: Live job event streaming, Scenario: Double deploy from two tabs, Scenario: Job survives an API restart (+3 more)
+Cohesion: 0.19
+Nodes (11): _FakeCentral, _FakeStaging, Data browser: allowlisting, clamping, and identifier safety.  Runs without a dat, test_bad_direction_is_rejected(), test_page_below_one_is_clamped(), test_page_size_is_clamped_not_rejected(), test_sort_column_not_in_table_is_rejected(), test_target_side_reads_staging() (+3 more)
 
 ### Community 28 - "MappingReview.tsx"
-Cohesion: 0.30
-Nodes (9): approveMapping(), getProposal(), resolveMapping(), SchemaSystem, CopyButton(), SchemaTree(), SchemaTreeProps, MappingReview() (+1 more)
+Cohesion: 0.25
+Nodes (13): approveSchema(), getAudit(), getDriftReports(), SchemaSystem, CopyButton(), SchemaTree(), SchemaTreeProps, AuditLog() (+5 more)
 
 ### Community 29 - "Onboarding.tsx"
-Cohesion: 0.23
-Nodes (8): getStatus(), GuardedActionModalProps, GuardTier, DiscoveredTable, extractTables(), Onboarding(), STEPS, errStatus()
+Cohesion: 0.20
+Nodes (17): _columns_for(), compare_row(), fetch_rows(), list_browsable_tables(), _pipeline(), Read-only row access to the source and target databases (data-browser spec).  Se, Both sides' tables with column and row counts, plus the entity link., One page of rows. Size is clamped, never rejected, so a UI cannot wedge. (+9 more)
 
 ### Community 30 - "SKILL.md"
 Cohesion: 0.18
 Nodes (10): Check for context, Ending Discovery, Guardrails, Handling Different Entry Points, OpenSpec Awareness, The Stance, What You Don't Have To Do, What You Might Do (+2 more)
 
 ### Community 31 - "ADDED Requirements"
-Cohesion: 0.18
-Nodes (10): ADDED Requirements, migration-management Specification (Delta), Requirement: Idempotent foundation SQL, Requirement: Safe migration apply, Requirement: Tracked migration state, Scenario: Concurrent applies serialized, Scenario: Edited already-applied file is rejected, Scenario: Failed migration is a no-op (+2 more)
+Cohesion: 0.13
+Nodes (14): Context, D1. In-process services, not subprocesses, D2. FastAPI + SSE, D3. Durable jobs: `admin_job` + `admin_job_event`, D4. Concurrency guards live in Postgres, D5. Migration tracking, home-grown, D6. Auth and audit, D7. Guarded one-click contract (+6 more)
 
 ### Community 32 - "auth.tsx"
-Cohesion: 0.27
-Nodes (7): me(), setUnauthorizedHandler(), User, AuthContext, AuthContextValue, AuthProvider(), queryClient
+Cohesion: 0.13
+Nodes (14): ADDED Requirements, bulk-onboarding Specification (Delta), Requirement: Batch concurrency guard, Requirement: Non-destructive bulk onboarding, Requirement: One-click onboarding of many tables, Requirement: Resilient batch execution, Requirement: Uncertain mappings are never deployed, Scenario: Confident table proceeds (+6 more)
 
 ### Community 33 - "explore.md"
 Cohesion: 0.20
 Nodes (9): Check for context, Ending Discovery, Guardrails, OpenSpec Awareness, The Stance, What You Don't Have To Do, What You Might Do, When a change exists (+1 more)
 
 ### Community 34 - "ADDED Requirements"
-Cohesion: 0.20
-Nodes (9): ADDED Requirements, Requirement: Drift visibility and side-effect transparency, Requirement: On-demand schema scanning, Requirement: Queue and entity health API, Scenario: Paused entities called out, Scenario: Quarantine inspection, Scenario: Scan detects target drift, Scenario: Scan with no changes (+1 more)
+Cohesion: 0.13
+Nodes (14): ADDED Requirements, data-browser Specification (Delta), Requirement: Audited and non-cached access, Requirement: Identifier allowlisting, Requirement: Read-only row browsing of both databases, Requirement: Source-to-target row comparison, Scenario: Browse is attributable, Scenario: Injected sort column rejected (+6 more)
 
 ### Community 35 - "Tasks: Add Admin Database Dashboard"
-Cohesion: 0.20
-Nodes (9): 1. Foundations (SQL + service extraction), 2. Backend API core, 3. Job orchestration, 4. Schema observability, 5. Migration management, 6. Frontend, 7. Tests & verification, 8. Docs & context refresh (+1 more)
+Cohesion: 0.14
+Nodes (13): admin-dashboard Specification (Delta), MODIFIED Requirements, Requirement: Centralized admin web UI, Requirement: Database-focused presentation, Requirement: Live overview of integration health, Scenario: Admin reaches all workflows from one place, Scenario: Drift alert surfaces on overview, Scenario: Mapping review shows lanes (+5 more)
 
 ### Community 36 - "Region V IRIMSV-to-LRMIS integration"
 Cohesion: 0.20
@@ -254,12 +285,12 @@ Cohesion: 0.22
 Nodes (8): graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
 ### Community 38 - "migrations.py"
-Cohesion: 0.39
-Nodes (8): Path, apply_migration(), _checksum(), _ensure_tracker(), list_migrations(), mark_applied(), Tracked, checksummed, advisory-lock-guarded SQL migration runner (central Postgr, Record a file as applied without executing it (Docker-initialized databases).
+Cohesion: 0.29
+Nodes (12): NotFoundError, Requested entity/proposal/event does not exist., apply_migration(), _checksum(), _ensure_tracker(), list_migrations(), mark_applied(), Path (+4 more)
 
 ### Community 39 - "Add Admin Database Dashboard"
-Cohesion: 0.25
-Nodes (7): Add Admin Database Dashboard, Capabilities, Impact, Modified Capabilities, New Capabilities, What Changes, Why
+Cohesion: 0.14
+Nodes (13): ADDED Requirements, guided-workflow Specification (Delta), Requirement: Manager-facing terminology, Requirement: No hand-typed object identifiers, Requirement: One state and one next action per table, Requirement: Progressive disclosure of internals, Scenario: Audit trail keeps internal names, Scenario: Empty review queue (+5 more)
 
 ### Community 40 - "Project Context"
 Cohesion: 0.29
@@ -285,25 +316,145 @@ Nodes (3): For git commit hook, For native CLAUDE.md integration, graphify refer
 Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
+### Community 78 - "Requirements"
+Cohesion: 0.14
+Nodes (13): admin-dashboard Specification, Purpose, Requirement: Centralized admin web UI, Requirement: Database-focused presentation, Requirement: Live overview of integration health, Requirement: One-click workflow launch with guarded tiers, Requirements, Scenario: Admin reaches all workflows from one place (+5 more)
+
+### Community 79 - "Requirements"
+Cohesion: 0.14
+Nodes (13): audit-and-approval Specification, Purpose, Requirement: Approval remains a human gate, Requirement: Per-admin authentication with roles, Requirement: Reversibility affordances for dangerous actions, Requirement: Uniform audit trail on every mutation, Requirements, Scenario: Audit log is browsable (+5 more)
+
+### Community 80 - "ADDED Requirements"
+Cohesion: 0.15
+Nodes (12): ADDED Requirements, admin-dashboard Specification (Delta), Requirement: Centralized admin web UI, Requirement: Database-focused presentation, Requirement: Live overview of integration health, Requirement: One-click workflow launch with guarded tiers, Scenario: Admin reaches all workflows from one place, Scenario: Destructive action demands typed confirmation (+4 more)
+
+### Community 81 - "ADDED Requirements"
+Cohesion: 0.15
+Nodes (12): ADDED Requirements, audit-and-approval Specification (Delta), Requirement: Approval remains a human gate, Requirement: Per-admin authentication with roles, Requirement: Reversibility affordances for dangerous actions, Requirement: Uniform audit trail on every mutation, Scenario: Audit log is browsable, Scenario: Kill switch toggle audited (+4 more)
+
+### Community 82 - "Requirements"
+Cohesion: 0.15
+Nodes (12): job-orchestration Specification, Purpose, Requirement: Concurrent execution guards, Requirement: Controllable delivery worker, Requirement: Durable allowlisted jobs, Requirement: Live job event streaming, Requirements, Scenario: Double deploy from two tabs (+4 more)
+
+### Community 83 - "ADDED Requirements"
+Cohesion: 0.17
+Nodes (11): ADDED Requirements, job-orchestration Specification (Delta), Requirement: Concurrent execution guards, Requirement: Controllable delivery worker, Requirement: Durable allowlisted jobs, Requirement: Live job event streaming, Scenario: Double deploy from two tabs, Scenario: Job survives an API restart (+3 more)
+
+### Community 84 - "Requirement: Safe migration apply"
+Cohesion: 0.17
+Nodes (11): migration-management Specification, Purpose, Requirement: Idempotent foundation SQL, Requirement: Safe migration apply, Requirement: Tracked migration state, Requirements, Scenario: Concurrent applies serialized, Scenario: Edited already-applied file is rejected (+3 more)
+
+### Community 85 - "Migrations.tsx"
+Cohesion: 0.10
+Nodes (8): parse_ddl(), RuntimeError, Parse CREATE TABLE blocks out of a MySQL dump., The FK graph has a cycle that is not a simple self-reference., SchemaCycleError, Registry: DDL parsing, reference-table detection, self-loop-safe topo sort.  The, registry(), test_real_cycle_raises()
+
+### Community 86 - "ADDED Requirements"
+Cohesion: 0.18
+Nodes (10): ADDED Requirements, migration-management Specification (Delta), Requirement: Idempotent foundation SQL, Requirement: Safe migration apply, Requirement: Tracked migration state, Scenario: Concurrent applies serialized, Scenario: Edited already-applied file is rejected, Scenario: Failed migration is a no-op (+2 more)
+
+### Community 87 - "Requirements"
+Cohesion: 0.18
+Nodes (10): Purpose, Requirement: Drift visibility and side-effect transparency, Requirement: On-demand schema scanning, Requirement: Queue and entity health API, Requirements, Scenario: Paused entities called out, Scenario: Quarantine inspection, Scenario: Scan detects target drift (+2 more)
+
+### Community 88 - "ADDED Requirements"
+Cohesion: 0.20
+Nodes (9): ADDED Requirements, Requirement: Drift visibility and side-effect transparency, Requirement: On-demand schema scanning, Requirement: Queue and entity health API, Scenario: Paused entities called out, Scenario: Quarantine inspection, Scenario: Scan detects target drift, Scenario: Scan with no changes (+1 more)
+
+### Community 89 - "Tasks: Add Admin Database Dashboard"
+Cohesion: 0.20
+Nodes (9): 1. Foundations (SQL + service extraction), 2. Backend API core, 3. Job orchestration, 4. Schema observability, 5. Migration management, 6. Frontend, 7. Tests & verification, 8. Docs & context refresh (+1 more)
+
+### Community 90 - "Requirement: Durable allowlisted jobs"
+Cohesion: 0.20
+Nodes (9): job-orchestration Specification (Delta), MODIFIED Requirements, Requirement: Concurrent execution guards, Requirement: Durable allowlisted jobs, Scenario: Bulk onboard is an allowlisted type, Scenario: Double deploy from two tabs, Scenario: Job survives an API restart, Scenario: Overlapping bulk onboards (+1 more)
+
+### Community 91 - "Add Admin Database Dashboard"
+Cohesion: 0.25
+Nodes (7): Add Admin Database Dashboard, Capabilities, Impact, Modified Capabilities, New Capabilities, What Changes, Why
+
+### Community 92 - "Tasks: Simplify the Database Manager Experience"
+Cohesion: 0.25
+Nodes (7): 1. Data browser backend, 2. Bulk onboard + proposal listing, 3. Backend tests, 4. Design system, 5. Frontend workflow, 6. Verification and docs, Tasks: Simplify the Database Manager Experience
+
+### Community 93 - "PipelineDiagram.tsx"
+Cohesion: 0.22
+Nodes (4): Health, PipelineDiagramProps, TONE, base
+
+### Community 96 - "view_proposer.py"
+Cohesion: 0.15
+Nodes (22): _all_columns(), _all_tables(), apply_view(), _discover_fks(), _ensure_table(), _fetchval(), _find_join_path(), _generate_view_sql() (+14 more)
+
+### Community 97 - "JobRunner"
+Cohesion: 0.15
+Nodes (5): enqueue(), JobRunner, runner(), _scope(), WorkerController
+
+### Community 98 - "lrmis_registry.py"
+Cohesion: 0.16
+Nodes (12): ddl_path(), get_registry(), _iter_create_blocks(), LrmisColumn, LrmisForeignKey, _parse_block(), _parse_column(), Path (+4 more)
+
+### Community 99 - "lrmis_writer.py"
+Cohesion: 0.22
+Nodes (15): _apply_foreign_keys(), _crosswalk_lookup(), _crosswalk_record(), crosswalk_rows_for_entity(), delete_entity_rows(), _insert(), _quote(), Write one source row across several LRMIS tables (Path B, Phase 3).  Rules this (+7 more)
+
+### Community 100 - "snapshots.py"
+Cohesion: 0.28
+Nodes (12): restore_staging_snapshot(), staging_snapshots(), list_snapshots(), prune_snapshots(), _qt(), Staging-table snapshots taken before destructive drop/recreate operations., Rename the current table aside before a drop; returns the snapshot name., Replace the current table with a snapshot (latest by default). (+4 more)
+
+### Community 101 - "JobDrawer.tsx"
+Cohesion: 0.23
+Nodes (9): listJobs(), EVENT_TYPES, JobEvent, JobEventPayload, JobEventType, SseHandle, subscribeJobEvents(), JobDrawer() (+1 more)
+
+### Community 102 - "Onboarding.tsx"
+Cohesion: 0.23
+Nodes (8): getStatus(), GuardedActionModalProps, GuardTier, DiscoveredTable, extractTables(), Onboarding(), STEPS, errStatus()
+
+### Community 103 - "integration_admin.py"
+Cohesion: 0.31
+Nodes (7): main(), Minimal administrator/auditor CLI; suitable for wrapping in a future web UI., set_enabled(), status(), replay(), approve(), Immutable, reviewed database-backed mapping versions.
+
+### Community 104 - "onboarding.py"
+Cohesion: 0.42
+Nodes (9): backfill(), deploy(), discover(), onboard_bulk(), _pipeline(), propose(), Onboarding workflow services: discover, propose, review, resolve, deploy, backfi, Onboard many tables in one guarded pass (bulk-onboarding spec).      Conservativ (+1 more)
+
+### Community 106 - "rebaseline_entity_fingerprints"
+Cohesion: 0.50
+Nodes (4): main(), Preview or apply the one-time entity fingerprint scope migration., Convert legacy whole-database fingerprints to isolated entity contracts.      On, rebaseline_entity_fingerprints()
+
+### Community 107 - "db.py"
+Cohesion: 0.40
+Nodes (3): central(), Process-wide pooled connectors shared by all request handlers and jobs., staging()
+
+### Community 108 - "labels.ts"
+Cohesion: 0.70
+Nodes (3): DESCRIPTIONS, label(), LABELS
+
+### Community 109 - "group_by_table"
+Cohesion: 0.67
+Nodes (3): group_by_table(), Group column mappings by their `target_table`., test_group_by_table_splits_columns()
+
+### Community 110 - "WriterError"
+Cohesion: 0.67
+Nodes (3): RuntimeError, Base class for multi-table write failures., WriterError
+
 ## Knowledge Gaps
-- **219 isolated node(s):** `import_irimsv_data.sh script`, `import_lrmis_schema.sh script`, `name`, `private`, `version` (+214 more)
+- **310 isolated node(s):** `import_irimsv_data.sh script`, `import_lrmis_schema.sh script`, `name`, `private`, `version` (+305 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **25 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **26 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `PostgresCentralConnector` connect `Staging Fast Refresh` to `Schema Drift Monitoring`, `Outbox & Delivery Store`, `AI Mapping Engine`, `Terminal UI & Pipeline Entry`, `MySQL Staging Connector`, `migrations.py`, `Package Init`?**
+- **Why does `PostgresCentralConnector` connect `MySQL Staging Connector` to `Schema Drift Monitoring`, `view_proposer.py`, `Outbox & Delivery Store`, `AI Mapping Engine`, `Terminal UI & Pipeline Entry`, `migrations.py`, `Staging Fast Refresh`, `integration_admin.py`, `onboarding.py`, `rebaseline_entity_fingerprints`, `db.py`, `Onboarding.tsx`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **Why does `MySQLStagingConnector` connect `Staging Fast Refresh` to `Schema Drift Monitoring`, `Outbox & Delivery Store`, `snapshots.py`, `Terminal UI & Pipeline Entry`, `MySQL Staging Connector`, `onboarding.py`, `rebaseline_entity_fingerprints`, `db.py`, `Onboarding.tsx`?**
   _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **Why does `Schema` connect `Schema Drift Monitoring` to `Terminal UI & Pipeline Entry`, `Package Init`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
-- **Why does `MySQLStagingConnector` connect `MySQL Staging Connector` to `Schema Drift Monitoring`, `Outbox & Delivery Store`, `Terminal UI & Pipeline Entry`, `Staging Fast Refresh`, `Package Init`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+- **Why does `LrmisRegistry` connect `Decisions` to `lrmis_registry.py`, `lrmis_writer.py`, `_Cursor`, `WriterError`, `Package Init`, `Migrations.tsx`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `Schema` (e.g. with `FieldMapping` and `_Client`) actually correct?**
   _`Schema` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 7 inferred relationships involving `Table` (e.g. with `FieldMapping` and `print_field_mapping_table()`) actually correct?**
-  _`Table` has 7 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 8 inferred relationships involving `ValidationError` (e.g. with `create_app()` and `test_enqueue_validates_type_before_db()`) actually correct?**
+  _`ValidationError` has 8 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 5 inferred relationships involving `NotFoundError` (e.g. with `create_app()` and `test_unmanaged_migration_file_rejected()`) actually correct?**
+  _`NotFoundError` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `End-to-end demo of the pipeline using fake data, so you can see the whole flow b`, `This is YOUR schema -- stable, never changes per target system.`, `import_irimsv_data.sh script` to the rest of the system?**
-  _312 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Schema Drift Monitoring` be split into smaller, more focused modules?**
-  _Cohesion score 0.05713058419243986 - nodes in this community are weakly interconnected._
+  _460 weakly-connected nodes found - possible documentation gaps or missing edges._

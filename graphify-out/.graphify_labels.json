@@ -94,5 +94,22 @@
   "92": "Tasks: Simplify the Database Manager Experience",
   "93": "PipelineDiagram.tsx",
   "94": "design.md",
-  "95": "proposal.md"
+  "95": "proposal.md",
+  "96": "view_proposer.py",
+  "97": "JobRunner",
+  "98": "lrmis_registry.py",
+  "99": "lrmis_writer.py",
+  "100": "snapshots.py",
+  "101": "JobDrawer.tsx",
+  "102": "Onboarding.tsx",
+  "103": "integration_admin.py",
+  "104": "onboarding.py",
+  "105": "_Cursor",
+  "106": "rebaseline_entity_fingerprints",
+  "107": "db.py",
+  "108": "labels.ts",
+  "109": "group_by_table",
+  "110": "WriterError",
+  "111": "_h_onboard_bulk",
+  "112": "refresh"
 }
