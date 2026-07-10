@@ -2,23 +2,23 @@
 
 ## 1. Data browser backend
 
-- [ ] 1.1 Add read-only `fetch_rows` / `count_rows` helpers to `PostgresCentralConnector` and `MySQLStagingConnector`, reusing the existing identifier guard; no generic SQL passthrough
-- [ ] 1.2 Create `src/services/data_browser.py`: `list_browsable_tables()`, `fetch_rows()` (allowlisted table + sort column, size cap, direction enum), `compare_row()` keyed on `external_reference`
-- [ ] 1.3 Add `GET /api/data/tables`, `GET /api/data/rows`, `GET /api/data/compare` with `require_operator`, `data_browse` audit rows, and `Cache-Control: no-store`
+- [x] 1.1 Add read-only `fetch_rows` / `count_rows` helpers to `PostgresCentralConnector` and `MySQLStagingConnector`, reusing the existing identifier guard; no generic SQL passthrough
+- [x] 1.2 Create `src/services/data_browser.py`: `list_browsable_tables()`, `fetch_rows()` (allowlisted table + sort column, size cap, direction enum), `compare_row()` keyed on `external_reference`
+- [x] 1.3 Add `GET /api/data/tables`, `GET /api/data/rows`, `GET /api/data/compare` with `require_operator`, `data_browse` audit rows, and `Cache-Control: no-store`
 
 ## 2. Bulk onboard + proposal listing
 
-- [ ] 2.1 Add `ops.list_proposals(status=None)` and `GET /api/proposals`
-- [ ] 2.2 Add `onboarding.onboard_bulk()` composing discover/propose/deploy/backfill; four outcome buckets; continue-on-error; per-table progress callback
-- [ ] 2.3 Register `onboard_bulk` in `JOB_HANDLERS` and add its `_SCOPED` conflict key
-- [ ] 2.4 Guard tier in `routers.submit_job`: confirm+reason; typed confirmation when the batch redeploys a deployed table
+- [x] 2.1 Add `ops.list_proposals(status=None)` and `GET /api/proposals`
+- [x] 2.2 Add `onboarding.onboard_bulk()` composing discover/propose/deploy/backfill; four outcome buckets; continue-on-error; per-table progress callback
+- [x] 2.3 Register `onboard_bulk` in `JOB_HANDLERS` and add its `_SCOPED` conflict key
+- [x] 2.4 Guard tier in `routers.submit_job`: confirm+reason; typed confirmation when the batch redeploys a deployed table
 
 ## 3. Backend tests
 
-- [ ] 3.1 Data browser: unknown table rejected, non-existent sort column rejected, page size clamped, `data_browse` audit row written
-- [ ] 3.2 `onboard_bulk`: continues past a failing table; a sub-threshold or unmet-required proposal lands in `needs_review` and is never deployed; already-deployed table is skipped
+- [x] 3.1 Data browser: unknown table rejected, non-existent sort column rejected, page size clamped, `data_browse` audit row written
+- [x] 3.2 `onboard_bulk`: continues past a failing table; a sub-threshold or unmet-required proposal lands in `needs_review` and is never deployed; already-deployed table is skipped
 - [ ] 3.3 Overlapping `onboard_bulk` submissions produce exactly one job and one 409
-- [ ] 3.4 `pytest -q` and `python -m compileall -q src scripts tests` clean
+- [x] 3.4 `pytest -q` and `python -m compileall -q src scripts tests` clean
 
 ## 4. Design system
 

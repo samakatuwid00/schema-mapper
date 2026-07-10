@@ -137,6 +137,40 @@ def test_migration_apply_requires_typed_filename(admin_client):
     assert "typed confirmation mismatch" in response.json()["detail"]
 
 
+def test_onboard_bulk_is_allowlisted():
+    assert "onboard_bulk" in jobs_module.JOB_HANDLERS
+
+
+def test_onboard_bulk_requires_reason(operator_client):
+    response = operator_client.post("/api/jobs", json={
+        "job_type": "onboard_bulk", "params": {"tables": ["farmers"]}})
+    assert response.status_code == 422
+    assert "reason is required" in response.json()["detail"]
+
+
+def test_onboard_bulk_scope_is_order_independent():
+    scope = jobs_module._SCOPED["onboard_bulk"]
+    assert scope({"source_schema": "irimsv", "tables": ["b", "a"]}) == \
+           scope({"source_schema": "irimsv", "tables": " a , b "})
+
+
+def test_onboard_bulk_rejects_empty_table_list(operator_client, monkeypatch):
+    """The handler must refuse an empty batch rather than 'succeed' on nothing."""
+    from src.admin_api.jobs import _h_onboard_bulk
+    with pytest.raises(ValidationError):
+        _h_onboard_bulk({"tables": [], "_actor": "tester"}, None)
+
+
+def test_data_browse_routes_require_auth(anon_client):
+    for path in ("/api/data/tables", "/api/data/rows?side=source&table=x",
+                 "/api/data/compare?entity=a&external_reference=b"):
+        assert anon_client.get(path).status_code == 401
+
+
+def test_proposals_list_requires_auth(anon_client):
+    assert anon_client.get("/api/proposals").status_code == 401
+
+
 def test_approve_schema_requires_reason(operator_client):
     response = operator_client.post("/api/actions/approve-schema", json={
         "fingerprint": "abc123", "target_system": "LRMIS"})

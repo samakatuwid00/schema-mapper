@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from ..services import data_browser as data_browser_service
 from ..services import migrations as migrations_service
 from ..services import ops as ops_service
 from ..services.common import ValidationError
@@ -19,6 +20,7 @@ from .auth import (AdminUser, authenticate, clear_session, current_user,
                    hash_password, require_admin, require_operator, set_session)
 
 auth_router = APIRouter(prefix="/api/auth", tags=["auth"])
+data_router = APIRouter(prefix="/api/data", tags=["data-browser"])
 reads_router = APIRouter(prefix="/api", tags=["reads"],
                          dependencies=[Depends(current_user)])
 actions_router = APIRouter(prefix="/api/actions", tags=["actions"])
@@ -99,6 +101,11 @@ def schemas(source_schema: str = "irimsv"):
                                         source_schema=source_schema)
 
 
+@reads_router.get("/proposals")
+def proposals(status: str | None = None, limit: int = 200):
+    return ops_service.list_proposals(central=db.central(), status=status, limit=limit)
+
+
 @reads_router.get("/proposals/{proposal_id}")
 def proposal(proposal_id: int):
     return get_review(proposal_id, central=db.central())
@@ -112,6 +119,48 @@ def audit_log(limit: int = 200, actor: str | None = None, action: str | None = N
 @reads_router.get("/snapshots/{table}")
 def snapshots(table: str):
     return ops_service.staging_snapshots(table, staging=db.staging())
+
+
+# ---------------------------------------------------------------------------
+# Data browser (read-only; audited because rows contain personal data)
+# ---------------------------------------------------------------------------
+
+def _no_store(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store"
+
+
+@data_router.get("/tables")
+def data_tables(response: Response, source_schema: str | None = None,
+                user: AdminUser = Depends(require_operator)):
+    _no_store(response)
+    return data_browser_service.list_browsable_tables(
+        central=db.central(), staging=db.staging(), source_schema=source_schema)
+
+
+@data_router.get("/rows")
+def data_rows(response: Response, side: str, table: str, page: int = 1,
+              size: int = data_browser_service.DEFAULT_PAGE_SIZE,
+              sort: str | None = None, direction: str = "asc",
+              source_schema: str | None = None,
+              user: AdminUser = Depends(require_operator)):
+    _no_store(response)
+    with audited(user.username, "data_browse", target_type=side, target_id=table,
+                 details={"page": page, "size": size, "sort": sort}):
+        return data_browser_service.fetch_rows(
+            side, table, page=page, size=size, sort=sort, direction=direction,
+            central=db.central(), staging=db.staging(), source_schema=source_schema)
+
+
+@data_router.get("/compare")
+def data_compare(response: Response, entity: str, external_reference: str,
+                 source_schema: str | None = None,
+                 user: AdminUser = Depends(require_operator)):
+    _no_store(response)
+    with audited(user.username, "data_compare", target_type="entity", target_id=entity,
+                 details={"external_reference": external_reference}):
+        return data_browser_service.compare_row(
+            entity, external_reference, central=db.central(), staging=db.staging(),
+            source_schema=source_schema)
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +267,10 @@ class JobBody(BaseModel):
     confirm: str | None = None
 
 
-_CONFIRM_MODAL_JOBS = {"deploy", "backfill"}     # reason required
+# reason required. onboard_bulk belongs here rather than in the typed tier because
+# it skips already-deployed tables outright - no populated staging table can be
+# dropped by it, so typed confirmation would be friction without a hazard.
+_CONFIRM_MODAL_JOBS = {"deploy", "backfill", "onboard_bulk"}
 _ONE_CLICK_JOBS = {"schema_scan", "discover", "propose", "monitor",
                    "worker_run", "reconcile", "replay", "entity_toggle"}
 

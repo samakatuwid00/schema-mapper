@@ -117,6 +117,37 @@ def list_drift_reports(central: PostgresCentralConnector | None = None, limit: i
             central.close()
 
 
+def list_proposals(central: PostgresCentralConnector | None = None,
+                   status: str | None = None, limit: int = 200) -> list[dict]:
+    """Proposals joined to their entity, so the UI never asks for a typed id."""
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    try:
+        with central.connection() as conn:
+            where, params = "", []
+            if status:
+                where = "WHERE p.status = %s"
+                params.append(status)
+            params.append(limit)
+            return p._query(conn, f"""
+                SELECT p.id AS proposal_id, p.status, p.auto_approved_count,
+                       p.needs_review_count, p.rejected_count, p.unmet_required_columns,
+                       p.created_at, p.updated_at, p.reviewed_by,
+                       e.id AS entity_id, e.source_schema, e.source_table,
+                       e.target_system, e.status AS entity_status,
+                       (SELECT COUNT(*) FROM integration.onboarding_field_review r
+                        WHERE r.proposal_id = p.id AND r.status = 'pending') AS pending_fields
+                FROM integration.onboarding_proposal p
+                JOIN integration.onboarding_entity e ON e.id = p.entity_id
+                {where}
+                ORDER BY p.created_at DESC LIMIT %s
+            """, tuple(params))
+    finally:
+        if owns:
+            central.close()
+
+
 def get_schema_trees(central: PostgresCentralConnector | None = None,
                      staging: MySQLStagingConnector | None = None,
                      source_schema: str = "irimsv") -> dict:

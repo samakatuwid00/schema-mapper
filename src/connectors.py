@@ -10,6 +10,27 @@ import psycopg2
 import psycopg2.extras
 from psycopg2 import pool
 
+MAX_PAGE_SIZE = 100
+
+
+def safe_identifier(name: str) -> str:
+    """Reject anything that is not a bare SQL identifier.
+
+    Callers must additionally allowlist the name against information_schema;
+    this is the last line of defence, not the only one.
+    """
+    if not name or not name.replace("_", "").isalnum():
+        raise ValueError(f"unsafe identifier: {name!r}")
+    return name
+
+
+def _sort_clause(sort: str | None, direction: str) -> str:
+    if not sort:
+        return ""
+    if direction.lower() not in ("asc", "desc"):
+        raise ValueError(f"unsafe sort direction: {direction!r}")
+    return f" ORDER BY {{sort}} {direction.upper()}"
+
 
 class PostgresCentralConnector:
     def __init__(self, dsn: str | None = None, minimum: int = 1, maximum: int = 5):
@@ -28,6 +49,45 @@ class PostgresCentralConnector:
 
     def close(self):
         self._pool.closeall()
+
+    # -- read-only helpers for the data browser -----------------------------
+    # SELECT only. No user SQL reaches these; identifiers are allowlisted by
+    # the caller against information_schema and re-checked here.
+
+    def count_rows(self, schema: str, table: str) -> int:
+        safe_identifier(schema)
+        safe_identifier(table)
+        with self.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f'SELECT count(*) FROM "{schema}"."{table}"')
+                return cur.fetchone()[0]
+
+    def fetch_rows(self, schema: str, table: str, limit: int, offset: int,
+                   sort: str | None = None, direction: str = "asc") -> list[dict]:
+        safe_identifier(schema)
+        safe_identifier(table)
+        limit = max(1, min(int(limit), MAX_PAGE_SIZE))
+        offset = max(0, int(offset))
+        order = ""
+        if sort:
+            safe_identifier(sort)
+            order = _sort_clause(sort, direction).format(sort=f'"{sort}"')
+        sql = f'SELECT * FROM "{schema}"."{table}"{order} LIMIT %s OFFSET %s'
+        with self.connection() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, (limit, offset))
+                return [dict(row) for row in cur.fetchall()]
+
+    def fetch_row_by(self, schema: str, table: str, column: str, value) -> dict | None:
+        safe_identifier(schema)
+        safe_identifier(table)
+        safe_identifier(column)
+        sql = f'SELECT * FROM "{schema}"."{table}" WHERE "{column}" = %s LIMIT 1'
+        with self.connection() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(sql, (value,))
+                row = cur.fetchone()
+                return dict(row) if row else None
 
 
 class MySQLStagingConnector:
@@ -140,3 +200,39 @@ class MySQLStagingConnector:
             with conn.cursor(dictionary=True) as cur:
                 cur.execute(sql, (schema_name,))
                 return cur.fetchall()
+
+    # -- read-only helpers for the data browser -----------------------------
+    # This class stays a least-privilege writer: these issue SELECT only and
+    # accept no user-supplied SQL. Identifiers are allowlisted by the caller.
+
+    def count_rows(self, table: str) -> int:
+        safe_identifier(table)
+        with self.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT count(*) FROM `{table}`")
+                return cur.fetchone()[0]
+
+    def fetch_rows(self, table: str, limit: int, offset: int,
+                   sort: str | None = None, direction: str = "asc") -> list[dict]:
+        safe_identifier(table)
+        limit = max(1, min(int(limit), MAX_PAGE_SIZE))
+        offset = max(0, int(offset))
+        order = ""
+        if sort:
+            safe_identifier(sort)
+            order = _sort_clause(sort, direction).format(sort=f"`{sort}`")
+        sql = f"SELECT * FROM `{table}`{order} LIMIT %s OFFSET %s"
+        with self.connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute(sql, (limit, offset))
+                return cur.fetchall()
+
+    def fetch_row_by(self, table: str, column: str, value) -> dict | None:
+        safe_identifier(table)
+        safe_identifier(column)
+        sql = f"SELECT * FROM `{table}` WHERE `{column}` = %s LIMIT 1"
+        with self.connection() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute(sql, (value,))
+                rows = cur.fetchall()
+                return rows[0] if rows else None

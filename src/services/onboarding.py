@@ -370,6 +370,102 @@ def deploy(proposal_id: int, by: str,
             central.close()
 
 
+def onboard_bulk(source_schema: str, tables: list[str], target_system: str, actor: str,
+                 central: PostgresCentralConnector | None = None,
+                 staging: MySQLStagingConnector | None = None,
+                 progress=None) -> dict:
+    """Onboard many tables in one guarded pass (bulk-onboarding spec).
+
+    Conservative by design. A table is deployed only when its proposal is
+    auto-approved with no unmet required columns; anything less certain is
+    routed to `needs_review` with its proposal id rather than being deployed
+    with columns nobody checked. This is the opposite of the CLI's --auto,
+    which silently drops mid-confidence mappings.
+
+    Non-destructive: composes deploy() (which snapshots before any redeploy
+    drop) and backfill() (which only enqueues outbox events). It never calls
+    the CLI fast path's drop_staging_table + fetch_and_bulk_insert, so rows
+    reach the target only through the audited delivery worker.
+
+    Resilient: a failure on one table is recorded and the batch continues,
+    unlike cmd_onboard which aborts on the first hard exception.
+    """
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    staging = staging or MySQLStagingConnector()
+    target_system = target_system.upper()
+
+    onboarded, needs_review, skipped, failed = [], [], [], []
+    total = len(tables)
+    try:
+        for index, table in enumerate(tables):
+            if progress:
+                progress(index, total, f"onboarding {table}")
+            try:
+                with central.connection() as conn:
+                    existing = p._query(conn, """
+                        SELECT status FROM integration.onboarding_entity
+                        WHERE source_schema = %s AND source_table = %s AND target_system = %s
+                    """, (source_schema, table, target_system))
+                if existing and existing[0]["status"] == "deployed":
+                    skipped.append({"table": table, "reason": "already deployed"})
+                    continue
+
+                # Registers the entity if this table has never been seen.
+                discover(source_schema, target_system, central=central)
+
+                proposed = propose(source_schema, table, target_system, central=central)
+                blocking = (proposed["status"] != "auto_approved"
+                            or bool(proposed["unmet_required"]))
+                if blocking:
+                    needs_review.append({
+                        "table": table,
+                        "proposal_id": proposed["proposal_id"],
+                        "needs_review_fields": proposed["needs_review"],
+                        "rejected_fields": proposed["rejected"],
+                        "unmet_required": proposed["unmet_required"],
+                        "gemini_error": proposed.get("gemini_error"),
+                    })
+                    continue
+
+                deployed = deploy(proposed["proposal_id"], actor,
+                                  central=central, staging=staging)
+                filled = backfill(table, central=central)
+                onboarded.append({
+                    "table": table,
+                    "proposal_id": proposed["proposal_id"],
+                    "staging_table": deployed["staging_table"],
+                    "mappings": deployed["mappings"],
+                    "queued": filled["queued"],
+                    "skipped_duplicates": filled["skipped"],
+                })
+            except Exception as exc:  # one bad table must not kill the batch
+                failed.append({"table": table, "error": str(exc)})
+
+        if progress:
+            progress(total, total, "bulk onboard complete")
+
+        return {
+            "source_schema": source_schema,
+            "target_system": target_system,
+            "requested": total,
+            "onboarded": onboarded,
+            "needs_review": needs_review,
+            "skipped_already_deployed": skipped,
+            "failed": failed,
+            "counts": {
+                "onboarded": len(onboarded),
+                "needs_review": len(needs_review),
+                "skipped_already_deployed": len(skipped),
+                "failed": len(failed),
+            },
+        }
+    finally:
+        if owns:
+            central.close()
+
+
 def backfill(entity_name: str, central: PostgresCentralConnector | None = None) -> dict:
     p = _pipeline()
     owns = central is None

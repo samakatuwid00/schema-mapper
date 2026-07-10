@@ -19,7 +19,7 @@ from ..services import ConflictError, NotFoundError, ValidationError
 from ..services import migrations as migrations_service
 from ..services import ops as ops_service
 from ..services import scan as scan_service
-from ..services.onboarding import backfill, deploy, discover, propose
+from ..services.onboarding import backfill, deploy, discover, onboard_bulk, propose
 from . import db
 from .audit import write_audit
 from .settings import JOB_HEARTBEAT_SECONDS, JOB_STALE_SECONDS, JOB_WORKERS
@@ -80,6 +80,23 @@ def _h_backfill(params, ctx):
     return backfill(params["entity"])
 
 
+def _normalize_tables(raw) -> list[str]:
+    if isinstance(raw, str):
+        raw = raw.split(",")
+    return [t.strip() for t in (raw or []) if t and t.strip()]
+
+
+def _h_onboard_bulk(params, ctx: JobContext):
+    tables = _normalize_tables(params.get("tables"))
+    if not tables:
+        raise ValidationError("onboard_bulk requires at least one table")
+    return onboard_bulk(
+        params.get("source_schema", "irimsv"), tables,
+        params.get("target_system", "LRMIS").upper(), params["_actor"],
+        progress=lambda i, n, msg: ctx.progress(i, n, msg),
+    )
+
+
 def _h_reconcile(params, ctx):
     return ops_service.reconcile(params["entity"])
 
@@ -126,6 +143,7 @@ JOB_HANDLERS = {
     "propose": _h_propose,
     "deploy": _h_deploy,
     "backfill": _h_backfill,
+    "onboard_bulk": _h_onboard_bulk,
     "reconcile": _h_reconcile,
     "monitor": _h_monitor,
     "refresh": _h_refresh,
@@ -142,6 +160,10 @@ _SCOPED = {
     "deploy": lambda p: f"deploy:{p.get('proposal_id')}",
     "refresh": lambda p: f"refresh:{p.get('source_tables')}",
     "migration_apply": lambda p: "migrations",
+    "onboard_bulk": lambda p: (
+        f"onboard:{p.get('source_schema', 'irimsv')}:"
+        f"{','.join(sorted(_normalize_tables(p.get('tables'))))}"
+    ),
 }
 
 

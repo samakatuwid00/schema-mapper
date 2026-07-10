@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from ..services.common import (ConflictError, NotFoundError, ServiceError,
                                ValidationError)
 from . import jobs
-from .routers import (actions_router, auth_router, jobs_router,
+from .routers import (actions_router, auth_router, data_router, jobs_router,
                       migrations_router, reads_router, users_router,
                       worker_router)
 
@@ -36,8 +36,8 @@ def create_app() -> FastAPI:
     async def _service(request: Request, exc: ServiceError):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
 
-    for router in (auth_router, reads_router, actions_router, jobs_router,
-                   worker_router, migrations_router, users_router):
+    for router in (auth_router, reads_router, data_router, actions_router,
+                   jobs_router, worker_router, migrations_router, users_router):
         app.include_router(router)
 
     @app.on_event("startup")
