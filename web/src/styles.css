@@ -2,23 +2,64 @@
    schema_mapper admin console — dark database-console theme
    ============================================================ */
 
+/* ---------- Self-hosted fonts (served from /fonts, may not exist yet) ----- */
+@font-face {
+  font-family: "Fira Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/FiraSans-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/FiraSans-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/FiraSans-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Code";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/FiraCode-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Code";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/FiraCode-Medium.woff2") format("woff2");
+}
+
 :root {
-  --bg: #0f172a;
-  --bg-deep: #0b1120;
-  --panel: #1e293b;
-  --panel-2: #253349;
-  --panel-inset: #16203a;
+  /* Surfaces — deepened dark slate spine */
+  --bg: #0c1424;
+  --bg-deep: #080e1b;
+  --panel: #1a2536;
+  --panel-2: #223047;
+  --panel-inset: #131d33;
   --border: #2c3b55;
   --border-strong: #3b4d6e;
 
-  --text: #e2e8f0;
-  --text-dim: #94a3b8;
+  /* Body text passes >= 4.5:1 on --bg (no neon-on-black) */
+  --text: #e6edf6;
+  --text-dim: #9fb0c6;
   --text-faint: #64748b;
 
+  /* Cyan spine */
   --accent: #22d3ee;
   --accent-strong: #06b6d4;
   --accent-dim: #0e7490;
 
+  /* Raw status palette */
   --amber: #f59e0b;
   --blue: #3b82f6;
   --green: #22c55e;
@@ -28,13 +69,38 @@
   --gray: #94a3b8;
   --cyan: #22d3ee;
 
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Semantic status aliases — each color carries exactly ONE meaning */
+  --st-flowing: var(--green);   /* data delivered / healthy */
+  --st-info: var(--cyan);       /* informational / reviewed */
+  --st-waiting: var(--amber);   /* queued, not started */
+  --st-active: var(--blue);     /* in progress */
+  --st-retry: var(--orange);    /* will be attempted again */
+  --st-blocked: var(--purple);  /* held back for a human */
+  --st-failed: var(--red);      /* gave up / rejected */
+  --st-idle: var(--gray);       /* paused / disabled / unknown */
+
+  --mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   --radius: 8px;
   --radius-sm: 5px;
   --sidebar-w: 220px;
-  --shadow: 0 8px 30px rgba(2, 6, 23, 0.55);
+
+  /* One elevation scale */
+  --elev-1: 0 1px 2px rgba(2, 6, 23, 0.4);
+  --elev-2: 0 4px 14px rgba(2, 6, 23, 0.5);
+  --elev-3: 0 12px 34px rgba(2, 6, 23, 0.6);
+  --shadow: var(--elev-3); /* legacy alias so existing panels keep their depth */
+
+  /* Glow reserved for live / active state only — never on static cards */
+  --glow-live: 0 0 0 1px var(--accent-dim), 0 0 12px -2px var(--accent);
+
+  /* Motion tokens */
+  --dur-fast: 150ms;
+  --dur: 220ms;
+  --dur-slow: 300ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
 }
 
 * {
@@ -63,6 +129,17 @@ body {
 code {
   font-family: var(--mono);
   font-size: 0.92em;
+}
+
+/* Keep data columns from jittering as digits change */
+.mono,
+.data-cell,
+td.num {
+  font-variant-numeric: tabular-nums;
+}
+
+td.num {
+  text-align: right;
 }
 
 .dim {
@@ -120,6 +197,8 @@ h1, h2, h3, h4 {
 }
 
 .brand-glyph {
+  display: inline-flex;
+  align-items: center;
   font-size: 22px;
   color: var(--accent);
 }
@@ -134,24 +213,63 @@ h1, h2, h3, h4 {
   font-size: 11px;
 }
 
+.brand-sub svg,
+.topbar-title svg {
+  vertical-align: -1px;
+  opacity: 0.8;
+}
+
 .nav-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 14px;
   flex: 1;
 }
 
+/* ---------- Grouped nav ---------- */
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-group-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-faint);
+  padding: 2px 12px 4px;
+}
+
+.nav-group-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   color: var(--text-dim);
   font-size: 13px;
   border-left: 2px solid transparent;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.nav-link svg {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .nav-link:hover {
@@ -391,6 +509,38 @@ h1, h2, h3, h4 {
 .chip-red { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.5); }
 .chip-gray { background: rgba(148, 163, 184, 0.13); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.4); }
 .chip-cyan { background: rgba(34, 211, 238, 0.13); color: #67e8f9; border-color: rgba(34, 211, 238, 0.45); }
+
+/* Semantic chips — one color, one meaning. Derived from the --st-* hue. */
+.chip-flowing { --chip-c: var(--st-flowing); }
+.chip-info    { --chip-c: var(--st-info); }
+.chip-waiting { --chip-c: var(--st-waiting); }
+.chip-active  { --chip-c: var(--st-active); }
+.chip-retry   { --chip-c: var(--st-retry); }
+.chip-blocked { --chip-c: var(--st-blocked); }
+.chip-failed  { --chip-c: var(--st-failed); }
+.chip-idle    { --chip-c: var(--st-idle); }
+
+.chip-flowing,
+.chip-info,
+.chip-waiting,
+.chip-active,
+.chip-retry,
+.chip-blocked,
+.chip-failed,
+.chip-idle {
+  background: color-mix(in srgb, var(--chip-c) 15%, transparent);
+  border-color: color-mix(in srgb, var(--chip-c) 45%, transparent);
+  color: color-mix(in srgb, var(--chip-c) 55%, #ffffff);
+}
+
+.chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
 
 /* ---------- Badges ---------- */
 
@@ -1410,4 +1560,127 @@ details summary {
 
 details summary:hover {
   color: var(--text);
+}
+
+/* ============================================================
+   Phase-1 additions: glass, elevation glow, dense grid, motion
+   ============================================================ */
+
+/* ---------- Glass panels ---------- */
+
+.glass {
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+}
+
+/* ---------- Live / active glow (reserved — never on static cards) ---------- */
+
+.is-live,
+.job-running {
+  box-shadow: var(--glow-live);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.nav-link:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--glow-live);
+}
+
+/* ---------- Dense data grid ---------- */
+
+.data-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel-2);
+  text-align: left;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-faint);
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-strong);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.data-grid tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  vertical-align: top;
+}
+
+.data-grid tbody tr:nth-child(even) {
+  background: rgba(148, 163, 184, 0.035);
+}
+
+.data-grid tbody tr:hover {
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.data-grid .null-cell {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* ---------- Pipeline / sparkline ---------- */
+
+.pipeline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger > * {
+  animation: fadeUp var(--dur) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/* ---------- Hard reduced-motion guard (keep last) ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

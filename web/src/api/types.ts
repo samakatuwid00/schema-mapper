@@ -268,3 +268,105 @@ export interface AdminUser {
   is_active?: boolean;
   [key: string]: unknown;
 }
+
+// ---- Data browser ----
+
+export type DataSide = "source" | "target";
+
+/** One column's metadata as returned by the row-page endpoint. */
+export interface DataColumn {
+  name: string;
+  data_type: string;
+  nullable: boolean;
+  is_primary_key: boolean;
+}
+
+/** A source-side table in the browser rail (counts, not the columns themselves). */
+export interface SourceTableSummary {
+  table: string;
+  columns: number;
+  rows: number;
+  entity_status: EntityStatus | null;
+  staging_table: string | null;
+}
+
+/** A staging/target-side table in the browser rail. */
+export interface TargetTableSummary {
+  table: string;
+  columns: number;
+  rows: number;
+  entity_status: EntityStatus | null;
+  source_table: string | null;
+}
+
+export interface DataTablesResponse {
+  source: { schema: string; tables: SourceTableSummary[] };
+  target: { database: string; tables: TargetTableSummary[] };
+}
+
+export type DataRow = Record<string, unknown>;
+
+export interface DataRowsResponse {
+  side: DataSide;
+  table: string;
+  columns: DataColumn[];
+  rows: DataRow[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}
+
+export interface DataRowsParams {
+  side: DataSide;
+  table: string;
+  page?: number;
+  size?: number;
+  sort?: string;
+  direction?: "asc" | "desc";
+  sourceSchema?: string;
+}
+
+/** One field of a source↔target row comparison. */
+export interface CompareField {
+  field: string;
+  source: unknown;
+  target: unknown;
+  /** True only when the field is carried on both sides and the values match. */
+  matches: boolean;
+  /** False for envelope-only columns the target adds that the source never had. */
+  compared: boolean;
+}
+
+export interface CompareResponse {
+  entity: string;
+  external_reference: string;
+  staging_table: string | null;
+  delivery_status: string | null;
+  source_row: Record<string, unknown> | null;
+  target_row: Record<string, unknown> | null;
+  missing_in_target: boolean;
+  missing_in_source: boolean;
+  fields: CompareField[];
+}
+
+// ---- Proposal summaries (review queue) ----
+
+/** A proposal joined to its entity, so the review queue never needs a typed id. */
+export interface ProposalSummary {
+  proposal_id: number;
+  status: string;
+  auto_approved_count: number;
+  needs_review_count: number;
+  rejected_count: number;
+  unmet_required_columns: string[];
+  created_at: string;
+  updated_at: string;
+  reviewed_by: string | null;
+  entity_id: number;
+  source_schema: string;
+  source_table: string;
+  target_system: string;
+  entity_status: EntityStatus | null;
+  pending_fields: number;
+}

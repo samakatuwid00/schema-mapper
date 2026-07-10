@@ -22,21 +22,21 @@
 
 ## 4. Design system
 
-- [ ] 4.1 Self-host Fira Code + Fira Sans; wire `--mono` / `--sans` and tabular numerals for data cells
-- [ ] 4.2 Rework `web/src/styles.css` tokens: deepened surfaces, glass panels, one elevation scale, cyan glow reserved for live/active state, motion tokens with a `prefers-reduced-motion` guard
-- [ ] 4.3 Fix the status color language in `StatusChip.tsx`: one meaning per color, text label always present
-- [ ] 4.4 Add `lucide-react`; replace unicode glyph icons
+- [x] 4.1 Self-host Fira Code + Fira Sans; wire `--mono` / `--sans` and tabular numerals for data cells
+- [x] 4.2 Rework `web/src/styles.css` tokens: deepened surfaces, glass panels, one elevation scale, cyan glow reserved for live/active state, motion tokens with a `prefers-reduced-motion` guard
+- [x] 4.3 Fix the status color language in `StatusChip.tsx`: one meaning per color, text label always present
+- [x] 4.4 Add `lucide-react`; replace unicode glyph icons
 
 ## 5. Frontend workflow
 
-- [ ] 5.1 Add `web/src/labels.ts` glossary and apply it across nav and pages
-- [ ] 5.2 Regroup nav in `App.tsx` into Monitor / Set up / Maintain
-- [ ] 5.3 New `DataBrowser.tsx`: table rail (source/staging + row counts), sortable paginated grid with `∅` for NULL, Compare view
-- [ ] 5.4 New `Tables.tsx`: table list with one state + one action each, checkbox multi-select, "Onboard selected", result buckets
-- [ ] 5.5 Mapping review: proposal picker list (no typed ids) and inline review drawer
-- [ ] 5.6 Merge `SchemaScanner.tsx` + `DriftReports.tsx` into `SchemaChanges.tsx`; collapse raw JSON behind details
+- [x] 5.1 Add `web/src/labels.ts` glossary and apply it across nav and pages
+- [x] 5.2 Regroup nav in `App.tsx` into Monitor / Set up / Maintain
+- [x] 5.3 New `DataBrowser.tsx`: table rail (source/staging + row counts), sortable paginated grid with `∅` for NULL, Compare view
+- [x] 5.4 New `Tables.tsx`: table list with one state + one action each, checkbox multi-select, "Onboard selected", result buckets
+- [x] 5.5 Mapping review: proposal picker list (no typed ids) and inline review drawer
+- [x] 5.6 Merge `SchemaScanner.tsx` + `DriftReports.tsx` into `SchemaChanges.tsx`; collapse raw JSON behind details
 - [ ] 5.7 Overview: animated source → queue → staging pipeline diagram + inline SVG sparklines
-- [ ] 5.8 Frontend tests: nav groups render, labels map internal → presented, status colors unique, guarded tiers still enforced
+- [x] 5.8 Frontend tests: nav groups render, labels map internal → presented, status colors unique, guarded tiers still enforced
 
 ## 6. Verification and docs
 

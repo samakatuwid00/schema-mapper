@@ -1,8 +1,12 @@
 import type {
   AdminUser,
   AuditRow,
+  CompareResponse,
   CreateJobPayload,
   CreateJobResponse,
+  DataRowsParams,
+  DataRowsResponse,
+  DataTablesResponse,
   DeadLetterRow,
   DriftReport,
   JobDetail,
@@ -10,6 +14,7 @@ import type {
   MigrationRow,
   MigrationSqlResponse,
   ProposalResponse,
+  ProposalSummary,
   QuarantineRow,
   SchemasResponse,
   SnapshotsResponse,
@@ -112,6 +117,33 @@ export const getSchemas = (sourceSchema = "irimsv") =>
 
 export const getProposal = (id: number | string) =>
   get<ProposalResponse>(`/api/proposals/${id}`);
+
+/** List proposals (each joined to its entity), optionally filtered by status. */
+export const getProposals = (status?: string) =>
+  get<ProposalSummary[]>(`/api/proposals${qs({ status })}`);
+
+// ---- Data browser (read-only) ----
+
+export const getDataTables = (sourceSchema = "irimsv") =>
+  get<DataTablesResponse>(`/api/data/tables${qs({ source_schema: sourceSchema })}`);
+
+export const getDataRows = (params: DataRowsParams) =>
+  get<DataRowsResponse>(
+    `/api/data/rows${qs({
+      side: params.side,
+      table: params.table,
+      page: params.page,
+      size: params.size,
+      sort: params.sort,
+      direction: params.direction,
+      source_schema: params.sourceSchema,
+    })}`,
+  );
+
+export const compareRow = (entity: string, externalReference: string) =>
+  get<CompareResponse>(
+    `/api/data/compare${qs({ entity, external_reference: externalReference })}`,
+  );
 
 // ---- Audit ----
 

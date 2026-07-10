@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { approveMapping, getProposal, resolveMapping } from "../api/client";
+import { approveMapping, getProposal, getProposals, resolveMapping } from "../api/client";
 import type { ProposalField } from "../api/types";
 import CopyButton from "../components/CopyButton";
 import GuardedActionModal from "../components/GuardedActionModal";
@@ -11,9 +11,7 @@ import { errMsg, shortFp } from "../utils";
 
 export default function MappingReview() {
   const { proposalId } = useParams<{ proposalId: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [inputId, setInputId] = useState(proposalId ?? "");
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const [approveOpen, setApproveOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -23,6 +21,13 @@ export default function MappingReview() {
     queryKey: ["proposal", proposalId],
     queryFn: () => getProposal(proposalId as string),
     enabled,
+  });
+
+  // Picker: the tables still awaiting review, shown when no proposal is open.
+  const queue = useQuery({
+    queryKey: ["needs-review-proposals"],
+    queryFn: () => getProposals("needs_review"),
+    enabled: !enabled,
   });
 
   const resolve = useMutation({
@@ -51,30 +56,50 @@ export default function MappingReview() {
     <div className="page">
       <h2 className="page-title">Mapping Review</h2>
 
-      <div className="form-row">
-        <label className="field field-inline">
-          <span className="field-label">Proposal id</span>
-          <input
-            className="input input-sm mono"
-            value={inputId}
-            placeholder="42"
-            onChange={(e) => setInputId(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && /^\d+$/.test(inputId)) navigate(`/mappings/${inputId}`);
-            }}
-          />
-        </label>
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={!/^\d+$/.test(inputId)}
-          onClick={() => navigate(`/mappings/${inputId}`)}
-        >
-          Load proposal
-        </button>
-      </div>
+      {!enabled && (
+        <section className="panel">
+          <div className="panel-header">
+            <h3 className="panel-title">Tables awaiting review</h3>
+            {queue.data && queue.data.length > 0 && (
+              <span className="dim">{queue.data.length} pending</span>
+            )}
+          </div>
+          {queue.isLoading && <p className="dim">Loading…</p>}
+          {queue.isError && <div className="alert alert-danger">{errMsg(queue.error)}</div>}
+          {queue.data && queue.data.length === 0 && (
+            <p className="dim">Nothing to review — every table's columns are matched.</p>
+          )}
+          {queue.data && queue.data.length > 0 && (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Table</th>
+                  <th>Columns to match</th>
+                  <th>Target</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {queue.data.map((p) => (
+                  <tr key={p.proposal_id}>
+                    <td className="mono">
+                      {p.source_schema}.{p.source_table}
+                    </td>
+                    <td className="num mono">{p.pending_fields}</td>
+                    <td className="mono">{p.target_system}</td>
+                    <td className="row-actions">
+                      <Link className="btn btn-sm btn-primary" to={`/mappings/${p.proposal_id}`}>
+                        Review →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      )}
 
-      {!enabled && <p className="dim">Enter a proposal id to review its field mappings.</p>}
       {isLoading && enabled && <p className="dim">Loading proposal…</p>}
       {isError && <div className="alert alert-danger">{errMsg(error)}</div>}
       {actionError && (
