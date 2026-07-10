@@ -57,7 +57,7 @@ export default function Onboarding() {
 
   // Wizard state shared across steps.
   const [sourceSchema, setSourceSchema] = useState("irimsv");
-  const [targetSystem, setTargetSystem] = useState("lrmis");
+  const [targetSystem, setTargetSystem] = useState("LRMIS");
   const [selectedTable, setSelectedTable] = useState("");
   const [proposalId, setProposalId] = useState("");
   const [backfillEntity, setBackfillEntity] = useState("");

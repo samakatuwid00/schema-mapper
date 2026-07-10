@@ -184,13 +184,68 @@ def set_entity_enabled(entity: str, target_system: str, enabled: bool,
 
 def approve_mapping(mapping_id: int, by: str,
                     central: PostgresCentralConnector | None = None) -> dict:
+    """Approve a legacy mapping_version or the newer onboarding proposal.
+
+    The admin UI reviews onboarding proposals, while the older CLI approval path
+    still targets integration.mapping_version. Keep one API action compatible
+    with both records so admins do not see a 500 when approving from Mapping
+    Review.
+    """
+    p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
     try:
         with central.connection() as conn:
-            _approve_mapping(conn, mapping_id, by)
+            try:
+                _approve_mapping(conn, mapping_id, by)
+            except ValueError as exc:
+                conn.rollback()
+                if str(exc) != "mapping version not found":
+                    raise ValidationError(str(exc)) from exc
+
+                proposals = p._query(conn, """
+                    SELECT p.id, p.entity_id, p.status, e.source_table, e.status AS entity_status
+                    FROM integration.onboarding_proposal p
+                    JOIN integration.onboarding_entity e ON e.id = p.entity_id
+                    WHERE p.id = %s
+                    FOR UPDATE OF p
+                """, (mapping_id,))
+                if not proposals:
+                    raise NotFoundError(f"mapping version or onboarding proposal {mapping_id} not found")
+                proposal = proposals[0]
+                if proposal["status"] in ("rejected", "deploying"):
+                    raise ValidationError(
+                        f"proposal status is '{proposal['status']}' and cannot be approved")
+                pending = p._fetchval(conn, """
+                    SELECT COUNT(*) FROM integration.onboarding_field_review
+                    WHERE proposal_id = %s AND status = 'pending'
+                """, (mapping_id,))
+                if pending:
+                    raise ValidationError(
+                        f"proposal has {pending} pending field review(s); resolve them before approval")
+                accepted = p._fetchval(conn, """
+                    SELECT COUNT(*) FROM integration.onboarding_field_review
+                    WHERE proposal_id = %s AND status IN ('accepted', 'resolved')
+                """, (mapping_id,))
+                if not accepted:
+                    raise ValidationError("proposal has no accepted or resolved field mappings")
+
+                p._execute(conn, """
+                    UPDATE integration.onboarding_proposal
+                    SET status = 'approved', reviewed_by = %s,
+                        reviewed_at = now(), updated_at = now()
+                    WHERE id = %s
+                """, (by, mapping_id))
+                p._execute(conn, """
+                    UPDATE integration.onboarding_entity
+                    SET status = CASE WHEN status = 'deployed' THEN status ELSE 'reviewed' END,
+                        updated_at = now()
+                    WHERE id = %s
+                """, (proposal["entity_id"],))
+                conn.commit()
+                return {"proposal_id": mapping_id, "approved_by": by, "kind": "onboarding_proposal"}
             conn.commit()
-        return {"mapping_id": mapping_id, "approved_by": by}
+        return {"mapping_id": mapping_id, "approved_by": by, "kind": "mapping_version"}
     finally:
         if owns:
             central.close()

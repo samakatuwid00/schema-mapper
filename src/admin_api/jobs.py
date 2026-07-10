@@ -64,12 +64,12 @@ def _h_schema_scan(params, ctx: JobContext):
 
 def _h_discover(params, ctx):
     return discover(params.get("source_schema", "irimsv"),
-                    params.get("target_system", "LRMIS"))
+                    params.get("target_system", "LRMIS").upper())
 
 
 def _h_propose(params, ctx):
     return propose(params.get("source_schema", "irimsv"),
-                   params["source_table"], params.get("target_system", "LRMIS"))
+                   params["source_table"], params.get("target_system", "LRMIS").upper())
 
 
 def _h_deploy(params, ctx):
@@ -94,7 +94,7 @@ def _h_refresh(params, ctx):
         tables = [t.strip() for t in tables.split(",")]
     return ops_service.refresh(
         params.get("source_schema", "irimsv"), tables,
-        params.get("target_system", "LRMIS"),
+        params.get("target_system", "LRMIS").upper(),
         source_system=params.get("source_system", "IRIMSV_REGION_V"),
         batch_size=int(params.get("batch_size", 1000)),
         schedule=params.get("schedule"),
@@ -112,7 +112,7 @@ def _h_replay(params, ctx):
 
 def _h_entity_toggle(params, ctx):
     return ops_service.set_entity_enabled(
-        params["entity"], params.get("target_system", "LRMIS"),
+        params["entity"], params.get("target_system", "LRMIS").upper(),
         bool(params["enabled"]), params.get("reason"))
 
 
