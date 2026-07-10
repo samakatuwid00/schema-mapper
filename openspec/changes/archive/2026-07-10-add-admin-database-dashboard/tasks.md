@@ -55,7 +55,7 @@
 
 - [x] 7.1 Backend tests: auth/roles, audit-in-transaction, job allowlist + state machine, deploy conflict (409), migration checksum mismatch, replay CAS mapping
 - [x] 7.2 Frontend tests: guarded modal tiers, status chip rendering, job drawer updates from SSE events
-- [ ] 7.3 E2E happy path against Docker stack: login → scan → onboard pilot table → worker pass → replay a quarantined event → apply migration
+- [ ] 7.3 E2E happy path against Docker stack (DEFERRED — carried into database-manager-ui-simplification verification)
 - [x] 7.4 `pytest -q` and `python -m compileall -q src scripts tests` clean
 
 ## 8. Docs & context refresh
@@ -63,4 +63,4 @@
 - [x] 8.1 Update README/LOCAL_SETUP: admin UI quickstart; correct stale script references to `python -m src.pipeline` equivalents
 - [x] 8.2 Update `CLAUDE.md` with admin UI dev commands
 - [x] 8.3 Run `graphify update .` so the graph includes the new backend/frontend
-- [ ] 8.4 `openspec validate add-admin-database-dashboard --strict` passes; archive change after acceptance
+- [x] 8.4 `openspec validate add-admin-database-dashboard --strict` passes; archive change after acceptance
