@@ -17,7 +17,7 @@
 
 - [x] 3.1 Data browser: unknown table rejected, non-existent sort column rejected, page size clamped, `data_browse` audit row written
 - [x] 3.2 `onboard_bulk`: continues past a failing table; a sub-threshold or unmet-required proposal lands in `needs_review` and is never deployed; already-deployed table is skipped
-- [ ] 3.3 Overlapping `onboard_bulk` submissions produce exactly one job and one 409
+- [x] 3.3 Overlapping `onboard_bulk` submissions produce exactly one job and one 409
 - [x] 3.4 `pytest -q` and `python -m compileall -q src scripts tests` clean
 
 ## 4. Design system
@@ -41,8 +41,8 @@
 ## 6. Verification and docs
 
 - [x] 6.1 `npm run build` and `npm test -- --run` clean
-- [ ] 6.2 E2E on the Docker stack: log in, bulk onboard all tables, verify the four buckets, open Data Browser, verify staging rows match source via Compare
-- [ ] 6.3 Prove non-destructiveness: after bulk onboard over an already-deployed table, its staging rows survive and no unexpected snapshot/drop occurred
-- [ ] 6.4 Accessibility pass: body text ≥ 4.5:1 contrast, visible focus rings, usable under `prefers-reduced-motion: reduce`
-- [ ] 6.5 Update README/CLAUDE.md for the new pages and vocabulary; run `graphify update .`
+- [x] 6.2 E2E on the Docker stack: log in, bulk onboard all tables, verify the four buckets, open Data Browser, verify staging rows match source via Compare
+- [x] 6.3 Prove non-destructiveness: after bulk onboard over an already-deployed table, its staging rows survive and no unexpected snapshot/drop occurred
+- [~] 6.4 Accessibility: reduced-motion guard + focus rings + tabular numerals in place and contrast tokens chosen for AA; full audited contrast sweep across every new page still pending
+- [x] 6.5 Update README/CLAUDE.md for the new pages and vocabulary; run `graphify update .`
 - [ ] 6.6 `openspec validate database-manager-ui-simplification --strict`; archive after acceptance

@@ -73,10 +73,24 @@ python -m src.pipeline backfill --entity customer
 
 ## Admin web UI
 
-A guarded web dashboard centralizes every operation above (schema scans, onboarding,
-mapping review, deploy, backfill, refresh, worker control, replay, kill switches,
-migrations, audit log) with real-time job progress. Governing specs live in
-`openspec/changes/add-admin-database-dashboard/`.
+A guarded web dashboard centralizes every operation above with real-time job progress.
+The navigation is grouped for a database manager, not by internal concept:
+
+- **Monitor** — Overview (live delivery-pipeline diagram + queue/throughput sparklines),
+  Data Browser (read-only phpMyAdmin-style row grids for the source and staging tables,
+  with source-vs-target row comparison), Sync Queue.
+- **Set up** — Tables (one state and one action per table, plus **Onboard selected** to
+  bulk-onboard many tables in a single guarded click), Review Queue.
+- **Maintain** — Schema Changes (scan + drift in one place), Database Updates (SQL), Audit
+  Log.
+
+Bulk onboard is conservative: tables whose AI column mappings are all high-confidence are
+deployed and their rows queued for delivery; any table with an uncertain or unmet-required
+column is routed to the Review Queue instead of being deployed, and one failing table does
+not abort the batch. It is non-destructive — it never drops and reloads a staging table.
+
+Governing specs: `openspec/changes/database-manager-ui-simplification/` (and the archived
+`openspec/changes/archive/2026-07-10-add-admin-database-dashboard/`).
 
 ```bash
 # one-time: admin tables (auto-applied on fresh docker volumes) + first login
