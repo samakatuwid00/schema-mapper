@@ -94,7 +94,12 @@ def test_multiline_statement_captured_whole(tmp_path):
     assert "secondary" in got["station_type"]     # spanned two lines, captured fully
 
 
-def test_seed_tables_are_all_in_the_schema():
+def test_seed_tables_are_derived_from_the_schema():
     from src.lrmis_registry import get_registry
-    names = set(get_registry().table_names)
-    assert set(init.SEED_TABLES) <= names
+    reg = get_registry()
+    seeds = init.seed_tables(reg)
+    assert set(seeds) <= set(reg.table_names)
+    # the FK parents of the station fan-out, on the real schema
+    assert set(seeds) == {"circular_class", "contact_type", "geo_level", "profile",
+                          "psgc", "school_type", "station_type", "user_status",
+                          "user_type"}

@@ -30,23 +30,16 @@ from src.lrmis_registry import ddl_path, get_registry
 
 TARGET_DB = os.environ.get("LRMIS_TARGET_DATABASE", "lrmis_target")
 
-# The FK-closure of the pipeline's write set: the only lookups its inserts
-# point at. Computed from the registry (see the Phase 1 analysis); everything
-# else in LRMIS (the multi-million-row library catalog) stays empty.
+# The tables to seed are computed from the registry as the FK-closure of the
+# pipeline's write set (see seed_tables() / station_write_set()) - i.e. only
+# the lookups the inserts actually point at. This is derived, not hardcoded,
+# so it can't drift from the schema. On the real schema it resolves to 9
+# tables (psgc, profile, geo_level, station_type, school_type, contact_type,
+# circular_class, user_status, user_type) and correctly excludes the
+# multi-million-row library catalog.
 #   NOTE: `profile` is ~15k person records rather than a pure lookup; it is
-#   seeded because station_head FKs to it, but it can be dropped from this list
-#   if IRIMSV should own profiles instead.
-SEED_TABLES = [
-    "psgc",           # ~44k geographic codes (national PSGC registry)
-    "profile",        # ~15k person profiles (needed by station_head)
-    "geo_level",
-    "station_type",
-    "school_type",
-    "contact_type",
-    "circular_class",
-    "user_status",
-    "user_type",
-]
+#   seeded because station_head FKs to it, but IRIMSV could own profiles
+#   instead - drop it by narrowing the write set if so.
 
 DELIVERY_AUDIT_DDL = """
 CREATE TABLE IF NOT EXISTS `delivery_audit` (
@@ -134,6 +127,12 @@ def iter_seed_statements(path: str, wanted: set[str]):
                 capturing_for = None
 
 
+def seed_tables(registry=None) -> list[str]:
+    """The lookup tables to seed, derived from the schema's FK graph."""
+    registry = registry or get_registry()
+    return registry.seed_tables(registry.station_write_set())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create and seed lrmis_target")
     parser.add_argument("--dry-run", action="store_true",
@@ -142,17 +141,14 @@ def main() -> int:
 
     registry = get_registry()
     tables_in_order = registry.topological_order()   # parents before children
-    seed_set = set(SEED_TABLES)
-    missing = seed_set - set(registry.table_names)
-    if missing:
-        print(f"ERROR: seed tables not in the schema: {sorted(missing)}", file=sys.stderr)
-        return 1
+    seeds = seed_tables(registry)
+    seed_set = set(seeds)
 
     print(f"Target database : {TARGET_DB}")
     print(f"Schema source   : {ddl_path()}")
     print(f"Tables to create: {len(tables_in_order)} (all, so every FK resolves)")
-    print(f"Lookups to seed : {len(SEED_TABLES)} -> {SEED_TABLES}")
-    print(f"Left empty      : {len(tables_in_order) - len(SEED_TABLES)} "
+    print(f"Lookups to seed : {len(seeds)} -> {seeds}")
+    print(f"Left empty      : {len(tables_in_order) - len(seeds)} "
           f"(entity tables the pipeline fills + unused catalog)")
     if args.dry_run:
         print("\n--dry-run: no changes made.")
@@ -185,7 +181,7 @@ def main() -> int:
     print("Created/verified delivery_audit.")
 
     # Seed: rebuild each lookup from the canonical dump for idempotency.
-    for table in SEED_TABLES:
+    for table in seeds:
         cur.execute(f"TRUNCATE TABLE `{table}`")
     statements = 0
     for _table, statement in iter_seed_statements(ddl_path(), seed_set):
@@ -196,7 +192,7 @@ def main() -> int:
     cur.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     print("\nSeed row counts:")
-    for table in SEED_TABLES:
+    for table in seeds:
         cur.execute(f"SELECT COUNT(*) FROM `{table}`")
         print(f"  {table:16} {cur.fetchone()[0]:>8}")
 

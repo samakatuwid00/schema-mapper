@@ -47,6 +47,18 @@ CREATE TABLE `station_address` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 """
 
+DEFAULTS_DDL = """
+CREATE TABLE `d` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `note` varchar(100) DEFAULT NULL,
+  `code` varchar(10) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+"""
+
 CYCLIC_DDL = """
 CREATE TABLE `a` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -155,6 +167,51 @@ def test_real_cycle_raises(registry):
 def test_unknown_table_rejected(registry):
     with pytest.raises(KeyError):
         registry.get_table("not_a_table")
+
+
+# ---------------------------------------------------------------------------
+# Column defaults + required detection
+# ---------------------------------------------------------------------------
+
+def test_default_parsing_and_is_required():
+    reg = LrmisRegistry(parse_ddl(DEFAULTS_DDL))
+    t = reg.get_table("d")
+
+    assert t.get_column("active").default == "'1'"
+    assert t.get_column("active").has_default is True
+    assert t.get_column("created_at").default == "CURRENT_TIMESTAMP"
+    assert t.get_column("note").default is None          # DEFAULT NULL -> no default
+    assert t.get_column("code").default is None
+
+    # required = NOT NULL, no default, not auto_increment
+    assert t.get_column("id").is_required is False        # auto_increment
+    assert t.get_column("name").is_required is True       # NOT NULL, no default
+    assert t.get_column("active").is_required is False    # has a default
+    assert t.get_column("created_at").is_required is False
+    assert t.get_column("note").is_required is False      # nullable
+    assert t.get_column("code").is_required is True
+
+    assert reg.required_columns("d") == ["name", "code"]
+
+
+# ---------------------------------------------------------------------------
+# FK closure + seed set computation
+# ---------------------------------------------------------------------------
+
+def test_fk_closure(registry):
+    # beis and station_address both depend on station (transitively).
+    closure = registry.fk_closure({"beis", "station_address"})
+    assert "station" in closure
+    assert "station_type" in closure   # station -> station_type
+    assert "beis" not in closure       # not a parent of itself
+
+
+def test_seed_tables_excludes_write_set(registry):
+    write_set = registry.station_write_set()
+    seeds = registry.seed_tables(write_set)
+    assert "station" not in seeds       # app-assigned, in the write set
+    assert "beis" not in seeds          # the pipeline populates it
+    assert "station_type" in seeds      # a lookup the inserts point at
 
 
 def test_fk_column_and_relations(registry):

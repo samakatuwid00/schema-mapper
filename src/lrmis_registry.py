@@ -30,6 +30,7 @@ _PK_RE = re.compile(r"PRIMARY KEY \(([^)]+)\)")
 _FK_RE = re.compile(
     r"FOREIGN KEY \(`([^`]+)`\) REFERENCES `([^`]+)` \(`([^`]+)`\)")
 _ENUM_RE = re.compile(r"enum\((.*)\)", re.I)
+_DEFAULT_RE = re.compile(r"\bDEFAULT\s+('(?:[^']|'')*'|[^\s,]+)", re.I)
 
 
 class SchemaCycleError(RuntimeError):
@@ -44,10 +45,22 @@ class LrmisColumn:
     is_primary_key: bool
     auto_increment: bool
     enum_values: tuple[str, ...] = ()
+    default: str | None = None   # raw DEFAULT token, None if the column has none
 
     @property
     def base_type(self) -> str:
         return self.data_type.split("(")[0].strip().lower()
+
+    @property
+    def has_default(self) -> bool:
+        return self.default is not None
+
+    @property
+    def is_required(self) -> bool:
+        """A value must be supplied on insert: NOT NULL, no default, not
+        auto-increment. FK/PK handling is a separate concern the caller layers
+        on top (see services.lrmis_mapping)."""
+        return not self.nullable and self.default is None and not self.auto_increment
 
 
 @dataclass(frozen=True)
@@ -79,6 +92,18 @@ class LrmisTable:
         return next((c for c in self.columns if c.name == name), None)
 
 
+def _parse_default(line: str) -> str | None:
+    """Return the raw DEFAULT token, or None. `DEFAULT NULL` reads as no default
+    (the column falls back to NULL, which only helps a nullable column)."""
+    m = _DEFAULT_RE.search(line)
+    if not m:
+        return None
+    token = m.group(1)
+    if token.upper() == "NULL":
+        return None
+    return token
+
+
 def _parse_column(line: str, pk_columns: set[str]) -> LrmisColumn | None:
     m = _COLUMN_RE.match(line)
     if not m:
@@ -98,6 +123,7 @@ def _parse_column(line: str, pk_columns: set[str]) -> LrmisColumn | None:
         is_primary_key=name in pk_columns,
         auto_increment="auto_increment" in lowered,
         enum_values=enum_values,
+        default=_parse_default(line),
     )
 
 
@@ -175,12 +201,14 @@ class LrmisRegistry:
         for name, cols in grouped.items():
             table = LrmisTable(name=name)
             for r in sorted(cols, key=lambda c: c["ordinal_position"]):
+                raw_default = r.get("column_default")
                 table.columns.append(LrmisColumn(
                     name=r["column_name"],
                     data_type=r["data_type"],
                     nullable=r["is_nullable"] == "YES",
                     is_primary_key=r.get("column_key") == "PRI",
                     auto_increment="auto_increment" in (r.get("extra") or "").lower(),
+                    default=None if raw_default in (None, "NULL") else str(raw_default),
                 ))
             tables[name] = table
         return cls(tables)
@@ -240,6 +268,43 @@ class LrmisRegistry:
         pre-seeded reference data owned by LRMIS.
         """
         return self.get_table(table).auto_increment_column is None
+
+    def required_columns(self, table: str) -> list[str]:
+        """Columns a source mapping MUST supply a value for on insert.
+
+        Excludes columns the system fills anyway: nullable, defaulted, and
+        auto-increment. FK columns are still listed here (the writer fills them
+        from parents, but that is layered on in services.lrmis_mapping so the
+        registry stays purely structural)."""
+        return [c.name for c in self.get_table(table).columns if c.is_required]
+
+    def fk_closure(self, tables) -> set[str]:
+        """Every table transitively reachable via foreign keys from `tables`
+        (parents, grandparents, ...), excluding self-loops. Includes the input
+        tables' parents, not the inputs themselves unless reached as a parent."""
+        seen: set[str] = set()
+        frontier = set(tables)
+        while frontier:
+            t = frontier.pop()
+            for fk in self.get_table(t).foreign_keys:
+                parent = fk.ref_table
+                if parent != t and parent not in seen:
+                    seen.add(parent)
+                    frontier.add(parent)
+        return seen
+
+    def seed_tables(self, write_set) -> list[str]:
+        """Lookup tables that must hold data for the pipeline's inserts to
+        satisfy their foreign keys: the FK-closure of the write set minus the
+        write set itself (the pipeline populates those, including app-assigned
+        station)."""
+        write_set = set(write_set)
+        return sorted(self.fk_closure(write_set) - write_set)
+
+    def station_write_set(self) -> set[str]:
+        """The tables a school row fans out into: station plus everything that
+        references it."""
+        return {"station"} | set(self.get_referencing_tables("station"))
 
     def reference_tables(self) -> list[str]:
         return sorted(t for t in self._tables if self.is_reference_table(t))

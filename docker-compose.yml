@@ -19,6 +19,7 @@ services:
       - ./sql/004_schema_scope_isolation.sql:/docker-entrypoint-initdb.d/05_schema_scope.sql
       - ./sql/005_crosswalk_target_table.sql:/docker-entrypoint-initdb.d/06_crosswalk.sql
       - ./sql/006_station_id_sequence.sql:/docker-entrypoint-initdb.d/07_id_sequence.sql
+      - ./sql/007_onboarding_target_tables.sql:/docker-entrypoint-initdb.d/08_target_tables.sql
 
   lrmis_staging_db:
     image: mysql:8.4

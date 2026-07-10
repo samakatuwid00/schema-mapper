@@ -20,6 +20,7 @@ MIGRATION_FILES = [
     "sql/004_schema_scope_isolation.sql",
     "sql/005_crosswalk_target_table.sql",
     "sql/006_station_id_sequence.sql",
+    "sql/007_onboarding_target_tables.sql",
 ]
 
 _MIGRATION_LOCK_KEY = "schema_mapper:migrations"

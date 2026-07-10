@@ -109,6 +109,5 @@
   "107": "db.py",
   "108": "labels.ts",
   "109": "group_by_table",
-  "110": "WriterError",
-  "112": "refresh"
+  "110": "WriterError"
 }
