@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import json
+import datetime
 from contextlib import contextmanager
 from typing import Iterator
 
@@ -30,6 +31,15 @@ def _sort_clause(sort: str | None, direction: str) -> str:
     if direction.lower() not in ("asc", "desc"):
         raise ValueError(f"unsafe sort direction: {direction!r}")
     return f" ORDER BY {{sort}} {direction.upper()}"
+
+
+def _clamp_mysql_dates(row: dict) -> dict:
+    """Replace out-of-range Python date/datetime objects (year > 9999) with None."""
+    return {
+        k: None if isinstance(v, (datetime.date, datetime.datetime)) and v.year > 9999
+        else v
+        for k, v in row.items()
+    }
 
 
 class PostgresCentralConnector:
@@ -90,6 +100,9 @@ class PostgresCentralConnector:
                 return dict(row) if row else None
 
 
+VIEWS_DATABASE = "lrmis_staging_views"
+
+
 class MySQLStagingConnector:
     """Least-privilege writer. It never creates or alters LRMIS tables."""
 
@@ -108,10 +121,39 @@ class MySQLStagingConnector:
             "ssl_disabled": os.environ.get("LRMIS_STAGING_SSL_DISABLED", "false").lower() == "true",
         }
 
+    @classmethod
+    def for_database(cls, database: str) -> "MySQLStagingConnector":
+        """A connector to a different database on the same server (same creds).
+
+        Used to reach the Path B `lrmis_target` database while the default
+        connector keeps serving `lrmis_staging`."""
+        config = cls._environment_config()
+        config["database"] = database
+        return cls(config)
+
+    @classmethod
+    def for_target(cls) -> "MySQLStagingConnector":
+        return cls.for_database(os.environ.get("LRMIS_TARGET_DATABASE", "lrmis_target"))
+
+    @staticmethod
+    def is_views_table(table: str) -> bool:
+        return "_for_lrmis" in table
+
+    def _qt(self, table: str) -> str:
+        """Return a qualified table name, optionally database-prefixed for views."""
+        safe_identifier(table)
+        if self.is_views_table(table):
+            return f"`{VIEWS_DATABASE}`.`{table}`"
+        return f"`{table}`"
+
     def _ensure_pool(self):
         if self._pool is None:
             from mysql.connector.pooling import MySQLConnectionPool
-            self._pool = MySQLConnectionPool(pool_name="lrmis_staging", pool_size=5, **self.config)
+            # Pool names are process-global in mysql.connector, so derive it from
+            # the database — otherwise a second connector (lrmis_target) collides
+            # with the lrmis_staging pool.
+            pool_name = f"lrmis_{self.config.get('database', 'staging')}"
+            self._pool = MySQLConnectionPool(pool_name=pool_name, pool_size=5, **self.config)
 
     @contextmanager
     def connection(self) -> Iterator:
@@ -145,10 +187,12 @@ class MySQLStagingConnector:
             )
         else:
             updates = [f"`{column}` = VALUES(`{column}`)" for column in update_columns]
+        qt = self._qt(table)
         sql = (
-            f"INSERT INTO `{table}` ({', '.join(f'`{c}`' for c in columns)}) "
+            f"INSERT INTO {qt} ({', '.join(f'`{c}`' for c in columns)}) "
             f"VALUES ({placeholders}) ON DUPLICATE KEY UPDATE {', '.join(updates)}"
         )
+        row = _clamp_mysql_dates(row)
         with self.connection() as conn:
             with conn.cursor() as cur:
                 values = [json.dumps(row[c], default=str) if isinstance(row[c], (dict, list)) else row[c]
@@ -166,9 +210,10 @@ class MySQLStagingConnector:
             if not column.replace("_", "").isalnum():
                 raise ValueError(f"unsafe target column name: {column}")
 
+        qt = self._qt(table)
         placeholders = ", ".join(["%s"] * len(columns))
         sql = (
-            f"INSERT INTO `{table}` ({', '.join(f'`{c}`' for c in columns)}) "
+            f"INSERT INTO {qt} ({', '.join(f'`{c}`' for c in columns)}) "
             f"VALUES ({placeholders})"
         )
 
@@ -176,7 +221,7 @@ class MySQLStagingConnector:
         with self.connection() as conn:
             with conn.cursor() as cur:
                 for i in range(0, len(rows), batch_size):
-                    batch = rows[i : i + batch_size]
+                    batch = [_clamp_mysql_dates(r) for r in rows[i : i + batch_size]]
                     values = [
                         [json.dumps(row[c], default=str) if isinstance(row[c], (dict, list)) else row[c] for c in columns]
                         for row in batch
@@ -188,7 +233,8 @@ class MySQLStagingConnector:
         return total
 
     def information_schema(self, schema_name: str | None = None) -> list[dict]:
-        schema_name = schema_name or self.config["database"]
+        if schema_name is None:
+            schema_name = self.config["database"]
         sql = """
             SELECT table_name, column_name, data_type, is_nullable, column_key,
                    ordinal_position, column_default, extra
@@ -206,31 +252,31 @@ class MySQLStagingConnector:
     # accept no user-supplied SQL. Identifiers are allowlisted by the caller.
 
     def count_rows(self, table: str) -> int:
-        safe_identifier(table)
+        qt = self._qt(table)
         with self.connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SELECT count(*) FROM `{table}`")
+                cur.execute(f"SELECT count(*) FROM {qt}")
                 return cur.fetchone()[0]
 
     def fetch_rows(self, table: str, limit: int, offset: int,
                    sort: str | None = None, direction: str = "asc") -> list[dict]:
-        safe_identifier(table)
+        qt = self._qt(table)
         limit = max(1, min(int(limit), MAX_PAGE_SIZE))
         offset = max(0, int(offset))
         order = ""
         if sort:
             safe_identifier(sort)
             order = _sort_clause(sort, direction).format(sort=f"`{sort}`")
-        sql = f"SELECT * FROM `{table}`{order} LIMIT %s OFFSET %s"
+        sql = f"SELECT * FROM {qt}{order} LIMIT %s OFFSET %s"
         with self.connection() as conn:
             with conn.cursor(dictionary=True) as cur:
                 cur.execute(sql, (limit, offset))
                 return cur.fetchall()
 
     def fetch_row_by(self, table: str, column: str, value) -> dict | None:
-        safe_identifier(table)
+        qt = self._qt(table)
         safe_identifier(column)
-        sql = f"SELECT * FROM `{table}` WHERE `{column}` = %s LIMIT 1"
+        sql = f"SELECT * FROM {qt} WHERE `{column}` = %s LIMIT 1"
         with self.connection() as conn:
             with conn.cursor(dictionary=True) as cur:
                 cur.execute(sql, (value,))

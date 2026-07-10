@@ -196,6 +196,18 @@ def main() -> int:
         cur.execute(f"SELECT COUNT(*) FROM `{table}`")
         print(f"  {table:16} {cur.fetchone()[0]:>8}")
 
+    # The delivery writer connects as the least-privilege LRMIS_STAGING_USER;
+    # give it DML + SELECT on lrmis_target (SELECT for reference resolution,
+    # DELETE for crosswalk-scoped refresh). No DDL privileges.
+    writer_user = os.environ.get("LRMIS_STAGING_USER", "irimsv_writer")
+    try:
+        cur.execute(
+            f"GRANT SELECT, INSERT, UPDATE, DELETE ON `{TARGET_DB}`.* TO %s@'%%'",
+            (writer_user,))
+        print(f"Granted SELECT/INSERT/UPDATE/DELETE on {TARGET_DB} to {writer_user}.")
+    except Exception as exc:   # e.g. user only exists as writer@localhost in some setups
+        print(f"WARNING: could not grant to {writer_user}@'%': {exc}")
+
     cur.execute("SELECT COUNT(*) FROM information_schema.tables "
                 "WHERE table_schema = %s AND table_type = 'BASE TABLE'", (TARGET_DB,))
     total = cur.fetchone()[0]

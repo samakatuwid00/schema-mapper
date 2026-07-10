@@ -124,11 +124,30 @@ def delivered(conn, event: dict, mapping: dict, target_id: str | None = None):
                 (source_system, source_entity, external_reference, target_system,
                  target_table, target_id, last_event_id)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (source_system, source_entity, external_reference, target_system)
+            ON CONFLICT (source_system, source_entity, external_reference, target_system, target_table)
             DO UPDATE SET target_id = COALESCE(EXCLUDED.target_id, integration.id_crosswalk.target_id),
                           last_event_id = EXCLUDED.last_event_id, updated_at = now()
         """, (event["source_system"], event["source_entity"], event["external_reference"],
               event["target_system"], mapping["target_table"], target_id, event["event_id"]))
+
+
+def mark_event_delivered(conn, event: dict) -> None:
+    """Mark an outbox event delivered without touching the crosswalk.
+
+    The Path B multi-table writer records one crosswalk row per target table
+    itself, so this only advances the outbox status and audit trail (unlike
+    delivered(), which owns the single-table crosswalk write)."""
+    attempt = event["attempts"] + 1
+    with conn.cursor() as cur:
+        cur.execute("""
+            UPDATE integration.outbox SET status = 'delivered', attempts = %s,
+                processed_at = now(), last_error_code = NULL, last_error_message = NULL
+            WHERE event_id = %s
+        """, (attempt, event["event_id"]))
+        cur.execute("""
+            INSERT INTO integration.delivery_audit (event_id, attempt, outcome, response_code)
+            VALUES (%s, %s, 'accepted', 'LRMIS_MULTI')
+        """, (event["event_id"], attempt))
 
 
 def retry_or_dead_letter(conn, event: dict, error: Exception, max_attempts: int):
