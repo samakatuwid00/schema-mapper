@@ -136,6 +136,14 @@ def list_proposals(central: PostgresCentralConnector | None = None,
                        p.created_at, p.updated_at, p.reviewed_by,
                        e.id AS entity_id, e.source_schema, e.source_table,
                        e.target_system, e.status AS entity_status,
+                       (e.lrmis_target_tables IS NOT NULL) AS on_target,
+                       EXISTS (
+                         SELECT 1 FROM integration.onboarding_field_review lr
+                         WHERE lr.proposal_id = p.id
+                           AND lr.status IN ('accepted', 'resolved')
+                           AND lr.suggested_target_table IS NOT NULL
+                           AND lr.suggested_target_table NOT LIKE 'irimsv_%%_staging'
+                       ) AS has_lrmis_mapping,
                        (SELECT COUNT(*) FROM integration.onboarding_field_review r
                         WHERE r.proposal_id = p.id AND r.status = 'pending') AS pending_fields
                 FROM integration.onboarding_proposal p
@@ -150,19 +158,25 @@ def list_proposals(central: PostgresCentralConnector | None = None,
 
 def get_schema_trees(central: PostgresCentralConnector | None = None,
                      staging: MySQLStagingConnector | None = None,
-                     source_schema: str = "irimsv") -> dict:
+                     source_schema: str = "irimsv",
+                     target: MySQLStagingConnector | None = None) -> dict:
+    """Three trees: source (IRIMSV), staging (Path A lrmis_staging), and
+    target_b (Path B lrmis_target canonical contract)."""
     from ..schema_ingest import from_information_schema, schema_fingerprint
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
     staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     try:
         with central.connection() as conn:
             src = p._discover_source_schema(conn, source_schema)
-        tgt = from_information_schema(staging.information_schema(), "LRMIS")
+        stg = from_information_schema(staging.information_schema(), "LRMIS")
+        tgt_b = from_information_schema(target.information_schema(), "LRMIS_B")
         return {
             "source": {"fingerprint": schema_fingerprint(src), **src.to_dict()},
-            "target": {"fingerprint": schema_fingerprint(tgt), **tgt.to_dict()},
+            "staging": {"fingerprint": schema_fingerprint(stg), **stg.to_dict()},
+            "target_b": {"fingerprint": schema_fingerprint(tgt_b), **tgt_b.to_dict()},
         }
     finally:
         if owns:
@@ -208,6 +222,28 @@ def set_entity_enabled(entity: str, target_system: str, enabled: bool,
             conn.commit()
         return {"entity": entity, "target_system": target_system, "enabled": enabled,
                 "reason": None if enabled else (reason or "manually paused")}
+    finally:
+        if owns:
+            central.close()
+
+
+def cancel_queue(entity: str,
+                 central: PostgresCentralConnector | None = None) -> dict:
+    """Quarantine all pending outbox events for an entity."""
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    try:
+        with central.connection() as conn:
+            count = p._execute(conn, """
+                UPDATE integration.outbox
+                SET status = 'quarantined',
+                    updated_at = now(),
+                    error_log = COALESCE(error_log || chr(10), '') || 'cancelled by admin'
+                WHERE source_entity = %s AND status = 'pending'
+            """, (entity,))
+            conn.commit()
+        return {"entity": entity, "cancelled": count or 0}
     finally:
         if owns:
             central.close()
@@ -291,7 +327,8 @@ def approve_schema(fingerprint: str, target_system: str, by: str,
         with central.connection() as conn:
             count = p._execute(conn, """
                 UPDATE integration.schema_version SET approved_at = now(), approved_by = %s
-                WHERE target_system = %s AND fingerprint = %s
+                WHERE target_system = %s AND scope_kind = 'contract' AND scope_name = ''
+                  AND fingerprint = %s
             """, (by, target_system, fingerprint))
             if count != 1:
                 raise NotFoundError("schema fingerprint not found")
@@ -352,11 +389,32 @@ def reconcile(entity_name: str,
             central.close()
 
 
-def monitor(central: PostgresCentralConnector | None = None) -> dict:
-    from ..schema_ingest import schema_fingerprint
+def _entity_fingerprints(conn, staging: MySQLStagingConnector, entity: dict) -> tuple[str | None, str | None]:
+    """Fingerprint only this entity's source object and exact staging table."""
+    from ..connectors import VIEWS_DATABASE
+    from ..schema_ingest import from_information_schema, schema_fingerprint, table_schema
+
+    p = _pipeline()
+    current_source = p._discover_source_schema(conn, entity["source_schema"])
+    source_contract = table_schema(current_source, entity["source_table"])
+    source_fp = schema_fingerprint(source_contract) if source_contract else None
+
+    staging_table = entity.get("staging_table")
+    target_fp = None
+    if staging_table:
+        database = VIEWS_DATABASE if staging.is_views_table(staging_table) else None
+        target = from_information_schema(staging.information_schema(database), "LRMIS")
+        target_contract = table_schema(target, staging_table)
+        target_fp = schema_fingerprint(target_contract) if target_contract else None
+    return source_fp, target_fp
+
+
+def monitor(central: PostgresCentralConnector | None = None,
+            staging: MySQLStagingConnector | None = None) -> dict:
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
+    staging = staging or MySQLStagingConnector()
     try:
         with central.connection() as conn:
             entities = p._query(conn, """
@@ -364,22 +422,24 @@ def monitor(central: PostgresCentralConnector | None = None) -> dict:
             """)
             results, paused = [], []
             for entity in entities:
-                current_source = p._discover_source_schema(conn, entity["source_schema"])
-                has_table = current_source.get_table(entity["source_table"]) is not None
-                new_source_fp = schema_fingerprint(current_source) if has_table else None
-                target = p._discover_target_schema(conn, entity["target_system"])
-                new_target_fp = schema_fingerprint(target) if target else None
-                source_drift = bool(entity.get("source_fingerprint") and new_source_fp
+                new_source_fp, new_target_fp = _entity_fingerprints(conn, staging, entity)
+                legacy = int(entity.get("fingerprint_scope_version") or 1) < 2
+                source_drift = bool(not legacy and entity.get("source_fingerprint")
                                     and entity["source_fingerprint"] != new_source_fp)
-                target_drift = bool(entity.get("target_fingerprint") and new_target_fp
+                target_drift = bool(not legacy and entity.get("target_fingerprint")
                                     and entity["target_fingerprint"] != new_target_fp)
                 if source_drift or target_drift:
+                    reason = f"Schema drift detected: source={source_drift}, target={target_drift}"
                     p._execute(conn, """
                         UPDATE integration.onboarding_entity
                         SET status = 'paused', paused_reason = %s, updated_at = now()
                         WHERE id = %s
-                    """, (f"Schema drift detected: source={source_drift}, target={target_drift}",
-                          entity["id"]))
+                    """, (reason, entity["id"]))
+                    p._execute(conn, """
+                        UPDATE integration.entity_control
+                        SET enabled = false, paused_reason = %s, updated_at = now()
+                        WHERE source_entity = %s AND target_system = %s
+                    """, (reason, entity["source_table"], entity["target_system"]))
                     p._execute(conn, """
                         INSERT INTO integration.schema_drift_report
                             (target_system, previous_fingerprint, observed_fingerprint,
@@ -396,9 +456,89 @@ def monitor(central: PostgresCentralConnector | None = None) -> dict:
                     "source_drift": source_drift,
                     "target_drift": target_drift,
                     "paused": source_drift or target_drift,
+                    "rebaseline_required": legacy,
                 })
             conn.commit()
         return {"entities": results, "paused_entities": paused}
+    finally:
+        if owns:
+            central.close()
+
+
+def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
+                                   central: PostgresCentralConnector | None = None,
+                                   staging: MySQLStagingConnector | None = None) -> dict:
+    """Convert legacy whole-database fingerprints to isolated entity contracts.
+
+    Only entities paused by the old schema-drift monitor are eligible for
+    automatic re-enable. Missing source or target objects are reported and
+    left untouched. Call with ``apply=False`` for a read-only preview.
+    """
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    staging = staging or MySQLStagingConnector()
+    converted, skipped = [], []
+    try:
+        with central.connection() as conn:
+            entities = p._query(conn, """
+                SELECT * FROM integration.onboarding_entity
+                WHERE fingerprint_scope_version < 2
+                  AND status IN ('deployed', 'paused')
+                ORDER BY source_schema, source_table
+            """)
+            for entity in entities:
+                source_fp, target_fp = _entity_fingerprints(conn, staging, entity)
+                if not source_fp or not target_fp:
+                    skipped.append({
+                        "entity": entity["source_table"],
+                        "source_schema": entity["source_schema"],
+                        "reason": "source object missing" if not source_fp else "staging table missing",
+                    })
+                    continue
+                was_drift_pause = (
+                    entity["status"] == "paused"
+                    and str(entity.get("paused_reason") or "").startswith("Schema drift detected:")
+                )
+                converted.append({
+                    "entity": entity["source_table"],
+                    "source_schema": entity["source_schema"],
+                    "staging_table": entity["staging_table"],
+                    "will_reenable": was_drift_pause,
+                })
+                if not apply:
+                    continue
+                p._execute(conn, """
+                    UPDATE integration.onboarding_entity
+                    SET source_fingerprint = %s, target_fingerprint = %s,
+                        fingerprint_scope_version = 2,
+                        status = CASE WHEN %s THEN 'deployed' ELSE status END,
+                        paused_reason = CASE WHEN %s THEN NULL ELSE paused_reason END,
+                        updated_at = now()
+                    WHERE id = %s
+                """, (source_fp, target_fp, was_drift_pause, was_drift_pause, entity["id"]))
+                if was_drift_pause:
+                    p._execute(conn, """
+                        UPDATE integration.entity_control
+                        SET enabled = true, paused_reason = NULL, updated_at = now()
+                        WHERE source_entity = %s AND target_system = %s
+                    """, (entity["source_table"], entity["target_system"]))
+                p._execute(conn, """
+                    INSERT INTO integration.onboarding_audit
+                        (entity_id, action, details, performed_by)
+                    VALUES (%s, 'fingerprint_rebaseline', %s, %s)
+                """, (entity["id"], json.dumps({
+                    "source_schema": entity["source_schema"],
+                    "source_table": entity["source_table"],
+                    "staging_table": entity["staging_table"],
+                    "reenabled": was_drift_pause,
+                }), actor))
+            if apply:
+                conn.commit()
+            else:
+                conn.rollback()
+        return {"apply": apply, "converted": converted, "skipped": skipped,
+                "converted_count": len(converted), "skipped_count": len(skipped)}
     finally:
         if owns:
             central.close()
@@ -439,7 +579,31 @@ def refresh(source_schema: str, source_tables: list[str], target_system: str,
                     results.append({"table": table, "status": "skipped",
                                     "error": f"source table {source_schema}.{table} not found"})
                     continue
-                pk_cols = [c.name for c in source_table_obj.columns if c.is_primary_key] or ["id"]
+
+                # Use stored primary_key_columns from the entity (set at deploy time)
+                # rather than re-detecting via information_schema, which can fail when
+                # PK constraints are not visible to the querying role.
+                # If a stored PK column no longer exists in the source table (e.g. the
+                # entity was deployed with a fallback ["id"]), fall back to detecting
+                # actual PK columns from the live source schema.
+                entity_row = p._fetchval(conn, """
+                    SELECT primary_key_columns FROM integration.onboarding_entity
+                    WHERE source_schema = %s AND source_table = %s AND target_system = %s
+                """, (source_schema, table, target_system))
+                pk_cols = json.loads(entity_row) if isinstance(entity_row, str) else (entity_row or [])
+                source_col_names = {c.name for c in source_table_obj.columns}
+                if not pk_cols or not all(c in source_col_names for c in pk_cols):
+                    live_pk = [c.name for c in source_table_obj.columns if c.is_primary_key]
+                    if live_pk:
+                        pk_cols = live_pk
+                    elif "id" in source_col_names:
+                        pk_cols = ["id"]
+                    else:
+                        # No declared PK and no id column: let generate_refresh_sql
+                        # key each row off a content hash instead of a column that
+                        # does not exist.
+                        pk_cols = []
+
                 updated_at_col = next(
                     (c.name for c in source_table_obj.columns
                      if c.name.lower() in ("updated_at", "modified_at", "last_updated", "timestamp")),

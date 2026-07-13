@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  cancelQueue,
   getDeadLetter,
   getQuarantine,
   getStatus,
@@ -14,7 +15,7 @@ import StatusChip from "../components/StatusChip";
 import { useJobRunner } from "../hooks/useJobRunner";
 import { errMsg, fmtAgo, fmtDate, prettyJson } from "../utils";
 
-type WorkerModal = "start" | "stop" | "refresh" | null;
+type WorkerModal = "start" | "stop" | "refresh" | "refresh_all" | null;
 
 export default function WorkerQueues() {
   const queryClient = useQueryClient();
@@ -24,6 +25,7 @@ export default function WorkerQueues() {
   const [includeResolved, setIncludeResolved] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   // refresh (typed tier) inputs
   const [refreshSchema, setRefreshSchema] = useState("irimsv");
@@ -44,6 +46,10 @@ export default function WorkerQueues() {
   });
 
   const singlePass = useJobRunner();
+  const refreshAll = useJobRunner();
+
+  const entities = status.data?.entities ?? [];
+  const deployedCount = entities.filter((e) => e.status === "deployed").length;
 
   const invalidateAll = () => {
     void queryClient.invalidateQueries({ queryKey: ["worker"] });
@@ -71,6 +77,18 @@ export default function WorkerQueues() {
     onSuccess: invalidateAll,
     onError: (err) => setActionError(errMsg(err)),
   });
+
+  const handleCancelQueue = async (entity: string) => {
+    setCancelling(entity);
+    try {
+      await cancelQueue(entity);
+      invalidateAll();
+    } catch (err) {
+      setActionError(errMsg(err));
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   const toggleExpanded = (id: string) =>
     setExpanded((prev) => {
@@ -188,6 +206,7 @@ export default function WorkerQueues() {
           <div className="panel-header">
             <h3 className="panel-title">Outbox by entity</h3>
           </div>
+          <div className="table-scroll">
           <table className="table">
             <thead>
               <tr>
@@ -195,6 +214,7 @@ export default function WorkerQueues() {
                 <th>Status</th>
                 <th>Events</th>
                 <th>Oldest</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -206,17 +226,31 @@ export default function WorkerQueues() {
                   </td>
                   <td>{row.events}</td>
                   <td className="dim">{row.oldest ? `${fmtAgo(row.oldest)} ago` : "—"}</td>
+                  <td className="row-actions">
+                    {row.status === "pending" && row.events > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        disabled={cancelling === row.source_entity}
+                        onClick={() => handleCancelQueue(row.source_entity)}
+                        title="Cancel queued events"
+                      >
+                        {cancelling === row.source_entity ? "…" : "Cancel"}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {status.data && status.data.outbox_stats.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="dim">
+                  <td colSpan={5} className="dim">
                     Outbox is empty.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+          </div>
         </section>
       </div>
 
@@ -258,6 +292,16 @@ export default function WorkerQueues() {
             onClick={() => setModal("refresh")}
           >
             Refresh…
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger-outline"
+            disabled={deployedCount === 0 || refreshAll.running}
+            onClick={() => setModal("refresh_all")}
+          >
+            {refreshAll.running
+              ? "Refreshing…"
+              : `Refresh all deployed${deployedCount > 0 ? ` (${deployedCount})` : ""}`}
           </button>
         </div>
       </section>
@@ -432,6 +476,38 @@ export default function WorkerQueues() {
               confirm: refreshTables.trim(),
             })
             .catch((err) => setActionError(errMsg(err)));
+        }}
+        onClose={() => setModal(null)}
+      />
+      <GuardedActionModal
+        open={modal === "refresh_all"}
+        tier="typed"
+        danger
+        title={`Refresh all deployed tables (${deployedCount})`}
+        description="Drop and recreate staging data for every deployed entity from the source."
+        confirmString="REFRESH ALL"
+        warning={
+          <div>
+            <p>
+              <strong>This rewrites staging data for all {deployedCount} deployed entities.</strong>
+            </p>
+            <p>Deliveries for these entities may re-emit events after refresh.</p>
+          </div>
+        }
+        actionLabel="Refresh all"
+        busy={refreshAll.running}
+        error={refreshAll.submitError}
+        onConfirm={(reason) => {
+          setModal(null);
+          void refreshAll
+            .run({
+              job_type: "refresh_all",
+              params: { source_schema: refreshSchema.trim(), target_system: refreshTarget.trim() },
+              reason,
+              confirm: "REFRESH ALL",
+            })
+            .then(() => void queryClient.invalidateQueries({ queryKey: ["status"] }))
+            .catch(() => {});
         }}
         onClose={() => setModal(null)}
       />

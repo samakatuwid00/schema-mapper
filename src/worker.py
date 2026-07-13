@@ -83,7 +83,29 @@ def _deliver_legacy(conn, staging, event, result) -> None:
         result["retried"] += 1
 
 
-def _deliver_path_b(conn, target, event, result) -> None:
+def _open_target(holder: dict) -> None:
+    """Open the Path B target connection + writer, engine-selected by config.
+
+    Default (and unchanged) is the MySQL target with the legacy writer. Set
+    `LRMIS_TARGET_ENGINE=postgres` to stream into a Postgres target through the
+    dialect-aware `GenericWriter` (the target's schema is discovered from the
+    adapter, so the whole pipeline agrees on it)."""
+    engine = os.environ.get("LRMIS_TARGET_ENGINE", "mysql").strip().lower()
+    if engine in ("postgres", "postgresql", "pg"):
+        from src.adapters import get_target_adapter
+        from src.delivery import GenericWriter
+        adapter = get_target_adapter("postgres")
+        holder["cm"] = adapter.connection()
+        holder["conn"] = holder["cm"].__enter__()
+        holder["writer"] = GenericWriter(adapter.dialect(), adapter.discover_registry())
+    else:
+        connector = MySQLStagingConnector.for_target()
+        holder["cm"] = connector.connection()
+        holder["conn"] = holder["cm"].__enter__()
+        holder["writer"] = None            # legacy MySQL writer (deliver_event default)
+
+
+def _deliver_path_b(conn, target, event, result, agent=None) -> None:
     """Multi-table delivery into lrmis_target for an onboarded entity.
 
     The target writes for one event are committed as a unit and rolled back on
@@ -98,7 +120,8 @@ def _deliver_path_b(conn, target, event, result) -> None:
     try:
         outcome = deliver_event(target_conn_of(target), conn, entity_name=entity_name,
                                 event=event, mappings=mappings,
-                                target_system=event["target_system"])
+                                target_system=event["target_system"],
+                                writer=target.get("writer"))
     except Exception as exc:                       # transport / DB failure
         _rollback(target)
         retry_or_dead_letter(conn, event, exc, MAX_ATTEMPTS)
@@ -106,7 +129,12 @@ def _deliver_path_b(conn, target, event, result) -> None:
         return
     if outcome["status"] != "delivered":
         _rollback(target)
-        quarantine(conn, event, outcome.get("errors", ["delivery error"]), None)
+        reasons = list(outcome.get("errors", ["delivery error"]))
+        if agent is not None:                          # §8.6: heal triggers on delivery error
+            proposal = agent.heal("; ".join(str(r) for r in reasons),
+                                  {"entity": entity_name})
+            reasons.append(f"agent_heal={proposal.action}:{proposal.detail}")
+        quarantine(conn, event, reasons, None)
         result["quarantined"] += 1
         return
     _commit(target)
@@ -128,7 +156,7 @@ def _rollback(holder: dict) -> None:
 
 def process_once(central: PostgresCentralConnector | None = None,
                  staging: MySQLStagingConnector | None = None,
-                 batch_size: int = DEFAULT_BATCH_SIZE) -> dict:
+                 batch_size: int = DEFAULT_BATCH_SIZE, agent=None) -> dict:
     owns_central = central is None
     central = central or PostgresCentralConnector()
     staging = staging or MySQLStagingConnector()
@@ -144,10 +172,8 @@ def process_once(central: PostgresCentralConnector | None = None,
             for event in events:
                 if is_path_b_entity(conn, event["source_entity"], event["target_system"]):
                     if "conn" not in target_holder:
-                        target_connector = MySQLStagingConnector.for_target()
-                        target_holder["cm"] = target_connector.connection()
-                        target_holder["conn"] = target_holder["cm"].__enter__()
-                    _deliver_path_b(conn, target_holder, event, result)
+                        _open_target(target_holder)
+                    _deliver_path_b(conn, target_holder, event, result, agent)
                     result["lrmis"] += 1
                 else:
                     _deliver_legacy(conn, staging, event, result)

@@ -27,6 +27,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.lrmis_registry import ddl_path, get_registry
+from src.adapters.lrmis_plugin import DELIVERY_AUDIT_DDL
 
 TARGET_DB = os.environ.get("LRMIS_TARGET_DATABASE", "lrmis_target")
 
@@ -40,22 +41,6 @@ TARGET_DB = os.environ.get("LRMIS_TARGET_DATABASE", "lrmis_target")
 #   NOTE: `profile` is ~15k person records rather than a pure lookup; it is
 #   seeded because station_head FKs to it, but IRIMSV could own profiles
 #   instead - drop it by narrowing the write set if so.
-
-DELIVERY_AUDIT_DDL = """
-CREATE TABLE IF NOT EXISTS `delivery_audit` (
-    `event_id` CHAR(36) NOT NULL PRIMARY KEY,
-    `external_reference` CHAR(36) NOT NULL,
-    `source_system` VARCHAR(40),
-    `operation` VARCHAR(20),
-    `source_updated_at` DATETIME(6),
-    `mapping_version` INT,
-    `payload_checksum` CHAR(64),
-    `active` TINYINT(1) DEFAULT 1,
-    `accepted_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
-    INDEX `idx_ext_ref` (`external_reference`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-""".strip()
-
 
 _FK_LINE_RE = re.compile(
     r"CONSTRAINT `[^`]+` FOREIGN KEY \(`([^`]+)`\) REFERENCES `([^`]+)` \(`([^`]+)`\)")
@@ -133,26 +118,30 @@ def seed_tables(registry=None) -> list[str]:
     return registry.seed_tables(registry.station_write_set())
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Create and seed lrmis_target")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Report the plan without changing anything")
-    args = parser.parse_args()
+def recreate_target_database(dry_run: bool = False) -> dict:
+    """Drop + recreate the Path B target database from canonical DDL.
 
+    This is the programmatic equivalent of running
+    ``python scripts/init_lrmis_target.py``, returning a dict with table
+    counts and seed rows so callers can report progress without parsing stdout.
+    """
     registry = get_registry()
-    tables_in_order = registry.topological_order()   # parents before children
+    tables_in_order = registry.topological_order()
     seeds = seed_tables(registry)
     seed_set = set(seeds)
 
-    print(f"Target database : {TARGET_DB}")
-    print(f"Schema source   : {ddl_path()}")
-    print(f"Tables to create: {len(tables_in_order)} (all, so every FK resolves)")
-    print(f"Lookups to seed : {len(seeds)} -> {seeds}")
-    print(f"Left empty      : {len(tables_in_order) - len(seeds)} "
-          f"(entity tables the pipeline fills + unused catalog)")
-    if args.dry_run:
-        print("\n--dry-run: no changes made.")
-        return 0
+    result = {
+        "target_database": TARGET_DB,
+        "schema_source": ddl_path(),
+        "tables_to_create": len(tables_in_order),
+        "lookups_to_seed": len(seeds),
+        "seed_tables": seeds,
+        "created": 0,
+        "table_total": 0,
+        "seed_rows": {},
+    }
+    if dry_run:
+        return result
 
     import mysql.connector
 
@@ -160,7 +149,8 @@ def main() -> int:
     server.autocommit = True
     cur = server.cursor()
 
-    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{TARGET_DB}` "
+    cur.execute(f"DROP DATABASE IF EXISTS `{TARGET_DB}`")
+    cur.execute(f"CREATE DATABASE `{TARGET_DB}` "
                 f"DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
     cur.execute(f"USE `{TARGET_DB}`")
     cur.execute("SET FOREIGN_KEY_CHECKS = 0")
@@ -168,53 +158,66 @@ def main() -> int:
     created = 0
     for table in tables_in_order:
         ddl = registry.get_create_sql(table)
-        # registry stores the exact mysqldump CREATE TABLE block; make it
-        # re-runnable and drop only the degenerate self-FKs 8.4 rejects.
         ddl = ddl.replace("CREATE TABLE `", "CREATE TABLE IF NOT EXISTS `", 1)
         ddl = sanitize_ddl(ddl)
         ddl = ddl.rstrip().rstrip(";")
         cur.execute(ddl)
         created += 1
-    print(f"\nCreated/verified {created} tables.")
+    result["created"] = created
 
     cur.execute(DELIVERY_AUDIT_DDL)
-    print("Created/verified delivery_audit.")
 
-    # Seed: rebuild each lookup from the canonical dump for idempotency.
     for table in seeds:
         cur.execute(f"TRUNCATE TABLE `{table}`")
     statements = 0
     for _table, statement in iter_seed_statements(ddl_path(), seed_set):
         cur.execute(statement.rstrip().rstrip(";"))
         statements += 1
-    print(f"\nExecuted {statements} seed INSERT statement(s).")
+    result["seed_statements"] = statements
 
     cur.execute("SET FOREIGN_KEY_CHECKS = 1")
 
-    print("\nSeed row counts:")
+    seed_rows = {}
     for table in seeds:
         cur.execute(f"SELECT COUNT(*) FROM `{table}`")
-        print(f"  {table:16} {cur.fetchone()[0]:>8}")
+        seed_rows[table] = cur.fetchone()[0]
+    result["seed_rows"] = seed_rows
 
-    # The delivery writer connects as the least-privilege LRMIS_STAGING_USER;
-    # give it DML + SELECT on lrmis_target (SELECT for reference resolution,
-    # DELETE for crosswalk-scoped refresh). No DDL privileges.
     writer_user = os.environ.get("LRMIS_STAGING_USER", "irimsv_writer")
     try:
         cur.execute(
             f"GRANT SELECT, INSERT, UPDATE, DELETE ON `{TARGET_DB}`.* TO %s@'%%'",
             (writer_user,))
-        print(f"Granted SELECT/INSERT/UPDATE/DELETE on {TARGET_DB} to {writer_user}.")
-    except Exception as exc:   # e.g. user only exists as writer@localhost in some setups
-        print(f"WARNING: could not grant to {writer_user}@'%': {exc}")
+        result["grant_result"] = f"granted to {writer_user}"
+    except Exception as exc:
+        result["grant_result"] = f"warning: could not grant: {exc}"
 
     cur.execute("SELECT COUNT(*) FROM information_schema.tables "
                 "WHERE table_schema = %s AND table_type = 'BASE TABLE'", (TARGET_DB,))
-    total = cur.fetchone()[0]
-    print(f"\n{TARGET_DB}: {total} tables total (51 schema + delivery_audit expected).")
+    result["table_total"] = cur.fetchone()[0]
 
     cur.close()
     server.close()
+    return result
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Create and seed lrmis_target")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Report the plan without changing anything")
+    args = parser.parse_args()
+
+    result = recreate_target_database(args.dry_run)
+    print(f"Target database : {result['target_database']}")
+    print(f"Schema source   : {result['schema_source']}")
+    print(f"Tables to create: {result['tables_to_create']}")
+    print(f"Lookups to seed : {result['lookups_to_seed']} -> {result.get('seed_tables', [])}")
+    if not args.dry_run:
+        print(f"Created         : {result.get('created', 0)} tables")
+        print(f"Seed statements : {result.get('seed_statements', 0)}")
+        print(f"Table total     : {result.get('table_total', 0)}")
+        if result.get("grant_result"):
+            print(result["grant_result"])
     print("Done.")
     return 0
 

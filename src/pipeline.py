@@ -28,9 +28,9 @@ from typing import Optional
 import psycopg2
 import psycopg2.extras
 
-from .connectors import PostgresCentralConnector, MySQLStagingConnector
+from .connectors import PostgresCentralConnector, MySQLStagingConnector, VIEWS_DATABASE
 from .schema_models import Schema, Table, Column
-from .schema_ingest import parse_ddl, from_information_schema, schema_fingerprint
+from .schema_ingest import parse_ddl, from_information_schema, schema_fingerprint, table_schema
 from .mapping_engine import propose_mapping, FieldMapping, mapping_to_dicts
 from .transform_engine import transform_row, _ENVELOPE_FIELDS
 
@@ -276,6 +276,8 @@ def _target_schema(conn, fingerprint: str) -> Schema | None:
     row = _fetchval(conn, """
         SELECT schema_document FROM integration.schema_version
         WHERE target_system = %s AND fingerprint = %s AND approved_at IS NOT NULL
+        ORDER BY CASE scope_kind WHEN 'entity_staging' THEN 0 ELSE 1 END
+        LIMIT 1
     """, (os.environ.get("LRMIS_TARGET_SYSTEM", "LRMIS"), fingerprint))
     return Schema.from_dict(row) if row else None
 
@@ -301,12 +303,14 @@ def _discover_target_schema(conn, target_system: str, target_schema_fingerprint:
     if target_schema_fingerprint:
         row = _fetchval(conn, """
             SELECT schema_document FROM integration.schema_version
-            WHERE target_system = %s AND fingerprint = %s AND approved_at IS NOT NULL
+            WHERE target_system = %s AND scope_kind = 'contract' AND scope_name = ''
+              AND fingerprint = %s AND approved_at IS NOT NULL
         """, (target_system, target_schema_fingerprint))
     else:
         row = _fetchval(conn, """
             SELECT schema_document FROM integration.schema_version
-            WHERE target_system = %s AND approved_at IS NOT NULL
+            WHERE target_system = %s AND scope_kind = 'contract' AND scope_name = ''
+              AND approved_at IS NOT NULL
             ORDER BY observed_at DESC LIMIT 1
         """, (target_system,))
     return Schema.from_dict(row) if row else None
@@ -497,13 +501,15 @@ def cmd_propose(args):
             sys.exit(1)
 
         # Compute fingerprints
-        src_fp = schema_fingerprint(source_schema)
+        source_contract = table_schema(source_schema, args.source_table)
+        src_fp = schema_fingerprint(source_contract) if source_contract else ""
         tgt_fp = schema_fingerprint(target_schema)
 
         # Update entity fingerprints
         _execute(conn, """
             UPDATE integration.onboarding_entity
-            SET source_fingerprint = %s, target_fingerprint = %s, updated_at = now()
+            SET source_fingerprint = %s, target_fingerprint = %s,
+                fingerprint_scope_version = 2, updated_at = now()
             WHERE id = %s
         """, (src_fp, tgt_fp, entity["id"]))
 
@@ -741,6 +747,12 @@ def cmd_deploy(args):
 def _create_staging_table(staging: MySQLStagingConnector, table_name: str,
                           mappings: list[dict], pk_columns: list[str]):
     """Create the MySQL staging table with proper schema."""
+    # Route view-generated tables to the views database
+    if "_for_lrmis" in table_name:
+        qt = f"`{VIEWS_DATABASE}`.`{table_name}`"
+    else:
+        qt = f"`{table_name}`"
+
     # Build column definitions from mappings
     columns = [
         "`event_id` CHAR(36) NOT NULL",
@@ -773,10 +785,10 @@ def _create_staging_table(staging: MySQLStagingConnector, table_name: str,
     # Drop table if exists (for redeployment)
     with staging.connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS `{table_name}`")
+            cur.execute(f"DROP TABLE IF EXISTS {qt}")
         conn.commit()
 
-    create_sql = f"CREATE TABLE `{table_name}` (\n"
+    create_sql = f"CREATE TABLE {qt} (\n"
     create_sql += ",\n".join(f"  {c}" for c in columns)
     create_sql += f",\n  PRIMARY KEY (`event_id`)"
     create_sql += f",\n  UNIQUE KEY `uk_external_reference` (`external_reference`)"
@@ -789,9 +801,23 @@ def _create_staging_table(staging: MySQLStagingConnector, table_name: str,
     print(f"  Created table: {table_name}")
 
 
+def _is_view(conn, schema: str, table: str) -> bool:
+    row = _query(conn, """
+        SELECT table_type FROM information_schema.tables
+        WHERE table_schema = %s AND table_name = %s
+    """, (schema, table))
+    return bool(row) and row[0]["table_type"] == "VIEW"
+
+
 def _create_source_trigger(conn, source_schema: str, source_table: str,
                            pk_columns: list[str], updated_at_column: str | None):
-    """Create or replace a reusable PostgreSQL trigger function and trigger."""
+    """Create or replace a reusable PostgreSQL trigger function and trigger.
+    Skips trigger creation if the source is a view (views cannot have row-level triggers).
+    """
+    if _is_view(conn, source_schema, source_table):
+        log.info("Skipping trigger for view %s.%s — use backfill/refresh for sync", source_schema, source_table)
+        return
+
     # Create the reusable trigger function (if not exists)
     trigger_func_sql = """
         CREATE OR REPLACE FUNCTION integration.enqueue_entity_change() RETURNS trigger AS $func$
@@ -1345,24 +1371,31 @@ def _onboard_single_table(
     _create_source_trigger(conn, source_schema, source_table, pk_cols, updated_at_col)
 
     # Save schema version
-    staging_rows = staging.information_schema("lrmis_staging")
+    is_view_table = "_for_lrmis" in staging_table
+    staging_schema_name = VIEWS_DATABASE if is_view_table else "lrmis_staging"
+    staging_rows = staging.information_schema(staging_schema_name)
     staging_schema = from_information_schema(staging_rows, "LRMIS")
     staging_tables = [t for t in staging_schema.tables if t.name == staging_table]
     if staging_tables:
         staging_fp = schema_fingerprint(Schema(system_name="LRMIS", tables=staging_tables))
         staging_doc = Schema(system_name="LRMIS", tables=staging_tables).to_dict()
         _execute(conn, """
-            INSERT INTO integration.schema_version (target_system, fingerprint, schema_document, approved_at, approved_by)
-            VALUES (%s, %s, %s, now(), %s)
-            ON CONFLICT (target_system, fingerprint) DO UPDATE SET schema_document = %s, approved_at = now()
-        """, (target_system, staging_fp, json.dumps(staging_doc), operator, json.dumps(staging_doc)))
+            INSERT INTO integration.schema_version
+                (target_system, scope_kind, scope_name, fingerprint,
+                 schema_document, approved_at, approved_by)
+            VALUES (%s, 'entity_staging', %s, %s, %s, now(), %s)
+            ON CONFLICT (target_system, scope_kind, scope_name, fingerprint)
+            DO UPDATE SET schema_document = EXCLUDED.schema_document, approved_at = now()
+        """, (target_system, staging_table, staging_fp, json.dumps(staging_doc), operator))
 
     # Update entity status
     _execute(conn, """
         UPDATE integration.onboarding_entity
-        SET status = 'deployed', staging_table = %s, deployed_by = %s, deployed_at = now(), updated_at = now()
+        SET status = 'deployed', staging_table = %s, target_fingerprint = %s,
+            fingerprint_scope_version = 2, deployed_by = %s,
+            deployed_at = now(), updated_at = now()
         WHERE id = %s
-    """, (staging_table, operator, entity["id"]))
+    """, (staging_table, staging_fp, operator, entity["id"]))
 
     # Create entity_control
     _execute(conn, """

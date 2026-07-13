@@ -8,6 +8,7 @@ vi.mock("../../api/client", () => ({
   getDataTables: vi.fn(),
   getDataRows: vi.fn(),
   compareRow: vi.fn(),
+  compareStagingTarget: vi.fn(),
 }));
 
 import * as api from "../../api/client";
@@ -81,6 +82,26 @@ describe("DataBrowser", () => {
         expect.objectContaining({ sort: "name", direction: "asc", table: "farmers" }),
       ),
     );
+  });
+
+  it("shows one database table list at a time", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getDataTables).mockResolvedValue({
+      ...TABLES,
+      target: {
+        database: "lrmis_staging",
+        tables: [{ table: "stg_farmers", source_table: "farmers", columns: 2, rows: 2, entity_status: "deployed" }],
+      },
+    });
+    renderBrowser();
+
+    expect(await screen.findByText("farmers")).toBeInTheDocument();
+    expect(screen.queryByText("stg_farmers")).not.toBeInTheDocument();
+
+    // Path A staging is now the "Staging DB" option (a third "Target DB" = Path B).
+    await user.selectOptions(screen.getByRole("combobox", { name: /database/i }), "target");
+    expect(await screen.findByText("stg_farmers")).toBeInTheDocument();
+    expect(screen.queryByTitle("farmers")).not.toBeInTheDocument();
   });
 
   it("exposes no insert / edit / delete controls (read-only)", async () => {

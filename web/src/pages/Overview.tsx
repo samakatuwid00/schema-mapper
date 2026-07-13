@@ -6,6 +6,7 @@ import {
   getSnapshots,
   getStatus,
   getWorkerStatus,
+  listJobs,
   restoreSnapshot,
   toggleEntity,
 } from "../api/client";
@@ -18,6 +19,7 @@ import StatusChip from "../components/StatusChip";
 import { errMsg, fmtAgo, fmtDate } from "../utils";
 
 const HISTORY_LEN = 30;
+const QUEUE_PROCESSING_JOBS = new Set(["backfill", "refresh", "refresh_all", "onboard_bulk", "deploy", "replay"]);
 
 function queueCount(status: StatusResponse | undefined, key: string): number {
   return status?.queues.find((q) => q.status === key)?.events ?? 0;
@@ -118,6 +120,16 @@ export default function Overview() {
     refetchInterval: 5000,
   });
 
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: listJobs,
+    refetchInterval: 3000,
+  });
+
+  const runningJobs = jobs.filter((job) => job.status === "running");
+  const queueProcessing = runningJobs.some((job) => QUEUE_PROCESSING_JOBS.has(job.job_type));
+  const deliveryProcessing = runningJobs.some((job) => job.job_type === "worker_run");
+
   // Rolling in-memory history of queue depth + delivered, sampled each poll.
   // Purely client-side (the API exposes point-in-time counts, not a series).
   const [pendingHistory, setPendingHistory] = useState<number[]>([]);
@@ -178,6 +190,8 @@ export default function Overview() {
         blocked={queueCount(status, "quarantined") + queueCount(status, "dead_letter")}
         delivered={queueCount(status, "delivered")}
         workerRunning={Boolean(worker?.running)}
+        queueProcessing={queueProcessing}
+        deliveryProcessing={deliveryProcessing}
       />
 
       <div className="trend-grid">
@@ -232,6 +246,7 @@ export default function Overview() {
           <span className="dim">{status?.entities.length ?? 0} onboarded</span>
         </div>
         {isLoading && <p className="dim">Loading…</p>}
+        <div className="table-scroll">
         <table className="table">
           <thead>
             <tr>
@@ -310,6 +325,7 @@ export default function Overview() {
             )}
           </tbody>
         </table>
+        </div>
       </section>
 
       {snapshotEntity && (

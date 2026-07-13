@@ -16,7 +16,7 @@ export interface GuardedActionModalProps {
   danger?: boolean;
   busy?: boolean;
   error?: string | null;
-  onConfirm: (reason: string) => void;
+  onConfirm: (reason: string, typedConfirm?: string) => void;
   onClose: () => void;
 }
 
@@ -133,7 +133,7 @@ export default function GuardedActionModal({
             type="button"
             className={danger ? "btn btn-danger" : "btn btn-primary"}
             disabled={!canConfirm}
-            onClick={() => onConfirm(reason.trim())}
+            onClick={() => onConfirm(reason.trim(), typed)}
           >
             {busy ? "Working…" : actionLabel}
           </button>

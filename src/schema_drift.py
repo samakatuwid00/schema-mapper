@@ -65,17 +65,18 @@ def impacted_entities(conn, target_system: str, differences: list[dict]) -> list
 
 
 def record_drift(conn, target_system: str, previous_fingerprint: str | None,
-                 observed_fingerprint: str, differences: list[dict]) -> list[str]:
+                 observed_fingerprint: str, differences: list[dict],
+                 drift_pair: str = "source->staging") -> list[str]:
     impacted = impacted_entities(conn, target_system, differences)
     breaking = any(d.get("breaking") for d in differences)
     with conn.cursor() as cur:
         cur.execute("""
             INSERT INTO integration.schema_drift_report
                 (target_system, previous_fingerprint, observed_fingerprint,
-                 differences, impacted_entities, breaking)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                 differences, impacted_entities, breaking, drift_pair)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (target_system, previous_fingerprint, observed_fingerprint,
-              psycopg2.extras.Json(differences), impacted, breaking))
+              psycopg2.extras.Json(differences), impacted, breaking, drift_pair))
         if impacted:
             cur.execute("""
                 UPDATE integration.entity_control SET enabled = false,

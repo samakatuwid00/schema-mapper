@@ -16,9 +16,13 @@ import psycopg2.extras
 
 from .. import worker as worker_module
 from ..services import ConflictError, NotFoundError, ValidationError
+from ..services import drift_resolution as drift_service
 from ..services import migrations as migrations_service
+from ..services import nightly_refresh as nightly_refresh_service
 from ..services import ops as ops_service
 from ..services import scan as scan_service
+from ..services import staging_cleanup as cleanup_service
+from ..services.lrmis_onboarding import bulk_deploy_to_lrmis, bulk_propose_lrmis, deploy_to_lrmis
 from ..services.onboarding import backfill, deploy, discover, onboard_bulk, propose
 from . import db
 from .audit import write_audit
@@ -58,8 +62,11 @@ class JobContext:
 # ---------------------------------------------------------------------------
 
 def _h_schema_scan(params, ctx: JobContext):
+    mode = params.get("mode", "source")
+    if mode not in ("source", "staging"):
+        raise ValidationError(f"mode must be 'source' or 'staging', got {mode!r}")
     return scan_service.scan(approve_initial=bool(params.get("approve_initial")),
-                             by=params.get("_actor"))
+                             by=params.get("_actor"), mode=mode)
 
 
 def _h_discover(params, ctx):
@@ -74,6 +81,35 @@ def _h_propose(params, ctx):
 
 def _h_deploy(params, ctx):
     return deploy(int(params["proposal_id"]), params["_actor"])
+
+
+def _h_deploy_lrmis(params, ctx):
+    """Deploy a proposal to the real LRMIS target (Path B): validates the
+    multi-table mapping against the LRMIS schema, records the entity's target
+    footprint (which flips the worker to direct delivery), and marks it
+    deployed. Non-destructive: it creates no tables and never touches staging."""
+    return deploy_to_lrmis(int(params["proposal_id"]), params["_actor"])
+
+
+def _h_bulk_deploy_lrmis(params, ctx: JobContext):
+    """Deploy every approved, not-yet-migrated entity to the LRMIS target in one
+    pass. Continues past a failing entity; returns per-entity outcomes."""
+    return bulk_deploy_to_lrmis(
+        params["_actor"],
+        target_system=params.get("target_system", "LRMIS").upper(),
+        progress=lambda i, n, msg: ctx.progress(i, n, msg),
+    )
+
+
+def _h_bulk_propose_lrmis(params, ctx: JobContext):
+    """Generate a fresh LRMIS-target proposal (one Gemini call each) for every
+    deployed entity not yet on the target. Continues past failures."""
+    return bulk_propose_lrmis(
+        params["_actor"],
+        source_schema=params.get("source_schema", "irimsv"),
+        target_system=params.get("target_system", "LRMIS").upper(),
+        progress=lambda i, n, msg: ctx.progress(i, n, msg),
+    )
 
 
 def _h_backfill(params, ctx):
@@ -165,11 +201,91 @@ def _h_migration_apply(params, ctx):
     return migrations_service.apply_migration(params["filename"], params["_actor"])
 
 
+def _h_nightly_refresh(params, ctx: JobContext):
+    """One-command rebuild: restore fresh source -> reset target -> re-deliver.
+
+    Destructive (admin-only, single-flight). `restore` opts in to the source
+    restore; `dry_run` reports the plan and counts without changing anything.
+    """
+    return nightly_refresh_service.run_nightly_refresh(
+        actor=params["_actor"],
+        restore=_as_bool(params.get("restore")),
+        dump_path=params.get("dump_path"),
+        dry_run=_as_bool(params.get("dry_run")),
+        progress=lambda i, n, msg: ctx.progress(i, n, msg),
+    )
+
+
+def _as_bool(value, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
+
+
+def _h_resolve_drift(params, ctx: JobContext):
+    entities = _normalize_tables(params.get("entities")) or None
+    return drift_service.resolve_drift(
+        resolve_source=_as_bool(params.get("resolve_source", True), default=True),
+        resolve_target=_as_bool(params.get("resolve_target", True), default=True),
+        entities=entities,
+        actor=params["_actor"],
+        dry_run=_as_bool(params.get("dry_run")),
+        source_system=params.get("source_system", "IRIMSV_REGION_V"),
+        batch_size=int(params.get("batch_size", 1000)),
+        progress=lambda i, n, msg: ctx.progress(i, n, msg),
+    )
+
+
+def _h_reset_schemas(params, ctx: JobContext):
+    entities = _normalize_tables(params.get("entities")) or None
+    return drift_service.reset_all(
+        reset_source_flag=_as_bool(params.get("reset_source", True), default=True),
+        reset_target_flag=_as_bool(params.get("reset_target", True), default=True),
+        entities=entities,
+        actor=params["_actor"],
+        dry_run=_as_bool(params.get("dry_run")),
+        source_system=params.get("source_system", "IRIMSV_REGION_V"),
+        batch_size=int(params.get("batch_size", 1000)),
+        progress=lambda i, n, msg: ctx.progress(i, n, msg),
+    )
+
+
+def _h_reset_path_b(params, ctx: JobContext):
+    return drift_service.reset_path_b(
+        dry_run=_as_bool(params.get("dry_run")),
+    )
+
+
+def _h_retire_entity(params, ctx: JobContext):
+    entity_id = params.get("entity_id")
+    if entity_id is None:
+        raise ValidationError("entity_id is required")
+    return cleanup_service.retire_entity(
+        int(entity_id),
+        dry_run=_as_bool(params.get("dry_run")),
+        central=db.central(),
+        staging=db.staging(),
+    )
+
+
+def _h_sweep_staging(params, ctx: JobContext):
+    return cleanup_service.sweep_orphans(
+        dry_run=_as_bool(params.get("dry_run")),
+        central=db.central(),
+        staging=db.staging(),
+    )
+
+
 JOB_HANDLERS = {
     "schema_scan": _h_schema_scan,
     "discover": _h_discover,
     "propose": _h_propose,
     "deploy": _h_deploy,
+    "deploy_lrmis": _h_deploy_lrmis,
+    "bulk_deploy_lrmis": _h_bulk_deploy_lrmis,
+    "bulk_propose_lrmis": _h_bulk_propose_lrmis,
     "backfill": _h_backfill,
     "onboard_bulk": _h_onboard_bulk,
     "reconcile": _h_reconcile,
@@ -181,21 +297,36 @@ JOB_HANDLERS = {
     "entity_toggle": _h_entity_toggle,
     "cancel_queue": _h_cancel_queue,
     "migration_apply": _h_migration_apply,
+    "nightly_refresh": _h_nightly_refresh,
+    "resolve_drift": _h_resolve_drift,
+    "reset_schemas": _h_reset_schemas,
+    "reset_path_b": _h_reset_path_b,
+    "retire_entity": _h_retire_entity,
+    "sweep_staging": _h_sweep_staging,
 }
 
-ADMIN_ONLY_JOBS = {"migration_apply"}
+ADMIN_ONLY_JOBS = {"migration_apply", "nightly_refresh"}
 
 # job types whose concurrent execution on the same scope must be rejected
 _SCOPED = {
     "deploy": lambda p: f"deploy:{p.get('proposal_id')}",
+    "deploy_lrmis": lambda p: f"deploy-lrmis:{p.get('proposal_id')}",
+    "bulk_deploy_lrmis": lambda p: "bulk-deploy-lrmis",
+    "bulk_propose_lrmis": lambda p: "bulk-propose-lrmis",
     "refresh": lambda p: f"refresh:{p.get('source_tables')}",
     "refresh_all": lambda p: "refresh-all",
     "migration_apply": lambda p: "migrations",
+    "nightly_refresh": lambda p: "nightly-refresh",
     "onboard_bulk": lambda p: (
         f"onboard:{p.get('source_schema', 'irimsv')}:"
         f"{','.join(sorted(_normalize_tables(p.get('tables'))))}"
     ),
     "cancel_queue": lambda p: f"cancel:{p.get('entity', '')}",
+    "resolve_drift": lambda p: "resolve-drift",
+    "reset_schemas": lambda p: "reset-schemas",
+    "reset_path_b": lambda p: "reset-path-b",
+    "sweep_staging": lambda p: "sweep-staging",
+    "retire_entity": lambda p: f"retire:{p.get('entity_id')}",
 }
 
 

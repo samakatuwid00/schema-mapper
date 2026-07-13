@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, GitCompareArrows, KeyRound, Search } from "lucide-react";
-import { compareRow, getDataRows, getDataTables } from "../api/client";
+import { compareSourceTarget, compareStagingTarget, getDataRows, getDataTables } from "../api/client";
 import type {
-  CompareResponse,
   DataColumn,
   DataSide,
+  PathBTableSummary,
   SourceTableSummary,
+  SourceTargetCompareResponse,
+  StagingTargetCompareResponse,
   TargetTableSummary,
 } from "../api/types";
 import StatusChip from "../components/StatusChip";
@@ -15,10 +17,17 @@ import { errMsg } from "../utils";
 const SOURCE_SCHEMA = "irimsv";
 const PAGE_SIZES = [10, 25, 50, 100] as const;
 
+/** Internal side value -> segmented-control label. */
+const SIDE_LABEL: Record<DataSide, string> = {
+  source: "Source DB",
+  target: "Staging DB",
+  path_b: "Target DB",
+};
+
 interface Selection {
   side: DataSide;
   table: string;
-  /** Present on source tables that map to a deployed entity. */
+  /** The staging table this row set can be compared against (source & path_b sides). */
   stagingTable: string | null;
 }
 
@@ -40,21 +49,73 @@ function Cell({ value }: { value: unknown }) {
   return <>{String(value)}</>;
 }
 
-/** Side-by-side source↔target comparison of one logical record. */
-function CompareModal({
-  entity,
-  externalReference,
-  onClose,
+/** A field-by-field comparison table shared by both comparison modals. */
+function CompareFields({
+  fields,
+  leftLabel,
+  rightLabel,
 }: {
-  entity: string;
-  externalReference: string;
-  onClose: () => void;
+  fields: { field: string; left: unknown; right: unknown; matches: boolean; compared: boolean }[];
+  leftLabel: string;
+  rightLabel: string;
 }) {
-  const { data, isLoading, isError, error, refetch } = useQuery<CompareResponse>({
-    queryKey: ["data-compare", entity, externalReference],
-    queryFn: () => compareRow(entity, externalReference),
-  });
+  if (fields.length === 0) return null;
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table className="data-grid">
+        <thead>
+          <tr>
+            <th style={{ cursor: "default" }}>Field</th>
+            <th style={{ cursor: "default" }}>{leftLabel}</th>
+            <th style={{ cursor: "default" }}>{rightLabel}</th>
+            <th style={{ cursor: "default" }}>Match</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fields.map((f) => {
+            const tone = !f.compared
+              ? "var(--st-idle)"
+              : f.matches
+                ? "var(--st-flowing)"
+                : "var(--st-failed)";
+            return (
+              <tr key={f.field} style={{ borderLeft: `3px solid ${tone}` }}>
+                <td className="mono">{f.field}</td>
+                <td>
+                  <Cell value={f.left} />
+                </td>
+                <td>
+                  <Cell value={f.right} />
+                </td>
+                <td>
+                  {!f.compared ? (
+                    <StatusChip status="unknown" label="one side only" />
+                  ) : f.matches ? (
+                    <StatusChip status="delivered" label="match" />
+                  ) : (
+                    <StatusChip status="failed" label="differs" />
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
+function ModalShell({
+  title,
+  subtitle,
+  onClose,
+  children,
+}: {
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
       <div
@@ -66,93 +127,152 @@ function CompareModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h3 className="modal-title">
-            Compare — <span className="mono">{entity}</span>
-          </h3>
-          <div className="panel-header-actions">
-            {data?.delivery_status && <StatusChip status={data.delivery_status} />}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
-              ✕
-            </button>
-          </div>
+          <h3 className="modal-title">{title}</h3>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
         </div>
-
-        <div className="fingerprint-row">
-          <span className="dim">external_reference</span>
-          <span className="mono">{externalReference}</span>
-        </div>
-
-        {isLoading && <p className="dim">Loading comparison…</p>}
-        {isError && (
-          <div className="alert alert-danger">
-            {errMsg(error)}{" "}
-            <button type="button" className="btn btn-ghost btn-xs" onClick={() => void refetch()}>
-              retry
-            </button>
+        {subtitle && (
+          <div className="fingerprint-row">
+            {subtitle}
           </div>
         )}
-
-        {data && (
-          <>
-            {data.missing_in_target && (
-              <div className="alert alert-danger" style={{ marginBottom: 12 }}>
-                Not yet delivered to staging — this record has no row in{" "}
-                <span className="mono">{data.staging_table ?? "the staging table"}</span> yet.
-              </div>
-            )}
-            {data.missing_in_source && (
-              <div className="alert alert-info" style={{ marginBottom: 12 }}>
-                No source payload was found for this reference in the sync queue.
-              </div>
-            )}
-
-            {data.fields.length > 0 && (
-              <div style={{ overflowX: "auto" }}>
-                <table className="data-grid">
-                  <thead>
-                    <tr>
-                      <th style={{ cursor: "default" }}>Field</th>
-                      <th style={{ cursor: "default" }}>Source</th>
-                      <th style={{ cursor: "default" }}>Target</th>
-                      <th style={{ cursor: "default" }}>Match</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.fields.map((f) => {
-                      const tone = !f.compared
-                        ? "var(--st-idle)"
-                        : f.matches
-                          ? "var(--st-flowing)"
-                          : "var(--st-failed)";
-                      return (
-                        <tr key={f.field} style={{ borderLeft: `3px solid ${tone}` }}>
-                          <td className="mono">{f.field}</td>
-                          <td>
-                            <Cell value={f.source} />
-                          </td>
-                          <td>
-                            <Cell value={f.target} />
-                          </td>
-                          <td>
-                            {!f.compared ? (
-                              <StatusChip status="unknown" label="target only" />
-                            ) : f.matches ? (
-                              <StatusChip status="delivered" label="match" />
-                            ) : (
-                              <StatusChip status="failed" label="differs" />
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
+        {children}
       </div>
     </div>
+  );
+}
+
+/** Direct Source → LRMIS Target comparison of one source row (matched by primary key). */
+function SourceTargetModal({
+  entity,
+  pk,
+  onClose,
+}: {
+  entity: string;
+  pk: string;
+  onClose: () => void;
+}) {
+  const { data, isLoading, isError, error, refetch } = useQuery<SourceTargetCompareResponse>({
+    queryKey: ["source-target-compare", entity, pk],
+    queryFn: () => compareSourceTarget(entity, pk),
+  });
+
+  return (
+    <ModalShell
+      title={<>Source → Target — <span className="mono">{entity}</span></>}
+      subtitle={
+        <>
+          <span className="dim">{data?.primary_key ?? "id"}</span> <span className="mono">{pk}</span>
+          {data && data.target_tables.length > 0 && (
+            <>
+              <span className="lane-arrow">→</span>
+              <span className="mono">{data.target_tables.join(", ")}</span>
+            </>
+          )}
+        </>
+      }
+      onClose={onClose}
+    >
+      {isLoading && <p className="dim">Loading comparison…</p>}
+      {isError && (
+        <div className="alert alert-danger">
+          {errMsg(error)}{" "}
+          <button type="button" className="btn btn-ghost btn-xs" onClick={() => void refetch()}>
+            retry
+          </button>
+        </div>
+      )}
+      {data && (
+        <>
+          {data.missing_in_source && (
+            <div className="alert alert-info" style={{ marginBottom: 12 }}>
+              No source row found for this primary key.
+            </div>
+          )}
+          {!data.missing_in_source && data.missing_in_target && (
+            <div className="alert alert-danger" style={{ marginBottom: 12 }}>
+              Not yet delivered to the LRMIS target — no target rows recorded for this source row.
+            </div>
+          )}
+          <CompareFields
+            leftLabel="Source"
+            rightLabel="Target (LRMIS)"
+            fields={data.fields.map((f) => ({
+              field: f.field, left: f.source, right: f.target,
+              matches: f.matches, compared: f.compared,
+            }))}
+          />
+        </>
+      )}
+    </ModalShell>
+  );
+}
+
+/** Staging (Path A) ↔ Target (Path B) comparison of one row (matched by primary key). */
+function StagingTargetModal({
+  stagingTable,
+  pk,
+  onClose,
+}: {
+  stagingTable: string;
+  pk: string;
+  onClose: () => void;
+}) {
+  const { data, isLoading, isError, error, refetch } = useQuery<StagingTargetCompareResponse>({
+    queryKey: ["staging-target-compare", stagingTable, pk],
+    queryFn: () => compareStagingTarget(stagingTable, pk),
+  });
+
+  return (
+    <ModalShell
+      title={<>Staging ↔ Target — <span className="mono">{stagingTable}</span></>}
+      subtitle={
+        <>
+          <span className="dim">{data?.primary_key ?? "primary key"}</span>{" "}
+          <span className="mono">{pk}</span>
+          {data?.path_b_table && (
+            <>
+              <span className="lane-arrow">↔</span>
+              <span className="mono">{data.path_b_table}</span>
+            </>
+          )}
+        </>
+      }
+      onClose={onClose}
+    >
+      {isLoading && <p className="dim">Loading comparison…</p>}
+      {isError && (
+        <div className="alert alert-danger">
+          {errMsg(error)}{" "}
+          <button type="button" className="btn btn-ghost btn-xs" onClick={() => void refetch()}>
+            retry
+          </button>
+        </div>
+      )}
+      {data && (
+        <>
+          {data.missing_in_target && (
+            <div className="alert alert-danger" style={{ marginBottom: 12 }}>
+              No matching row in the Path B target (<span className="mono">{data.path_b_table}</span>).
+            </div>
+          )}
+          {data.missing_in_staging && (
+            <div className="alert alert-info" style={{ marginBottom: 12 }}>
+              No matching row in the staging table for this primary key.
+            </div>
+          )}
+          <CompareFields
+            leftLabel="Staging"
+            rightLabel="Target"
+            fields={data.fields.map((f) => ({
+              field: f.field, left: f.staging, right: f.target,
+              matches: f.matches, compared: f.compared,
+            }))}
+          />
+        </>
+      )}
+    </ModalShell>
   );
 }
 
@@ -190,13 +310,16 @@ function RailRow({
 
 export default function DataBrowser() {
   const [selected, setSelected] = useState<Selection | null>(null);
+  const [railSide, setRailSide] = useState<DataSide>("source");
   const [filter, setFilter] = useState("");
+  const [hideViews, setHideViews] = useState(false);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState<number>(25);
   const [sort, setSort] = useState<string | undefined>(undefined);
   const [direction, setDirection] = useState<"asc" | "desc">("asc");
   const [compareMode, setCompareMode] = useState(false);
-  const [compareRef, setCompareRef] = useState<string | null>(null);
+  const [stCompare, setStCompare] = useState<{ entity: string; pk: string } | null>(null);
+  const [ptCompare, setPtCompare] = useState<{ stagingTable: string; pk: string } | null>(null);
 
   const tables = useQuery({
     queryKey: ["data-tables", SOURCE_SCHEMA],
@@ -221,7 +344,8 @@ export default function DataBrowser() {
     setSort(undefined);
     setDirection("asc");
     setCompareMode(false);
-    setCompareRef(null);
+    setStCompare(null);
+    setPtCompare(null);
   }, [selected?.side, selected?.table]);
 
   const rows = useQuery({
@@ -240,6 +364,13 @@ export default function DataBrowser() {
     placeholderData: keepPreviousData,
   });
 
+  const pathBTables = tables.data?.path_b?.tables ?? [];
+  // Staging tables that have a Path B counterpart → staging side can compare to target.
+  const stagingWithPathB = useMemo(
+    () => new Set(pathBTables.map((t) => t.staging_table).filter((s): s is string => Boolean(s))),
+    [pathBTables],
+  );
+
   const filtered = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     const match = <T extends { table: string }>(list: T[]) =>
@@ -247,12 +378,40 @@ export default function DataBrowser() {
     return {
       source: match<SourceTableSummary>(tables.data?.source.tables ?? []),
       target: match<TargetTableSummary>(tables.data?.target.tables ?? []),
+      path_b: match<PathBTableSummary>(pathBTables),
     };
-  }, [tables.data, filter]);
+  }, [tables.data, pathBTables, filter]);
 
   const columns: DataColumn[] = rows.data?.columns ?? [];
-  const hasExternalRef = columns.some((c) => c.name === "external_reference");
-  const canCompare = selected?.side === "source" && Boolean(selected.stagingTable);
+  const pkColumn = columns.find((c) => c.is_primary_key)?.name;
+
+  // Comparison availability.
+  const canCompare =
+    selected?.side === "source"
+      ? Boolean(pkColumn) // Source → Target (by source primary key)
+      : selected?.side === "target"
+        ? stagingWithPathB.has(selected.table) // Staging ↔ Target (by PK)
+        : selected?.side === "path_b"
+          ? Boolean(selected.stagingTable) // Target ↔ Staging (by PK)
+          : false;
+  const compareByPk = selected?.side === "target" || selected?.side === "path_b";
+  const compareStagingTableName =
+    selected?.side === "target" ? selected.table : selected?.stagingTable ?? null;
+
+  const hiddenNote = hideViews ? " (view-generated hidden)" : "";
+  const activeList =
+    railSide === "source" ? filtered.source : railSide === "target" ? filtered.target : filtered.path_b;
+  const visibleTables = activeList.filter((t) => {
+    if (!hideViews) return true;
+    return !t.table.includes("_for_lrmis");
+  });
+
+  const railHeader =
+    railSide === "source"
+      ? `Source (${tables.data?.source.schema ?? SOURCE_SCHEMA})`
+      : railSide === "target"
+        ? `Staging (${tables.data?.target.database ?? "lrmis_staging"})`
+        : `Target (${tables.data?.path_b?.database ?? "lrmis_target"})`;
 
   const onSort = (col: string) => {
     if (sort === col) {
@@ -262,6 +421,35 @@ export default function DataBrowser() {
       setDirection("asc");
     }
     setPage(1);
+  };
+
+  const selectFromRail = (t: SourceTableSummary | TargetTableSummary | PathBTableSummary) => {
+    if (railSide === "source") {
+      const s = t as SourceTableSummary;
+      setSelected({ side: "source", table: s.table, stagingTable: s.staging_table });
+    } else if (railSide === "target") {
+      setSelected({ side: "target", table: t.table, stagingTable: null });
+    } else {
+      const b = t as PathBTableSummary;
+      setSelected({ side: "path_b", table: b.table, stagingTable: b.staging_table });
+    }
+  };
+
+  const startRowCompare = (row: Record<string, unknown>) => {
+    if (!pkColumn) return;
+    const pkVal = row[pkColumn];
+    if (pkVal === null || pkVal === undefined) return;
+    if (selected?.side === "source") {
+      setStCompare({ entity: selected.table, pk: String(pkVal) });
+    } else if (compareByPk && compareStagingTableName) {
+      setPtCompare({ stagingTable: compareStagingTableName, pk: String(pkVal) });
+    }
+  };
+
+  const rowCompareEnabled = (row: Record<string, unknown>): boolean => {
+    if (!pkColumn) return false;
+    const v = row[pkColumn];
+    return v !== null && v !== undefined;
   };
 
   return (
@@ -283,6 +471,30 @@ export default function DataBrowser() {
               aria-label="Find table"
             />
           </label>
+          <label className="checkbox-label" style={{ marginBottom: 10, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={hideViews}
+              onChange={(e) => setHideViews(e.target.checked)}
+            />
+            Hide generated views
+          </label>
+
+          <label className="field" style={{ marginBottom: 12 }}>
+            <span className="field-label">Database</span>
+            <select
+              className="input input-sm"
+              value={railSide}
+              onChange={(e) => setRailSide(e.target.value as DataSide)}
+              aria-label="Database to browse"
+            >
+              {(["source", "target", "path_b"] as DataSide[]).map((s) => (
+                <option key={s} value={s}>
+                  {SIDE_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </label>
 
           {tables.isLoading && <p className="dim">Loading tables…</p>}
           {tables.isError && (
@@ -296,35 +508,27 @@ export default function DataBrowser() {
 
           {tables.data && (
             <div className="tree">
-              <div className="nav-group-title">Source ({tables.data.source.schema})</div>
-              {filtered.source.length === 0 && <p className="dim empty-note">No tables</p>}
-              {filtered.source.map((t) => (
-                <RailRow
-                  key={`s-${t.table}`}
-                  name={t.table}
-                  rows={t.rows}
-                  entityStatus={t.entity_status}
-                  active={selected?.side === "source" && selected.table === t.table}
-                  onSelect={() =>
-                    setSelected({ side: "source", table: t.table, stagingTable: t.staging_table })
-                  }
-                />
-              ))}
-
-              <div className="nav-group-title" style={{ marginTop: 12 }}>
-                Staging ({tables.data.target.database})
+              <div className="nav-group-title">
+                {railHeader}
+                <span className="dim" style={{ fontSize: 11, marginLeft: 6 }}>
+                  {visibleTables.length}{hiddenNote}
+                </span>
               </div>
-              {filtered.target.length === 0 && <p className="dim empty-note">No tables</p>}
-              {filtered.target.map((t) => (
-                <RailRow
-                  key={`t-${t.table}`}
-                  name={t.table}
-                  rows={t.rows}
-                  entityStatus={t.entity_status}
-                  active={selected?.side === "target" && selected.table === t.table}
-                  onSelect={() => setSelected({ side: "target", table: t.table, stagingTable: null })}
-                />
-              ))}
+              {visibleTables.length === 0 && <p className="dim empty-note">No tables</p>}
+              {visibleTables.map((t) => {
+                const entityStatus =
+                  "entity_status" in t ? ((t as { entity_status: string | null }).entity_status) : null;
+                return (
+                  <RailRow
+                    key={`${railSide}-${t.table}`}
+                    name={t.table}
+                    rows={t.rows}
+                    entityStatus={entityStatus}
+                    active={selected?.side === railSide && selected.table === t.table}
+                    onSelect={() => selectFromRail(t)}
+                  />
+                );
+              })}
             </div>
           )}
         </aside>
@@ -339,7 +543,7 @@ export default function DataBrowser() {
                 <div>
                   <h3 className="panel-title">
                     <span className="mono">{selected.table}</span>{" "}
-                    <span className="badge badge-type mono">{selected.side}</span>
+                    <span className="badge badge-type mono">{SIDE_LABEL[selected.side]}</span>
                   </h3>
                   <div className="dim" style={{ fontSize: 12, marginTop: 3 }}>
                     {(rows.data?.total ?? 0).toLocaleString()} rows
@@ -350,7 +554,11 @@ export default function DataBrowser() {
                     type="button"
                     className={`btn btn-sm${compareMode ? " btn-primary" : ""}`}
                     onClick={() => setCompareMode((v) => !v)}
-                    title="Compare a source row against its delivered staging row"
+                    title={
+                      selected?.side === "source"
+                        ? "Compare a source row against the rows it produced in the LRMIS target"
+                        : "Compare a staging row against its Path B target row by primary key"
+                    }
                   >
                     <GitCompareArrows size={13} strokeWidth={2} aria-hidden="true" />{" "}
                     {compareMode ? "Comparing" : "Compare"}
@@ -421,9 +629,7 @@ export default function DataBrowser() {
                     {/* Rows */}
                     {!rows.isLoading &&
                       rows.data?.rows.map((row, i) => {
-                        const ref = row["external_reference"];
-                        const refStr = ref === null || ref === undefined ? "" : String(ref);
-                        const canRow = hasExternalRef && refStr !== "";
+                        const enabled = rowCompareEnabled(row);
                         return (
                           <tr key={i}>
                             {compareMode && (
@@ -431,13 +637,15 @@ export default function DataBrowser() {
                                 <button
                                   type="button"
                                   className="btn btn-ghost btn-xs"
-                                  disabled={!canRow}
+                                  disabled={!enabled}
                                   title={
-                                    canRow
-                                      ? "Compare this row against staging"
-                                      : "No external reference on this row yet"
+                                    !enabled
+                                      ? "No primary key on this row"
+                                      : selected?.side === "source"
+                                        ? "Compare this source row against its LRMIS target rows"
+                                        : "Compare this row against its Path B target"
                                   }
-                                  onClick={() => canRow && setCompareRef(refStr)}
+                                  onClick={() => enabled && startRowCompare(row)}
                                 >
                                   Compare row
                                 </button>
@@ -516,11 +724,18 @@ export default function DataBrowser() {
         </section>
       </div>
 
-      {compareRef !== null && selected && (
-        <CompareModal
-          entity={selected.table}
-          externalReference={compareRef}
-          onClose={() => setCompareRef(null)}
+      {stCompare && (
+        <SourceTargetModal
+          entity={stCompare.entity}
+          pk={stCompare.pk}
+          onClose={() => setStCompare(null)}
+        />
+      )}
+      {ptCompare !== null && (
+        <StagingTargetModal
+          stagingTable={ptCompare.stagingTable}
+          pk={ptCompare.pk}
+          onClose={() => setPtCompare(null)}
         />
       )}
     </div>

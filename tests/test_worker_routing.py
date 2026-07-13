@@ -33,7 +33,7 @@ def routed(monkeypatch):
     monkeypatch.setattr(worker, "_deliver_legacy",
                         lambda conn, staging, event, result: legacy.append(event["source_entity"]))
     monkeypatch.setattr(worker, "_deliver_path_b",
-                        lambda conn, target, event, result: path_b.append(event["source_entity"]))
+                        lambda conn, target, event, result, agent=None: path_b.append(event["source_entity"]))
     return legacy, path_b
 
 

@@ -72,7 +72,8 @@ def main():
                 with conn.cursor() as cur:
                     cur.execute("""
                         UPDATE integration.schema_version SET approved_at = now(), approved_by = %s
-                        WHERE target_system = %s AND fingerprint = %s
+                        WHERE target_system = %s AND scope_kind = 'contract' AND scope_name = ''
+                          AND fingerprint = %s
                     """, (args.by, args.target, args.fingerprint))
                     if cur.rowcount != 1:
                         raise ValueError("schema fingerprint not found")

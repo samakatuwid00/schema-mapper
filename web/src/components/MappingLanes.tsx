@@ -7,9 +7,16 @@ export const TRANSFORM_OPTIONS = ["none", "cast:date->datetime", "cast:str->int"
 export interface MappingLanesProps {
   fields: ProposalField[];
   /** Called when a pending row is resolved inline. */
-  onResolve?: (field: ProposalField, targetColumn: string, transform: string) => void;
+  onResolve?: (
+    field: ProposalField,
+    targetTable: string,
+    targetColumn: string,
+    transform: string,
+  ) => void;
   /** id of the field currently being resolved (disables its button). */
   resolvingId?: number | null;
+  /** LRMIS tables -> columns, for the manual mapping pickers. */
+  lrmisTables?: Record<string, string[]>;
 }
 
 const GROUP_ORDER: Array<{ key: string; label: string }> = [
@@ -29,22 +36,49 @@ function PendingEditor({
   field,
   onResolve,
   busy,
+  lrmisTables,
 }: {
   field: ProposalField;
-  onResolve: (targetColumn: string, transform: string) => void;
+  onResolve: (targetTable: string, targetColumn: string, transform: string) => void;
   busy: boolean;
+  lrmisTables?: Record<string, string[]>;
 }) {
-  const [target, setTarget] = useState(field.suggested_target_column ?? "");
+  // Pre-fill the target table only if the AI suggested a real LRMIS table (not
+  // a legacy staging table); otherwise the operator picks one.
+  const suggestedTable =
+    field.suggested_target_table && !field.suggested_target_table.includes("_staging")
+      ? field.suggested_target_table
+      : "";
+  const [table, setTable] = useState(suggestedTable);
+  const [target, setTarget] = useState(
+    field.resolved_target_column ?? field.suggested_target_column ?? "",
+  );
   const [transform, setTransform] = useState(field.transform ?? "none");
+  const columns = table && lrmisTables ? lrmisTables[table] ?? [] : [];
+
   return (
     <div className="lane-editor">
       <input
+        list="lrmis-tables"
+        className="input input-sm mono"
+        value={table}
+        onChange={(e) => setTable(e.target.value)}
+        placeholder="LRMIS table"
+        aria-label={`Target table for ${field.source_column}`}
+      />
+      <input
+        list={`cols-${field.id}`}
         className="input input-sm mono"
         value={target}
         onChange={(e) => setTarget(e.target.value)}
         placeholder="target column"
         aria-label={`Target column for ${field.source_column}`}
       />
+      <datalist id={`cols-${field.id}`}>
+        {columns.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
       <select
         className="input input-sm"
         value={transform}
@@ -60,8 +94,8 @@ function PendingEditor({
       <button
         type="button"
         className="btn btn-primary btn-sm"
-        disabled={busy || !target.trim()}
-        onClick={() => onResolve(target.trim(), transform)}
+        disabled={busy || !table.trim() || !target.trim()}
+        onClick={() => onResolve(table.trim(), target.trim(), transform)}
       >
         {busy ? "…" : "Resolve"}
       </button>
@@ -69,7 +103,7 @@ function PendingEditor({
   );
 }
 
-export default function MappingLanes({ fields, onResolve, resolvingId }: MappingLanesProps) {
+export default function MappingLanes({ fields, onResolve, resolvingId, lrmisTables }: MappingLanesProps) {
   const grouped = new Map<string, ProposalField[]>();
   for (const f of fields) {
     const key = GROUP_ORDER.some((g) => g.key === f.status) ? f.status : "pending";
@@ -80,6 +114,13 @@ export default function MappingLanes({ fields, onResolve, resolvingId }: Mapping
 
   return (
     <div className="mapping-lanes">
+      {lrmisTables && (
+        <datalist id="lrmis-tables">
+          {Object.keys(lrmisTables).map((t) => (
+            <option key={t} value={t} />
+          ))}
+        </datalist>
+      )}
       {GROUP_ORDER.map(({ key, label }) => {
         const rows = grouped.get(key) ?? [];
         if (rows.length === 0) return null;
@@ -115,11 +156,12 @@ export default function MappingLanes({ fields, onResolve, resolvingId }: Mapping
                     <StatusChip status={field.status} />
                   </div>
                   {field.reasoning && <div className="lane-reasoning dim">{field.reasoning}</div>}
-                  {key === "pending" && onResolve && (
+                  {(key === "pending" || key === "rejected") && onResolve && (
                     <PendingEditor
                       field={field}
                       busy={resolvingId === field.id}
-                      onResolve={(t, tf) => onResolve(field, t, tf)}
+                      lrmisTables={lrmisTables}
+                      onResolve={(tbl, col, tf) => onResolve(field, tbl, col, tf)}
                     />
                   )}
                 </div>

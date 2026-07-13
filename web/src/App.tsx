@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Radar,
+  RefreshCw,
   ScrollText,
   Table2,
   type LucideIcon,
@@ -19,6 +20,7 @@ import DataBrowser from "./pages/DataBrowser";
 import Login from "./pages/Login";
 import MappingReview from "./pages/MappingReview";
 import Migrations from "./pages/Migrations";
+import NightlyRebuild from "./pages/NightlyRebuild";
 import Onboarding from "./pages/Onboarding";
 import Overview from "./pages/Overview";
 import SchemaChanges from "./pages/SchemaChanges";
@@ -63,6 +65,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/schema", label: "Schema Changes", icon: Radar },
       { to: "/migrations", label: "Database Updates (SQL)", icon: FileCode2 },
+      { to: "/rebuild", label: "Nightly Rebuild", icon: RefreshCw },
       { to: "/audit", label: "Audit Log", icon: ScrollText },
     ],
   },
@@ -166,6 +169,7 @@ export default function App() {
         <Route path="/mappings/:proposalId" element={<MappingReview />} />
         <Route path="/schema" element={<SchemaChanges />} />
         <Route path="/migrations" element={<Migrations />} />
+        <Route path="/rebuild" element={<NightlyRebuild />} />
         <Route path="/audit" element={<AuditLog />} />
         {/* Preserve existing entry points */}
         <Route path="/onboarding" element={<Onboarding />} />

@@ -22,6 +22,8 @@ MIGRATION_FILES = [
     "sql/006_station_id_sequence.sql",
     "sql/007_onboarding_target_tables.sql",
     "sql/008_target_ddl_scope.sql",
+    "sql/009_drift_resolution.sql",
+    "sql/010_three_way_drift.sql",
 ]
 
 _MIGRATION_LOCK_KEY = "schema_mapper:migrations"

@@ -56,6 +56,7 @@ export default function AuditLog() {
 
       <section className="panel">
         {isLoading && <p className="dim">Loading…</p>}
+        <div className="table-scroll">
         <table className="table">
           <thead>
             <tr>
@@ -101,6 +102,7 @@ export default function AuditLog() {
             )}
           </tbody>
         </table>
+        </div>
       </section>
     </div>
   );

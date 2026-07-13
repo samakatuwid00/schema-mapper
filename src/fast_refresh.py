@@ -10,11 +10,18 @@ from __future__ import annotations
 import json
 import hashlib
 import uuid
+import datetime
 import logging
+
+from .connectors import VIEWS_DATABASE
 
 log = logging.getLogger(__name__)
 
 UUID5_NAMESPACE = uuid.UUID("12345678-1234-5678-1234-567812345678")
+
+
+def _qt(table: str) -> str:
+    return f"`{VIEWS_DATABASE}`.`{table}`" if "_for_lrmis" in table else f"`{table}`"
 
 
 def generate_refresh_sql(
@@ -27,8 +34,19 @@ def generate_refresh_sql(
     updated_at_column: str | None = None,
 ) -> str:
     """Generate PostgreSQL SELECT statement for refresh."""
-    pk_cols = pk_columns or ["id"]
-    pk_concat = "||'|'|| ".join([f"s.{pk}" for pk in pk_cols])
+    pk_cols = pk_columns or []
+    if pk_cols:
+        pk_concat = "||'|'|| ".join([f"s.{pk}" for pk in pk_cols])
+        ref_key = (f"'{source_system}|{source_schema}|{source_table}|' "
+                   f"|| {pk_concat}::text")
+    else:
+        # Source table has no usable primary key: identify each row by a hash of
+        # its full contents. This references no named column, so it cannot fail
+        # with "column s.id does not exist" on id-less tables. Byte-identical
+        # rows map to the same external_reference, which is the correct dedup
+        # behaviour for a table with no declared identity.
+        ref_key = (f"'{source_system}|{source_schema}|{source_table}|' "
+                   f"|| md5(s::text)")
 
     select_columns = []
 
@@ -37,7 +55,7 @@ def generate_refresh_sql(
     select_columns.append(
         f"uuid_generate_v5(\n"
         f"        '{UUID5_NAMESPACE}'::uuid,\n"
-        f"        '{source_system}|{source_schema}|{source_table}|' || {pk_concat}::text\n"
+        f"        {ref_key}\n"
         f"    ) AS external_reference"
     )
     select_columns.append(f"'{source_system}' AS source_system")
@@ -103,9 +121,19 @@ def fetch_and_bulk_insert(
     if not rows:
         return 0
 
+    # Clamp out-of-range dates (year > 9999) to None for MySQL compatibility
+    def _clamp_row(r):
+        return tuple(
+            None if isinstance(v, (datetime.date, datetime.datetime)) and v.year > 9999
+            else v
+            for v in r
+        )
+    rows = [_clamp_row(r) for r in rows]
+
+    qt = _qt(target_table)
     placeholders = ", ".join(["%s"] * len(columns))
     insert_sql = (
-        f"INSERT INTO `{target_table}` ({', '.join(f'`{c}`' for c in columns)}) "
+        f"INSERT INTO {qt} ({', '.join(f'`{c}`' for c in columns)}) "
         f"VALUES ({placeholders})"
     )
 
@@ -124,8 +152,9 @@ def fetch_and_bulk_insert(
 
 def drop_staging_table(staging, target_table: str):
     """Drop staging table if it exists."""
+    qt = _qt(target_table)
     with staging.connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS `{target_table}`")
+            cur.execute(f"DROP TABLE IF EXISTS {qt}")
         conn.commit()
     log.info("Dropped table: %s", target_table)

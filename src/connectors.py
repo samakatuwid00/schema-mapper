@@ -247,6 +247,31 @@ class MySQLStagingConnector:
                 cur.execute(sql, (schema_name,))
                 return cur.fetchall()
 
+    def table_names(self, schema_name: str | None = None) -> list[str]:
+        """Base-table names in the connector's database (one row per table).
+
+        Cheaper and clearer than deriving names from ``information_schema()``
+        (which returns one row per *column*) when only the table set is needed."""
+        if schema_name is None:
+            schema_name = self.config["database"]
+        sql = """
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = %s AND table_type = 'BASE TABLE'
+            ORDER BY table_name
+        """
+        with self.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (schema_name,))
+                return [row[0] for row in cur.fetchall()]
+
+    def close(self) -> None:
+        """Interface symmetry with PostgresCentralConnector.
+
+        Pooled MySQL connections are returned to the pool at the end of each
+        ``connection()`` context; mysql-connector-python's pool exposes no clean
+        close-all, so this is intentionally a no-op."""
+        return None
+
     # -- read-only helpers for the data browser -----------------------------
     # This class stays a least-privilege writer: these issue SELECT only and
     # accept no user-supplied SQL. Identifiers are allowlisted by the caller.

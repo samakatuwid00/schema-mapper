@@ -49,7 +49,8 @@ describe("GuardedActionModal", () => {
     expect(confirmBtn).toBeEnabled();
 
     await user.click(confirmBtn);
-    expect(onConfirm).toHaveBeenCalledWith("maintenance window");
+    // confirm tier has no typed-confirmation input, so the second arg is empty.
+    expect(onConfirm).toHaveBeenCalledWith("maintenance window", "");
   });
 
   it("typed tier: requires reason AND exact confirmation string, and shows the warning panel", async () => {
@@ -91,7 +92,8 @@ describe("GuardedActionModal", () => {
     expect(confirmBtn).toBeEnabled();
 
     await user.click(confirmBtn);
-    expect(onConfirm).toHaveBeenCalledWith("hotfix index");
+    // typed tier passes both the reason and the exact confirmation string.
+    expect(onConfirm).toHaveBeenCalledWith("hotfix index", "004_add_index.sql");
   });
 
   it("renders nothing when closed", () => {

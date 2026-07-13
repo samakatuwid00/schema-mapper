@@ -388,7 +388,14 @@ h1, h2, h3, h4 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
+}
+
+/* Cards in a two-col grid share equal height; the table/list inside the
+   shorter card grows to fill so the two panels line up cleanly. */
+.two-col > .panel {
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 1100px) {
@@ -633,6 +640,36 @@ h1, h2, h3, h4 {
   border-color: var(--accent);
 }
 
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 12px;
+  padding: 3px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.segmented-control-option {
+  padding: 6px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font: 600 11px var(--sans);
+}
+
+.segmented-control-option:hover {
+  color: var(--text);
+}
+
+.segmented-control-option.active {
+  background: var(--panel-2);
+  box-shadow: var(--elev-1);
+  color: var(--accent);
+}
+
 .btn-danger {
   background: rgba(239, 68, 68, 0.18);
   border-color: rgba(239, 68, 68, 0.55);
@@ -793,6 +830,10 @@ select.input {
 }
 
 .table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel-2);
   text-align: left;
   font-size: 10.5px;
   text-transform: uppercase;
@@ -811,6 +852,17 @@ select.input {
 
 .table tbody tr:hover {
   background: rgba(148, 163, 184, 0.045);
+}
+
+/* Scrollable table/list wrapper: caps height and scrolls internally so long
+   result sets no longer stretch the whole page. Header rows stay pinned. */
+.table-scroll {
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .error-cell {
@@ -1707,6 +1759,13 @@ textarea:focus-visible,
   transition: border-color var(--dur) var(--ease-out);
 }
 .pipe-node-icon { color: var(--text-dim); }
+.pipe-node-active {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--st-active) 30%, transparent),
+              0 0 18px -8px var(--st-active);
+}
+.pipe-node-active .pipe-node-icon {
+  animation: pipeNodeWorking 1.25s var(--ease-out) infinite;
+}
 .pipe-node-title { font-size: 13px; font-weight: 600; }
 .pipe-node-sub { font-size: 11px; }
 .pipe-segment {
@@ -1738,6 +1797,10 @@ textarea:focus-visible,
   15%  { opacity: 1; }
   85%  { opacity: 1; }
   100% { left: 100%; opacity: 0; }
+}
+@keyframes pipeNodeWorking {
+  0%, 100% { transform: translateY(0); opacity: .8; }
+  50% { transform: translateY(-2px); opacity: 1; }
 }
 .pipeline-hint { margin: 4px 0 0; font-size: 12px; }
 

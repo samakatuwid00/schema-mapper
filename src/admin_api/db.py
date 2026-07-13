@@ -5,6 +5,7 @@ from ..connectors import MySQLStagingConnector, PostgresCentralConnector
 
 _central: PostgresCentralConnector | None = None
 _staging: MySQLStagingConnector | None = None
+_target: MySQLStagingConnector | None = None
 
 
 def central() -> PostgresCentralConnector:
@@ -19,6 +20,14 @@ def staging() -> MySQLStagingConnector:
     if _staging is None:
         _staging = MySQLStagingConnector()
     return _staging
+
+
+def target() -> MySQLStagingConnector:
+    """Path B connector to lrmis_target (its own pool, same credentials)."""
+    global _target
+    if _target is None:
+        _target = MySQLStagingConnector.for_target()
+    return _target
 
 
 def close_all() -> None:

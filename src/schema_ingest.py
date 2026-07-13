@@ -131,3 +131,25 @@ def from_information_schema(rows: list[dict], system_name: str) -> Schema:
 def schema_fingerprint(schema: Schema) -> str:
     canonical = json.dumps(schema.to_dict(), sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def schema_subset(schema: Schema, table_names: list[str] | set[str] | tuple[str, ...]) -> Schema:
+    """Return a stable schema document containing only the named tables.
+
+    Entity drift checks must never fingerprint an entire database: unrelated
+    tables and generated projections would otherwise pause every entity.
+    """
+    wanted = set(table_names)
+    return Schema(
+        system_name=schema.system_name,
+        tables=[table for table in schema.tables if table.name in wanted],
+        version=schema.version,
+    )
+
+
+def table_schema(schema: Schema, table_name: str) -> Schema | None:
+    """Return the single-table contract used for an entity fingerprint."""
+    table = schema.get_table(table_name)
+    if table is None:
+        return None
+    return Schema(system_name=schema.system_name, tables=[table], version=schema.version)

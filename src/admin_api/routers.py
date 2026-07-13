@@ -37,6 +37,14 @@ def _require_reason(reason: str | None) -> str:
     return reason.strip()
 
 
+def _as_bool(value, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return bool(value)
+
+
 def _require_typed_confirm(confirm: str | None, expected: str) -> None:
     if (confirm or "").strip() != expected:
         raise ValidationError(
@@ -99,7 +107,17 @@ def drift_reports():
 @reads_router.get("/schemas")
 def schemas(source_schema: str = "irimsv"):
     return ops_service.get_schema_trees(central=db.central(), staging=db.staging(),
-                                        source_schema=source_schema)
+                                        source_schema=source_schema, target=db.target())
+
+
+@reads_router.get("/lrmis-schema")
+def lrmis_schema():
+    """The canonical LRMIS tables and their columns, for the manual mapping
+    picker (assign a source column to any LRMIS table.column)."""
+    from ..lrmis_registry import get_registry
+    reg = get_registry()
+    return {"tables": {t: [c.name for c in reg.get_table(t).columns]
+                       for t in reg.table_names}}
 
 
 @reads_router.get("/proposals")
@@ -140,7 +158,8 @@ def data_tables(response: Response, source_schema: str | None = None,
                 user: AdminUser = Depends(require_operator)):
     _no_store(response)
     return data_browser_service.list_browsable_tables(
-        central=db.central(), staging=db.staging(), source_schema=source_schema)
+        central=db.central(), staging=db.staging(), source_schema=source_schema,
+        target=db.target())
 
 
 @data_router.get("/rows")
@@ -154,7 +173,19 @@ def data_rows(response: Response, side: str, table: str, page: int = 1,
                  details={"page": page, "size": size, "sort": sort}):
         return data_browser_service.fetch_rows(
             side, table, page=page, size=size, sort=sort, direction=direction,
-            central=db.central(), staging=db.staging(), source_schema=source_schema)
+            central=db.central(), staging=db.staging(), source_schema=source_schema,
+            target=db.target())
+
+
+@data_router.get("/compare-staging-target")
+def data_compare_staging_target(response: Response, staging_table: str, pk: str,
+                                user: AdminUser = Depends(require_operator)):
+    """Read-only staging (Path A) vs target (Path B) row comparison by primary key."""
+    _no_store(response)
+    with audited(user.username, "data_browse", target_type="path_b",
+                 target_id=staging_table, details={"pk": pk}):
+        return data_browser_service.compare_staging_target(
+            staging_table, pk, staging=db.staging(), target=db.target())
 
 
 @data_router.get("/compare")
@@ -167,6 +198,18 @@ def data_compare(response: Response, entity: str, external_reference: str,
         return data_browser_service.compare_row(
             entity, external_reference, central=db.central(), staging=db.staging(),
             source_schema=source_schema)
+
+
+@data_router.get("/compare-source-target")
+def data_compare_source_target(response: Response, entity: str, pk: str,
+                               user: AdminUser = Depends(require_operator)):
+    """Read-only direct source vs LRMIS target comparison: one source row (by its
+    primary key) vs the exact rows it produced across the target tables, per mapping."""
+    _no_store(response)
+    with audited(user.username, "data_compare", target_type="entity", target_id=entity,
+                 details={"pk": pk, "direction": "source->target"}):
+        return data_browser_service.compare_source_target(
+            entity, pk, central=db.central(), target=db.target())
 
 
 # ---------------------------------------------------------------------------
@@ -234,6 +277,7 @@ class ResolveBody(BaseModel):
     proposal_id: int
     source_column: str
     target_column: str
+    target_table: str | None = None
     transform: str = "none"
 
 
@@ -242,9 +286,11 @@ def resolve_field(body: ResolveBody, user: AdminUser = Depends(require_operator)
     with audited(user.username, "resolve_field", target_type="proposal",
                  target_id=str(body.proposal_id),
                  details={"source_column": body.source_column,
+                          "target_table": body.target_table,
                           "target_column": body.target_column}):
         return resolve(body.proposal_id, body.source_column, body.target_column,
-                       body.transform, resolved_by=user.username, central=db.central())
+                       body.transform, resolved_by=user.username,
+                       target_table=body.target_table, central=db.central())
 
 
 class RestoreSnapshotBody(BaseModel):
@@ -306,7 +352,8 @@ class JobBody(BaseModel):
 # reason required. onboard_bulk belongs here rather than in the typed tier because
 # it skips already-deployed tables outright - no populated staging table can be
 # dropped by it, so typed confirmation would be friction without a hazard.
-_CONFIRM_MODAL_JOBS = {"deploy", "backfill", "onboard_bulk"}
+_CONFIRM_MODAL_JOBS = {"deploy", "deploy_lrmis", "bulk_deploy_lrmis", "bulk_propose_lrmis",
+                       "backfill", "onboard_bulk"}
 _ONE_CLICK_JOBS = {"schema_scan", "discover", "propose", "monitor",
                    "worker_run", "reconcile", "replay", "entity_toggle",
                    "cancel_queue"}
@@ -347,6 +394,33 @@ def submit_job(body: JobBody, user: AdminUser = Depends(require_operator)):
         deployed_table = _entity_deployed_for_proposal(int(params.get("proposal_id", 0)))
         if deployed_table:                          # redeploy = typed-confirmation tier
             _require_typed_confirm(body.confirm, deployed_table)
+    elif job_type == "resolve_drift":               # reason required for the live drop+recreate
+        if not params.get("dry_run"):               # a dry-run preview mutates nothing
+            _require_reason(body.reason)
+    elif job_type == "reset_schemas":               # typed-confirmation tier (destructive)
+        _require_reason(body.reason)
+        if not params.get("dry_run"):
+            direction = []
+            if _as_bool(params.get("reset_source", True)): direction.append("source")
+            if _as_bool(params.get("reset_target", True)): direction.append("target")
+            expected = "SOURCE" if direction == ["source"] else "TARGET" if direction == ["target"] else "RESET ALL"
+            _require_typed_confirm(body.confirm, expected)
+    elif job_type == "reset_path_b":                # typed-confirmation tier (drops whole DB)
+        _require_reason(body.reason)
+        if not params.get("dry_run"):
+            _require_typed_confirm(body.confirm, "PATH B")
+    elif job_type == "retire_entity":                # typed-confirmation tier (destructive)
+        _require_reason(body.reason)
+        if not params.get("dry_run"):
+            _require_typed_confirm(body.confirm, f"RETIRE {params.get('entity_id')}")
+    elif job_type == "sweep_staging":                # typed-confirmation tier (destructive)
+        _require_reason(body.reason)
+        if not params.get("dry_run"):
+            _require_typed_confirm(body.confirm, "SWEEP STAGING")
+    elif job_type == "nightly_refresh":              # typed-confirmation tier (destructive)
+        if not params.get("dry_run"):                # a dry-run mutates nothing
+            _require_reason(body.reason)
+            _require_typed_confirm(body.confirm, "REBUILD")
     elif job_type in _CONFIRM_MODAL_JOBS:
         _require_reason(body.reason)
 

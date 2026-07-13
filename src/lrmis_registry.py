@@ -190,11 +190,22 @@ class LrmisRegistry:
         return cls(tables)
 
     @classmethod
-    def from_information_schema(cls, staging, database: str | None = None) -> "LrmisRegistry":
-        """Fallback when the DDL file is unavailable: read the live database."""
-        rows = staging.information_schema(database)
+    def from_discovery(cls, column_rows, fk_rows=None) -> "LrmisRegistry":
+        """Build a registry from live-discovered metadata (engine-agnostic).
+
+        `column_rows` is one dict per column with case-insensitive keys
+        `table_name, column_name, data_type, is_nullable, ordinal_position`
+        plus optional `column_key` ('PRI'), `extra` ('auto_increment'), and
+        `column_default`. `fk_rows` is one dict per foreign key with
+        `table_name, column_name, ref_table, ref_column`.
+
+        Target adapters (see `src/adapters/`) normalise their engine's native
+        `information_schema` into this shape, so the FK graph, topological sort,
+        and seed-set logic behave identically whether the target is MySQL or
+        Postgres — unlike a columns-only read, which leaves the FK graph empty.
+        """
         grouped: dict[str, list[dict]] = {}
-        for row in rows:
+        for row in column_rows:
             r = {k.lower(): v for k, v in row.items()}
             grouped.setdefault(r["table_name"], []).append(r)
         tables: dict[str, LrmisTable] = {}
@@ -205,13 +216,36 @@ class LrmisRegistry:
                 table.columns.append(LrmisColumn(
                     name=r["column_name"],
                     data_type=r["data_type"],
-                    nullable=r["is_nullable"] == "YES",
+                    nullable=str(r.get("is_nullable")).upper() in ("YES", "1", "TRUE"),
                     is_primary_key=r.get("column_key") == "PRI",
-                    auto_increment="auto_increment" in (r.get("extra") or "").lower(),
+                    auto_increment="auto_increment" in str(r.get("extra") or "").lower(),
                     default=None if raw_default in (None, "NULL") else str(raw_default),
                 ))
             tables[name] = table
+        for fr in (fk_rows or []):
+            r = {k.lower(): v for k, v in fr.items()}
+            table = tables.get(r["table_name"])
+            if table is None:
+                continue
+            table.foreign_keys.append(LrmisForeignKey(
+                column=r["column_name"], ref_table=r["ref_table"],
+                ref_column=r["ref_column"]))
+        if not tables:
+            raise ValueError("no tables found in discovery rows")
         return cls(tables)
+
+    @classmethod
+    def from_information_schema(cls, staging, database: str | None = None) -> "LrmisRegistry":
+        """Read the live database's schema through a connector/adapter.
+
+        Also pulls foreign keys when the connector exposes `foreign_keys()` (the
+        target adapters do), so a discovered registry can order inserts
+        parents-first. Falls back to a columns-only (FK-less) registry otherwise.
+        """
+        column_rows = staging.information_schema(database)
+        fk_rows = (staging.foreign_keys(database)
+                   if hasattr(staging, "foreign_keys") else None)
+        return cls.from_discovery(column_rows, fk_rows)
 
     # -- lookups ------------------------------------------------------------
 

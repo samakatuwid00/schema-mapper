@@ -2,6 +2,8 @@ import type {
   AdminUser,
   AuditRow,
   CompareResponse,
+  SourceTargetCompareResponse,
+  StagingTargetCompareResponse,
   CreateJobPayload,
   CreateJobResponse,
   DataRowsParams,
@@ -145,6 +147,18 @@ export const compareRow = (entity: string, externalReference: string) =>
     `/api/data/compare${qs({ entity, external_reference: externalReference })}`,
   );
 
+/** Compare a Path A staging row against its Path B (lrmis_target) row by primary key. */
+export const compareStagingTarget = (stagingTable: string, pk: string) =>
+  get<StagingTargetCompareResponse>(
+    `/api/data/compare-staging-target${qs({ staging_table: stagingTable, pk })}`,
+  );
+
+/** Compare a source row (by primary key) against the exact rows it produced in the LRMIS target. */
+export const compareSourceTarget = (entity: string, pk: string) =>
+  get<SourceTargetCompareResponse>(
+    `/api/data/compare-source-target${qs({ entity, pk })}`,
+  );
+
 // ---- Audit ----
 
 export const getAudit = (params: { limit?: number; actor?: string; action?: string } = {}) =>
@@ -179,9 +193,13 @@ export const approveMapping = (payload: { mapping_id: number; reason: string }) 
 export const resolveMapping = (payload: {
   proposal_id: number;
   source_column: string;
+  target_table?: string;
   target_column: string;
   transform: string;
 }) => post<unknown>("/api/actions/resolve", payload);
+
+export const getLrmisSchema = () =>
+  get<{ tables: Record<string, string[]> }>("/api/lrmis-schema");
 
 export const restoreSnapshot = (payload: { table: string; snapshot?: string; reason: string }) =>
   post<unknown>("/api/actions/restore-snapshot", payload);
@@ -223,3 +241,46 @@ export const createUser = (payload: { username: string; password: string; role: 
 
 export const setUserActive = (id: number, isActive: boolean) =>
   post<unknown>(`/api/users/${id}/active`, { is_active: isActive });
+
+// ---- View proposals ----
+
+export interface ViewProposal {
+  id: number;
+  entity_id: number;
+  source_schema: string;
+  source_table: string;
+  target_system: string;
+  view_schema: string;
+  view_name: string;
+  view_sql: string;
+  joined_tables: Array<{ from_table: string; from_col: string; to_table: string; to_col: string }>;
+  mapped_columns: Array<{ table: string; column: string; alias: string }>;
+  status: string;
+  pending_proposal_id?: number;
+  created_at: string;
+  applied_at?: string;
+  applied_by?: string;
+}
+
+export const getViewProposals = (status?: string) =>
+  get<ViewProposal[]>(`/api/views/proposals${status ? qs({ status }) : ""}`);
+
+export const generateView = (payload: {
+  entity_id: number;
+  source_schema?: string;
+  source_table: string;
+  target_system?: string;
+}) => post<ViewProposal>("/api/actions/generate-view", payload);
+
+export const applyView = (payload: { proposal_id: number }) =>
+  post<{ proposal_id: number; entity_id: number; view_schema: string; view_name: string; status: string; view_sql: string }>(
+    "/api/actions/apply-view", payload,
+  );
+
+// ---- Cancel queue ----
+
+export const cancelQueue = (entity: string) =>
+  post<CreateJobResponse>("/api/jobs", {
+    job_type: "cancel_queue",
+    params: { entity },
+  });

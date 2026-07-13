@@ -35,17 +35,15 @@ from __future__ import annotations
 
 from .connectors import safe_identifier
 from .lrmis_registry import LrmisRegistry, get_registry
+from .adapters.lrmis_plugin import LRMIS
 
-# Tables with no AUTO_INCREMENT primary key that this pipeline is nonetheless
-# authorized to CREATE rows in, because IRIMSV is the authoritative source for
-# them. Every other no-AUTO_INCREMENT table (e.g. psgc) stays resolve-only —
-# see resolve_reference_id. New ids come from DEFAULT_ID_SEQUENCE_START up.
-APP_ASSIGNED_ID_TABLES = frozenset({"station"})
-
-# LRMIS's own station ids run 1..3921 today; this leaves enormous headroom
-# before a real collision could occur, and is deliberately round/inspectable
-# in the database rather than derived.
-DEFAULT_ID_SEQUENCE_START = 10_000_000
+# LRMIS domain config now lives in the plugin (§9); re-exported here so existing
+# importers keep working. `APP_ASSIGNED_ID_TABLES` are no-AUTO_INCREMENT tables
+# the pipeline may still CREATE rows in (an id is allocated from a reserved
+# range starting at `DEFAULT_ID_SEQUENCE_START`); every other no-AUTO_INCREMENT
+# table stays resolve-only (see resolve_reference_id).
+APP_ASSIGNED_ID_TABLES = LRMIS.app_assigned_id_tables
+DEFAULT_ID_SEQUENCE_START = LRMIS.id_sequence_start
 
 
 class WriterError(RuntimeError):
@@ -339,7 +337,10 @@ def delete_entity_rows(mysql_conn, central_conn, *, source_entity: str,
 
     by_table: dict[str, list] = {}
     for table, target_id in rows:
-        if registry.has_table(table) and registry.is_reference_table(table):
+        if not registry.has_table(table):
+            continue  # legacy staging crosswalk leftover (e.g. irimsv_*_staging):
+                      # not an LRMIS table this Path B delete owns — leave it be
+        if registry.is_reference_table(table):
             continue
         by_table.setdefault(table, []).append(target_id)
 

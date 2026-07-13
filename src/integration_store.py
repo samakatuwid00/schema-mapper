@@ -55,7 +55,7 @@ def approved_mapping(conn, source_entity: str, target_system: str) -> dict | Non
             JOIN integration.onboarding_entity e ON p.entity_id = e.id
             WHERE e.source_table = %s AND e.target_system = %s
               AND p.status IN ('approved', 'auto_approved')
-              AND e.status = 'deployed'
+               AND (e.status = 'deployed' OR (e.status = 'paused' AND e.paused_reason LIKE 'Schema drift detected:%%'))
             ORDER BY p.created_at DESC
             LIMIT 1
         """, (source_entity, target_system))

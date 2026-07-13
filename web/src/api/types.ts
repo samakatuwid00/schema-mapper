@@ -99,6 +99,8 @@ export interface DriftReport {
   breaking: boolean;
   created_at: string;
   resolved_at?: string | null;
+  /** Which database pair this report compares: 'source->staging' | 'staging->target'. */
+  drift_pair?: string;
 }
 
 // ---- Schemas ----
@@ -124,7 +126,10 @@ export interface SchemaSystem {
 
 export interface SchemasResponse {
   source: SchemaSystem;
-  target: SchemaSystem;
+  /** Path A: lrmis_staging contract. */
+  staging: SchemaSystem;
+  /** Path B: lrmis_target canonical contract. */
+  target_b: SchemaSystem;
 }
 
 // ---- Proposals / mappings ----
@@ -197,7 +202,11 @@ export type JobType =
   | "deploy"
   | "backfill"
   | "refresh"
-  | "migration_apply";
+  | "migration_apply"
+  | "resolve_drift"
+  | "reset_schemas"
+  | "retire_entity"
+  | "sweep_staging";
 
 export interface JobSummary {
   id: number;
@@ -271,7 +280,8 @@ export interface AdminUser {
 
 // ---- Data browser ----
 
-export type DataSide = "source" | "target";
+/** source = IRIMSV, target = Path A lrmis_staging, path_b = Path B lrmis_target. */
+export type DataSide = "source" | "target" | "path_b";
 
 /** One column's metadata as returned by the row-page endpoint. */
 export interface DataColumn {
@@ -299,9 +309,20 @@ export interface TargetTableSummary {
   source_table: string | null;
 }
 
+/** A Path B (lrmis_target) canonical table in the browser rail. */
+export interface PathBTableSummary {
+  table: string;
+  columns: number;
+  rows: number;
+  /** The Path A staging table this canonical table can be compared against. */
+  staging_table: string | null;
+}
+
 export interface DataTablesResponse {
   source: { schema: string; tables: SourceTableSummary[] };
   target: { database: string; tables: TargetTableSummary[] };
+  /** Path B lrmis_target. Optional so older API responses stay assignable. */
+  path_b?: { database: string; tables: PathBTableSummary[] };
 }
 
 export type DataRow = Record<string, unknown>;
@@ -350,6 +371,58 @@ export interface CompareResponse {
   fields: CompareField[];
 }
 
+/** One field of a staging (Path A) <-> target (Path B) row comparison. */
+export interface StagingTargetField {
+  field: string;
+  staging: unknown;
+  target: unknown;
+  matches: boolean;
+  compared: boolean;
+}
+
+export interface StagingTargetCompareResponse {
+  staging_table: string;
+  path_b_table: string;
+  primary_key: string;
+  primary_key_value: unknown;
+  staging_row: Record<string, unknown> | null;
+  target_row: Record<string, unknown> | null;
+  missing_in_target: boolean;
+  missing_in_staging: boolean;
+  fields: StagingTargetField[];
+}
+
+export interface SourceTargetCompareResponse {
+  entity: string;
+  primary_key: string;
+  primary_key_value: string;
+  external_reference: string | null;
+  target_tables: string[];
+  missing_in_target: boolean;
+  missing_in_source: boolean;
+  fields: { field: string; source: unknown; target: unknown; matches: boolean; compared: boolean }[];
+}
+
+// ---- View proposals ----
+
+export interface ViewProposal {
+  id: number;
+  entity_id: number;
+  source_schema: string;
+  source_table: string;
+  target_system: string;
+  view_schema: string;
+  view_name: string;
+  view_sql: string;
+  joined_tables: Array<{ from_table: string; from_col: string; to_table: string; to_col: string }>;
+  mapped_columns: Array<{ table: string; column: string; alias: string }>;
+  status: string;
+  pending_proposal_id?: number;
+  created_at: string;
+  applied_at?: string;
+  applied_by?: string;
+}
+
 // ---- Proposal summaries (review queue) ----
 
 /** A proposal joined to its entity, so the review queue never needs a typed id. */
@@ -368,5 +441,7 @@ export interface ProposalSummary {
   source_table: string;
   target_system: string;
   entity_status: EntityStatus | null;
+  on_target?: boolean;
+  has_lrmis_mapping?: boolean;
   pending_fields: number;
 }

@@ -13,7 +13,7 @@ from dataclasses import asdict
 
 from ..connectors import MySQLStagingConnector, PostgresCentralConnector
 from ..mapping_engine import mapping_to_dicts, propose_mapping
-from ..schema_ingest import from_information_schema, schema_fingerprint
+from ..schema_ingest import from_information_schema, schema_fingerprint, table_schema
 from ..schema_models import Schema
 from ..transform_engine import _ENVELOPE_FIELDS
 from .common import ConflictError, NotFoundError, ValidationError
@@ -83,11 +83,13 @@ def propose(source_schema: str, source_table: str, target_system: str,
             if not tgt:
                 raise ValidationError(f"no approved target schema for {target_system}")
 
-            src_fp = schema_fingerprint(src)
+            source_contract = table_schema(src, source_table)
+            src_fp = schema_fingerprint(source_contract) if source_contract else ""
             tgt_fp = schema_fingerprint(tgt)
             p._execute(conn, """
                 UPDATE integration.onboarding_entity
-                SET source_fingerprint = %s, target_fingerprint = %s, updated_at = now()
+                SET source_fingerprint = %s, target_fingerprint = %s,
+                    fingerprint_scope_version = 2, updated_at = now()
                 WHERE id = %s
             """, (src_fp, tgt_fp, entity["id"]))
 
@@ -184,6 +186,7 @@ def get_review(proposal_id: int, central: PostgresCentralConnector | None = None
 
 def resolve(proposal_id: int, source_column: str, target_column: str,
             transform: str = "none", resolved_by: str = "admin",
+            target_table: str | None = None,
             central: PostgresCentralConnector | None = None) -> dict:
     p = _pipeline()
     owns = central is None
@@ -203,12 +206,26 @@ def resolve(proposal_id: int, source_column: str, target_column: str,
                 raise ValidationError(
                     f"transform '{transform}' not in allowlist: {sorted(p.ALLOWED_TRANSFORMS)}")
 
-            p._execute(conn, """
-                UPDATE integration.onboarding_field_review
-                SET status = 'resolved', resolved_target_column = %s,
-                    resolved_transform = %s, resolved_by = %s, resolved_at = now()
-                WHERE proposal_id = %s AND source_column = %s
-            """, (target_column, transform, resolved_by, proposal_id, source_column))
+            if target_table:
+                # Manual multi-table mapping: assign the target TABLE too (the AI
+                # suggested none). The load paths read suggested_target_table, so
+                # setting it here is what lets a source column be hand-mapped to
+                # any LRMIS table.
+                p._execute(conn, """
+                    UPDATE integration.onboarding_field_review
+                    SET status = 'resolved', suggested_target_table = %s,
+                        resolved_target_column = %s, resolved_transform = %s,
+                        resolved_by = %s, resolved_at = now()
+                    WHERE proposal_id = %s AND source_column = %s
+                """, (target_table, target_column, transform, resolved_by,
+                      proposal_id, source_column))
+            else:
+                p._execute(conn, """
+                    UPDATE integration.onboarding_field_review
+                    SET status = 'resolved', resolved_target_column = %s,
+                        resolved_transform = %s, resolved_by = %s, resolved_at = now()
+                    WHERE proposal_id = %s AND source_column = %s
+                """, (target_column, transform, resolved_by, proposal_id, source_column))
 
             pending = p._fetchval(conn, """
                 SELECT COUNT(*) FROM integration.onboarding_field_review
@@ -301,7 +318,11 @@ def deploy(proposal_id: int, by: str,
                     p._create_source_trigger(conn, source_schema, source_table,
                                              pk_columns, proposal.get("updated_at_column"))
 
-                    staging_rows = staging.information_schema("lrmis_staging")
+                    from ..connectors import VIEWS_DATABASE
+                    views_db = VIEWS_DATABASE
+                    staging_rows = staging.information_schema(
+                        views_db if "_for_lrmis" in staging_table else "lrmis_staging"
+                    )
                     staging_schema = from_information_schema(staging_rows, "LRMIS")
                     staging_tables = [t for t in staging_schema.tables if t.name == staging_table]
                     staging_fp = None
@@ -311,18 +332,20 @@ def deploy(proposal_id: int, by: str,
                         doc = json.dumps(doc_schema.to_dict())
                         p._execute(conn, """
                             INSERT INTO integration.schema_version
-                                (target_system, fingerprint, schema_document, approved_at, approved_by)
-                            VALUES (%s, %s, %s, now(), %s)
-                            ON CONFLICT (target_system, fingerprint)
+                                (target_system, scope_kind, scope_name, fingerprint,
+                                 schema_document, approved_at, approved_by)
+                            VALUES (%s, 'entity_staging', %s, %s, %s, now(), %s)
+                            ON CONFLICT (target_system, scope_kind, scope_name, fingerprint)
                             DO UPDATE SET schema_document = EXCLUDED.schema_document, approved_at = now()
-                        """, (target_system, staging_fp, doc, by))
+                        """, (target_system, staging_table, staging_fp, doc, by))
 
                     p._execute(conn, """
                         UPDATE integration.onboarding_entity
-                        SET status = 'deployed', staging_table = %s, deployed_by = %s,
+                        SET status = 'deployed', staging_table = %s, target_fingerprint = %s,
+                            fingerprint_scope_version = 2, deployed_by = %s,
                             deployed_at = now(), updated_at = now()
                         WHERE id = %s
-                    """, (staging_table, by, entity_id))
+                    """, (staging_table, staging_fp, by, entity_id))
                     p._execute(conn, """
                         UPDATE integration.onboarding_proposal
                         SET status = 'approved', reviewed_by = %s, reviewed_at = now(), updated_at = now()
