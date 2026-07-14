@@ -370,3 +370,122 @@ export const restoreSource = (payload: {
   reason: string;
   dry_run?: boolean;
 }) => post<RestoreResult>("/api/recovery/restore-source", payload);
+
+// ---- Agent chat (conversational assistant) ----
+
+export type AutonomyTier = "propose_only" | "auto_safe";
+
+export interface AgentToolCall {
+  tool: string;
+  params: Record<string, unknown>;
+  requires_confirmation: boolean;
+  executed?: boolean;
+  autonomy?: string;
+  auto_executed?: boolean;
+}
+
+export interface AgentMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+  tool_calls?: AgentToolCall[];
+  tool_results?: unknown[];
+  created_at?: string;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  autonomy_tier: AutonomyTier;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export interface ConversationDetail extends Omit<ConversationSummary, "message_count"> {
+  messages: AgentMessage[];
+}
+
+export const listConversations = () =>
+  get<ConversationSummary[]>("/api/agent/conversations");
+
+export const getConversation = (id: string) =>
+  get<ConversationDetail>(`/api/agent/conversations/${id}`);
+
+export const deleteConversation = (id: string) =>
+  request<{ ok: boolean }>("DELETE", `/api/agent/conversations/${id}`);
+
+export interface AgentStreamEvent {
+  event: "conversation" | "token" | "tool_call" | "tool_result" | "error" | "done";
+  data: Record<string, unknown>;
+}
+
+export interface AgentChatPayload {
+  message: string;
+  conversation_id?: string | null;
+  context?: Record<string, unknown>;
+  autonomy_tier?: AutonomyTier;
+  confirm?: { tool: string; params: Record<string, unknown> } | null;
+}
+
+/**
+ * POST the chat message and stream the typed SSE events back (fetch-based:
+ * EventSource cannot POST). Calls onEvent per parsed event; resolves when the
+ * stream closes.
+ */
+export async function streamAgentChat(
+  payload: AgentChatPayload,
+  onEvent: (event: AgentStreamEvent) => void,
+): Promise<void> {
+  const res = await fetch("/api/agent/chat", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 401) {
+    unauthorizedHandler?.();
+    throw new ApiError(401, "Not authenticated");
+  }
+  if (!res.ok || !res.body) {
+    let detail = res.statusText || `HTTP ${res.status}`;
+    try {
+      const parsed: unknown = await res.json();
+      if (parsed && typeof parsed === "object" && "detail" in parsed) {
+        const d = (parsed as { detail: unknown }).detail;
+        detail = typeof d === "string" ? d : JSON.stringify(d);
+      }
+    } catch {
+      /* body was not JSON */
+    }
+    throw new ApiError(res.status, detail);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      boundary = buffer.indexOf("\n\n");
+      let eventName: string | null = null;
+      let dataLine: string | null = null;
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLine = line.slice(5).trim();
+      }
+      if (eventName && dataLine) {
+        try {
+          onEvent({ event: eventName as AgentStreamEvent["event"],
+                    data: JSON.parse(dataLine) as Record<string, unknown> });
+        } catch {
+          /* skip malformed frame (e.g. ping) */
+        }
+      }
+    }
+  }
+}

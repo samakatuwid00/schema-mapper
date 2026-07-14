@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from ..services.common import (ConflictError, NotFoundError, ServiceError,
                                ValidationError)
 from . import jobs
+from .agent_chat import agent_router
 from .recovery import recovery_router
 from .routers import (actions_router, auth_router, data_router, jobs_router,
                       migrations_router, reads_router, users_router,
@@ -46,7 +47,7 @@ def create_app() -> FastAPI:
 
     for router in (auth_router, reads_router, data_router, actions_router,
                    jobs_router, worker_router, migrations_router, users_router,
-                   recovery_router):
+                   recovery_router, agent_router):
         app.include_router(router)
 
     if WEB_DIST.exists():

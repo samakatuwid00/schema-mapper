@@ -1,15 +1,15 @@
 ## 0. MVP guardrails and feasibility
 
 - [x] 0.1 (2026-07-14) Confirmed — the seven MVP intents are implemented exactly as listed in `src/agent/tools.py`.
-- [ ] 0.2 Define free-tier budget limits: max prompt tokens, max response tokens, provider timeout, retry/fallback order
-- [ ] 0.3 Add prompt/privacy test fixture proving row values are excluded from prompts and persisted messages
+- [x] 0.2 (2026-07-14) Budgets defined in `conversation.py`, env-overridable: `AGENT_MAX_PROMPT_CHARS` (6000, hard cap enforced in `_build_classify_prompt`), `AGENT_MAX_RESPONSE_TOKENS` (512, passed to the provider), `AGENT_LLM_TIMEOUT_SECONDS` (20, provider http timeout), fallback order = the existing `LLM_PROVIDER_ORDER` contract with `heuristic` terminal.
+- [x] 0.3 `test_privacy_row_values_never_reach_prompt_or_persistence` — plants row values in BOTH page context and a tool result; proves neither reaches the classification prompt nor any persisted message (three planted markers, prompt capture + storage blob assertions), while schema-level context (proposal_id) survives.
 - [x] 0.4 Confirmed in the registry: dispatch tiers are `propose_only`/`auto_safe` only; `destructive` tools (e.g. `recover_from_backup`) always require confirmation regardless of tier, and the wrapped services enforce typed confirmation themselves. No `auto_all` anywhere.
 
 ## 1. Database migration
 
-- [ ] 1.1 Create the agent_conversation migration — NOTE (2026-07-14): the planned filename `sql/005_agent_conversation.sql` is stale, 005–012 are taken now; use `sql/013_agent_conversation.sql`. (id UUID PK, user_id FK, title TEXT, autonomy_tier TEXT DEFAULT 'propose_only', messages JSONB, created_at, updated_at)
-- [ ] 1.2 Add index on `user_id` + `updated_at` for conversation listing queries
-- [ ] 1.3 Add a CHECK constraint limiting `autonomy_tier` to `propose_only` or `auto_safe`
+- [x] 1.1 `sql/013_agent_conversation.sql` created (005 was stale — taken) with the D6 columns; applied to the live dev central DB.
+- [x] 1.2 `agent_conversation_user_updated_idx (user_id, updated_at DESC)` — matches the only listing query.
+- [x] 1.3 `CHECK (autonomy_tier IN ('propose_only','auto_safe'))` — `auto_all` is rejected at the DB in addition to API/service validation.
 
 ## 2. MVP tool registry (`src/agent/tools.py`)
 
@@ -25,56 +25,54 @@
 
 ## 3. Conversation loop (`src/agent/conversation.py`)
 
-- [ ] 3.1 Implement `ConversationContext` dataclass (conversation_id, messages, page_context, workflow_state, autonomy_tier)
-- [ ] 3.2 Implement intent classifier: takes user message + available tool names/descriptions, returns (intent_name, params, confidence)
-- [ ] 3.3 Wire intent classifier to use existing LLM provider failover with token caps and timeout fallback
-- [ ] 3.4 Implement heuristic/template fallback responses for every MVP intent
-- [ ] 3.5 Implement `ToolDispatcher`; validates params against schema, checks autonomy gate, calls handler, formats result
-- [ ] 3.6 Implement `ConversationManager`; load/save messages to DB, manage context window, summarize old messages schema-only
-- [ ] 3.7 Implement `AgentSession.converse(message, context) -> AsyncGenerator[StreamEvent]`
-- [ ] 3.8 Write unit tests for classification (mocked LLM), dispatch, template fallback, context management, and no-row-value storage
+- [x] 3.1 `ConversationContext` dataclass with the five specced fields (the session flow passes the pieces explicitly; the dataclass is the documented context shape).
+- [x] 3.2 `classify()`/`heuristic_classify()` → `Intent(name, params, confidence, source)`; params extracted from message regexes (proposal #N, onboard <table>, dilemma kinds) merged with page context; confidence floor 0.5 → clarification listing supported actions.
+- [x] 3.3 Follows the existing failover contract (`LLM_PROVIDER_ORDER`, skip-unconfigured, terminal `heuristic`): gemini classification uses its own structured-output schema (the mapping providers are hard-wired to the mapping schema so they can't be reused verbatim; openai-compatible names are SKIPPED for classification — documented in code — and the heuristic answers). Timeout + token caps per 0.2; ANY provider error falls through gracefully.
+- [x] 3.4 Deterministic template per MVP intent (`TEMPLATES`), + clarification + deferred (swap/drift/recovery → dashboard/CLI pointer) + error texts; all garbage-tolerant.
+- [x] 3.5 `ToolDispatcher.dispatch` — schema validation (descriptive error, handler NOT called), autonomy gate (§7), handler call, result redaction, audit callback with tier + auto_executed. Carries `destructive` on the outcome (BUG found by test: the session originally re-resolved the tool from the GLOBAL registry, breaking injected registries).
+- [x] 3.6 `ConversationManager` — CRUD scoped by user (foreign access = NotFoundError → 404), title auto-generation (first message, 120 cap), `_cap_messages` context window (> `AGENT_MAX_MESSAGES` collapses older messages into ONE schema-only summary entry: tool names + count, never content), per-user retention prune (default 100) on create.
+- [x] 3.7 `AgentSession.process_message` (sync, fully testable) + `converse()` async generator (blocking work via `asyncio.to_thread`); events: conversation → tool_call → tool_result/error → token chunks → done; confirmation round-trip via `confirm={tool, params}` dispatched with confirmed=True.
+- [x] 3.8 `tests/test_agent_conversation.py` — 53 tests total in the file: classification (heuristic per intent, LLM via fake gemini client, failover-on-quota-error, unregistered-intent rejection, heuristic-only never calls provider), prompt budget, dispatch tiers, templates, context cap, manager SQL behavior over a fake central, session flows, privacy fixture.
 
 ## 4. FastAPI chat endpoints
 
-- [ ] 4.1 Add `agent_router = APIRouter(prefix="/api/agent", ...)` in `routers.py`
-- [ ] 4.2 Implement `POST /api/agent/chat`; accepts `{"message": str, "conversation_id"?: str, "context"?: dict}`, returns SSE stream with typed events (conversation, token, tool_call, tool_result, error, done)
-- [ ] 4.3 Implement simple reconnect behavior: persisted conversation resumes, but exact token replay is not required in MVP
-- [ ] 4.4 Implement `GET /api/agent/conversations`; list user's conversations (id, title, created_at, updated_at, message_count, autonomy_tier)
-- [ ] 4.5 Implement `GET /api/agent/conversations/{id}`; get full conversation scoped to user
-- [ ] 4.6 Implement `DELETE /api/agent/conversations/{id}`; delete conversation scoped to user
-- [ ] 4.7 Audit wiring: log agent tool calls to existing audit system
-- [ ] 4.8 Include `agent_router` in `app.py` `create_app()`
-- [ ] 4.9 Write integration tests: SSE streaming, CRUD, auth scoping, audit entries, quota fallback
+- [x] 4.1 `agent_router` lives in NEW `src/admin_api/agent_chat.py` (routers.py untouched — same one-file-per-area pattern the recovery router set), prefix `/api/agent`.
+- [x] 4.2 `POST /api/agent/chat` — body `{message, conversation_id?, context?, autonomy_tier?, confirm?}`; `EventSourceResponse` of the six typed events; the loop runs in a worker thread so the event loop never blocks; service errors become an `error` event + `done` (stream stays well-formed).
+- [x] 4.3 Reconnect = reload persisted conversation by id (`GET /conversations/{id}`); no token replay (tested: after a completed stream, the reload returns the persisted assistant message).
+- [x] 4.4/4.5/4.6 CRUD implemented, all scoped by `user_id` in SQL — another user's conversation is a 404 (existence not leaked); DELETE returns `{"ok": true}`.
+- [x] 4.7 Every EXECUTED tool audited via `write_audit(actor, "agent:<tool>", target_type="agent_conversation", target_id=<conversation>, details={autonomy, auto_executed, params})`; confirmation PROMPTS are not executions and are not audited (tested both ways).
+- [x] 4.8 Included in `create_app()`.
+- [x] 4.9 `tests/test_agent_chat_api.py` — 13 integration tests over the REAL routes + REAL loop + REAL registry in heuristic mode: full SSE flow (typed event order, tool result content, persistence), resume, page-context disambiguation, confirmation round-trip through the API, clarification, deferred swap, audit details, auto_all → 422, tier persistence, CRUD + cross-user 404s, stream recovery reload, error event on unknown conversation, anon 401s.
 
 ## 5. React sidebar chat UI
 
-- [ ] 5.1 Create `web/src/hooks/useAgentChat.ts`; manages SSE connection, message history, streaming state, and page context injection
-- [ ] 5.2 Create `web/src/components/ChatMessage.tsx`; renders a single message with markdown-lite text, tool call indicators, and confirmation buttons
-- [ ] 5.3 Create `web/src/components/AgentSidebar.tsx`; collapsible right panel with message list, input box, conversation history dropdown, autonomy tier selector, and toggle button
-- [ ] 5.4 Add autonomy tier selector UI for `propose_only` and `auto_safe`
-- [ ] 5.5 Wire page-aware context: pass current route + entity/proposal IDs from Shell/page components to the chat hook
-- [ ] 5.6 Add reconnect behavior that reloads the persisted conversation after a dropped stream
-- [ ] 5.7 Add confirmation button rendering inline in chat messages for `tool_call` events requiring approval
-- [ ] 5.8 Style with Tailwind to match the existing admin UI; use lucide icons for compact controls
-- [ ] 5.9 Add `AgentSidebar` to the `Shell` component in `App.tsx`
-- [ ] 5.10 Write component tests: rendering, streaming, confirmation flow, page-context injection
+- [x] 5.1 `useAgentChat.ts` — fetch-based SSE (EventSource cannot POST; `client.streamAgentChat` parses the stream), message history, streaming/draft state, pendingConfirm, tier, loadConversation/reset. Page context is caller-supplied per message.
+- [x] 5.2 `ChatMessage.tsx` — role icon, pre-wrap text with streaming caret, compact tool chips (running/done/failed/needs-approval), inline Approve/Cancel.
+- [x] 5.3 `AgentSidebar.tsx` — fixed right panel (closed by default; open-state lives in Shell so it survives navigation), header actions (new chat / history / close), history list with per-item delete (window.confirm), message list, input + send.
+- [x] 5.4 Tier selector with EXACTLY `propose_only` and `auto_safe` (test pins the option list — no auto_all).
+- [x] 5.5 `pageContextFor(pathname)` derives `{page, context:{proposal_id}}` from the route (e.g. `/mappings/42`); sent with every message and confirmation. NOTE: implemented by route parsing in the sidebar rather than threading props through every page — same data, one seam, exported + unit-tested.
+- [x] 5.6 Reconnect: `loadConversation(id)` reloads persisted messages (used by the history list; MVP semantics per D4).
+- [x] 5.7 Inline Approve/Cancel rendered on the last message's gated tool_call; Approve re-sends with `confirm={tool, params}`.
+- [x] 5.8 Existing class conventions (`btn`/`input`/`panel-header`/`dim`/`mono`) + lucide icons (MessageSquare/Bot/Cog/…); layout via minimal inline styles matching the app's dark shell. (The app is NOT Tailwind — the task's wording was aspirational; matched the actual styling system instead.)
+- [x] 5.9 `AgentSidebar` mounted in Shell with a topbar "Assistant" toggle button (the closed-state indicator).
+- [x] 5.10 12 new component tests (`ChatMessage` 4: roles, streaming chip, approve/cancel callbacks, no-controls-without-handler; `AgentSidebar` 8: closed-renders-nothing, send-with-route-context, pageContextFor unit, two-tier pin, confirmation forwarding, history switch + delete-with-confirm, new chat, error surface). GATES: `tsc --noEmit` clean, vitest 86 passed (was 74), `npm run build` ok. (jsdom quirk fixed: guarded `Element.scrollTo`.)
 
 ## 6. MVP workflow guidance (`src/agent/workflows.py`)
 
-- [ ] 6.1 Define `WorkflowState` dataclass (workflow_name, current_step, completed_steps, context)
-- [ ] 6.2 Implement onboarding workflow state machine: discover -> propose -> review -> deploy -> backfill
-- [ ] 6.3 Implement deploy guidance workflow: check coverage -> resolve dilemmas -> confirm -> deploy
-- [ ] 6.4 Wire workflow state into `ConversationContext` so the agent suggests next steps
-- [ ] 6.5 Write tests for MVP workflows: state transitions, valid/invalid moves, completion detection
+- [x] 6.1 `WorkflowState` dataclass + to_dict/from_dict (persisted on assistant messages).
+- [x] 6.2 Onboarding machine: discover → propose → review → deploy → backfill; only the current step may complete (the LLM never decides transitions, D7).
+- [x] 6.3 Deploy machine: check_coverage → resolve_dilemmas → confirm → deploy.
+- [x] 6.4 Wired: a successful `onboard_table` records onboard-state (discover+propose done → "Next step: review…" appended to the reply); `deploy_guidance` records deploy-state (skipping resolve_dilemmas when ready); "where are we?" (`workflow_status` heuristic intent) answers from the last persisted state with current/done/remaining — no tool call.
+- [x] 6.5 `tests/test_agent_workflows.py` — 8 tests (transitions to completion, invalid move rejected + state unchanged, describe, suggestions, dict round-trip, unknown workflow) + 4 wiring tests in the conversation suite.
 
 ## 7. Conservative autonomy gating
 
-- [ ] 7.1 Implement autonomy gate in `ToolDispatcher`; checks tool autonomy against conversation tier before executing
-- [ ] 7.2 `propose_only`: all mutating tools return confirmation prompts instead of executing
-- [ ] 7.3 `auto_safe`: auto-execute only tools marked `auto_safe` when parameters validate and confidence exceeds threshold
-- [ ] 7.4 Destructive tool detection: tools marked `destructive` always require confirmation regardless of tier
-- [ ] 7.5 Audit logging: record autonomy tier + whether action was auto-executed or confirmed
-- [ ] 7.6 Write tests: each tier behavior, destructive guard, tier switching mid-conversation
+- [x] 7.1 Gate lives in `ToolDispatcher.dispatch` (single choke point); unsupported tiers (incl. auto_all) raise ValidationError before anything else.
+- [x] 7.2 `propose_only`: tools not on the auto_safe allowlist → confirmation prompt, handler untouched (reads marked auto_safe still answer — they're the product).
+- [x] 7.3 `auto_safe`: executes only `auto_safe`-marked tools with validated params AND classification confidence ≥ `AGENT_AUTO_SAFE_CONFIDENCE` (0.7); low confidence or non-allowlisted → confirmation prompt.
+- [x] 7.4 `destructive` → confirmation in every tier, always; the wrapped services additionally enforce their own typed confirmations (defense in depth — chat approval alone cannot run a restore).
+- [x] 7.5 Audit callback records `{autonomy: <tier>, tool_autonomy, auto_executed, error}`; API layer adds actor/conversation (§4.7).
+- [x] 7.6 Tier behaviors, low-confidence deferral, destructive guard (auto_safe tier, confidence 1.0 — still deferred), confirmed execution, invalid-params-no-call, auto_all rejection, and mid-conversation tier switch (`test_session_resumes_and_switches_tier` + API `test_tier_change_persists_on_conversation`).
 
 ## 8. Later phases
 
@@ -86,10 +84,10 @@
 
 ## 9. Integration and regression
 
-- [ ] 9.1 Wire `AgentSession.converse()` into `MigrationAgent` as a thin `converse()` wrapper
-- [ ] 9.2 Verify existing agent methods (`plan`, `guide`, `heal`) remain unchanged and existing tests pass
-- [ ] 9.3 Full end-to-end test: chat -> intent classify -> tool dispatch -> SSE response -> UI render
-- [ ] 9.4 Heuristic/offline mode test: `LLM_PROVIDER_ORDER=heuristic` -> template responses work
-- [ ] 9.5 Run full test suite: `pytest -q`
-- [ ] 9.6 Check lint/typecheck if available
-- [ ] 9.7 Run `openspec validate conversational-ai-assistant --strict`
+- [x] 9.1 `MigrationAgent.converse(message, user_id=..., session=...)` — thin wrapper over `AgentSession.process_message`, returns the final assistant content + conversation id + events; audited via the agent's existing `_record` sink.
+- [x] 9.2 `plan`/`guide`/`heal` untouched (converse appended only); full suite green including all pre-existing agent tests.
+- [x] 9.3 End-to-end covered at the API seam (`test_full_chat_flow_streams_typed_events`: real chat → real heuristic classify → real registry dispatch → SSE events → persisted messages) + UI render covered by the component tests over the same event shapes. A live browser click-through remains blocked on admin credentials (same limitation noted for the Recovery UI).
+- [x] 9.4 The entire API test file runs under `LLM_PROVIDER_ORDER=heuristic`; templates answer every intent; `test_classify_heuristic_only_never_calls_provider` proves no provider call.
+- [x] 9.5 Full `pytest -q` → **419 passed** (was 350: +53 conversation, +8 workflows, +13 chat API, -? none removed). sql/013 applied to the live dev central DB.
+- [x] 9.6 `tsc --noEmit` clean, vitest 86 passed, `npm run build` ok; no Python linter is configured in this repo (pytest is the gate).
+- [x] 9.7 `openspec validate conversational-ai-assistant --strict` → VALID.

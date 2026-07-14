@@ -179,3 +179,19 @@ class MigrationAgent:
         self._record("agent_heal", {"action": proposal.action, "apply": proposal.apply,
                                     "detail": proposal.detail})
         return proposal
+
+    # conversational-ai-assistant §9.1 -- NL entry point ---------------------
+    def converse(self, message: str, *, user_id: int, session=None, **kwargs) -> dict:
+        """Thin conversational wrapper: route one NL message through the
+        conversation layer (`AgentSession.process_message`) and return the
+        final assistant message dict. `plan`/`guide`/`heal` are untouched —
+        the conversation layer wraps them via the tool registry."""
+        if session is None:
+            from .conversation import AgentSession
+            session = AgentSession(user_id)
+        events = session.process_message(message, **kwargs)
+        done = next(e for e in reversed(events) if e.event == "done")
+        self._record("agent_converse", {"chars": len(message)})
+        return {"content": done.data.get("content", ""),
+                "conversation_id": done.data.get("conversation_id"),
+                "events": [{"event": e.event, "data": e.data} for e in events]}

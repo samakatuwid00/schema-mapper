@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Navigate, NavLink, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -8,6 +9,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   ListChecks,
+  MessageSquare,
   Radar,
   RefreshCw,
   ScrollText,
@@ -15,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "./auth";
+import AgentSidebar from "./components/AgentSidebar";
 import JobDrawer from "./components/JobDrawer";
 import AuditLog from "./pages/AuditLog";
 import DataBrowser from "./pages/DataBrowser";
@@ -77,6 +80,8 @@ export const NAV_GROUPS: NavGroup[] = [
 function Shell() {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+  // Closed by default; survives page navigation within the session.
+  const [agentOpen, setAgentOpen] = useState(false);
 
   if (loading) {
     return (
@@ -134,6 +139,15 @@ function Shell() {
             irimsv <ArrowRight size={11} strokeWidth={2} aria-hidden="true" /> lrmis
           </div>
           <div className="topbar-user">
+            <button
+              type="button"
+              className="btn btn-sm"
+              title="Ask the migration assistant"
+              aria-label="Toggle assistant"
+              onClick={() => setAgentOpen((v) => !v)}
+            >
+              <MessageSquare size={14} aria-hidden="true" /> Assistant
+            </button>
             <span className="user-chip">
               <span className="mono">{user.username}</span>
               <span className="role-badge">{user.role}</span>
@@ -155,6 +169,7 @@ function Shell() {
       </div>
 
       <JobDrawer />
+      <AgentSidebar open={agentOpen} onClose={() => setAgentOpen(false)} />
     </div>
   );
 }
