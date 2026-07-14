@@ -686,12 +686,12 @@ export default function Tables() {
         tier="typed"
         danger
         title={`Refresh all deployed tables (${deployedCount})`}
-        description="Drop and recreate staging data for every deployed entity from the source."
+        description="Re-deliver every deployed entity's rows into the target from the source."
         confirmString="REFRESH ALL"
         warning={
           <div>
             <p>
-              <strong>This rewrites staging data for all {deployedCount} deployed entities.</strong>
+              <strong>This rewrites target data for all {deployedCount} deployed entities.</strong>
             </p>
             <p>Deliveries for these entities may re-emit events after refresh.</p>
           </div>

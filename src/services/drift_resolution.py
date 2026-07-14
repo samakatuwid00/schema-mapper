@@ -4,10 +4,11 @@ When ``ops.monitor`` detects that an entity's source or target schema no longer
 matches its stored fingerprint, it pauses the entity and records a drift report.
 The only resolution path until now was manual: an admin refreshed each entity,
 then approved the new fingerprint. This module chains those steps into a single
-coordinated workflow — re-scan, refresh the staging table, update the stored
-fingerprint, clear the pause, re-enable delivery, and mark the report resolved.
+coordinated workflow — re-scan, refresh the entity into the target, update the
+stored fingerprint, clear the pause, re-enable delivery, and mark the report
+resolved.
 
-It reuses ``ops.refresh`` (drop + recreate + reload, snapshotting first) and
+It reuses ``ops.refresh`` (real-target redelivery) and
 ``ops._entity_fingerprints`` (per-entity source/target fingerprints) rather than
 reimplementing them.
 """
@@ -66,20 +67,20 @@ def _mark_reports_resolved(p, conn, actor: str) -> int:
 def _resolve(kind: str, entities: list[str] | None, actor: str, dry_run: bool,
              source_system: str, batch_size: int,
              central: PostgresCentralConnector | None,
-             staging: MySQLStagingConnector | None, progress) -> dict:
+             target: MySQLStagingConnector | None, progress) -> dict:
     """Resolve drift for one direction (``source`` or ``target``).
 
-    Live mode, per entity: refresh the staging table (drop + recreate + reload,
-    snapshotting first), recompute the fingerprint from the post-refresh state,
+    Live mode, per entity: refresh the entity into the target (crosswalk-scoped
+    delete + rewrite), recompute the fingerprint from the post-refresh state,
     store it, clear the pause on both ``onboarding_entity`` and
     ``entity_control``, and audit. Fingerprints are written only after the
-    staging table is populated and committed, so a stored fingerprint never
-    outruns the data it describes.
+    target is refreshed and committed, so a stored fingerprint never outruns the
+    data it describes.
     """
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     fp_col = _FP_COLUMN[kind]
     resolved, skipped, plan = [], [], []
     try:
@@ -94,7 +95,7 @@ def _resolve(kind: str, entities: list[str] | None, actor: str, dry_run: bool,
 
             if dry_run:
                 with central.connection() as conn:
-                    new_source_fp, new_target_fp = _entity_fingerprints(conn, staging, entity)
+                    new_source_fp, new_target_fp = _entity_fingerprints(conn, target, entity)
                 new_fp = new_source_fp if kind == "source" else new_target_fp
                 plan.append({
                     "entity": table,
@@ -102,15 +103,15 @@ def _resolve(kind: str, entities: list[str] | None, actor: str, dry_run: bool,
                     "current_fingerprint": old_fp,
                     "new_fingerprint": new_fp,
                     "changed": bool(old_fp and new_fp and old_fp != new_fp),
-                    "action": ("refresh staging, update fingerprint, re-enable"
-                               if new_fp else "skip - source/staging object missing"),
+                    "action": ("refresh target, update fingerprint, re-enable"
+                               if new_fp else "skip - source/target object missing"),
                 })
                 continue
 
             refresh_result = ops_service.refresh(
                 entity["source_schema"], [table], entity["target_system"],
                 source_system=source_system, batch_size=batch_size,
-                central=central, staging=staging)
+                central=central)
             row = (refresh_result.get("results") or [{}])[0]
             if row.get("status") != "refreshed":
                 skipped.append({"entity": table,
@@ -118,7 +119,7 @@ def _resolve(kind: str, entities: list[str] | None, actor: str, dry_run: bool,
                 continue
 
             with central.connection() as conn:
-                new_source_fp, new_target_fp = _entity_fingerprints(conn, staging, entity)
+                new_source_fp, new_target_fp = _entity_fingerprints(conn, target, entity)
                 new_fp = new_source_fp if kind == "source" else new_target_fp
                 p._execute(conn, f"""
                     UPDATE integration.onboarding_entity
@@ -139,7 +140,7 @@ def _resolve(kind: str, entities: list[str] | None, actor: str, dry_run: bool,
                     "kind": kind,
                     "old_fingerprint": old_fp,
                     "new_fingerprint": new_fp,
-                    "staging_table": entity.get("staging_table"),
+                    "target_tables": entity.get("lrmis_target_tables"),
                     "rows_loaded": row.get("rows_loaded"),
                 }), actor))
                 conn.commit()
@@ -167,41 +168,41 @@ def resolve_source_drift(entities: list[str] | None = None, *,
                          actor: str = "integration-admin", dry_run: bool = False,
                          source_system: str = "IRIMSV_REGION_V", batch_size: int = 1000,
                          central: PostgresCentralConnector | None = None,
-                         staging: MySQLStagingConnector | None = None,
+                         target: MySQLStagingConnector | None = None,
                          progress=None) -> dict:
     """Resolve source-side drift for the given entities (or all source-drifted)."""
     return _resolve("source", entities, actor, dry_run, source_system, batch_size,
-                    central, staging, progress)
+                    central, target, progress)
 
 
 def resolve_target_drift(entities: list[str] | None = None, *,
                          actor: str = "integration-admin", dry_run: bool = False,
                          source_system: str = "IRIMSV_REGION_V", batch_size: int = 1000,
                          central: PostgresCentralConnector | None = None,
-                         staging: MySQLStagingConnector | None = None,
+                         target: MySQLStagingConnector | None = None,
                          progress=None) -> dict:
     """Resolve target-side drift for the given entities (or all target-drifted)."""
     return _resolve("target", entities, actor, dry_run, source_system, batch_size,
-                    central, staging, progress)
+                    central, target, progress)
 
 
 def resolve_all(entities: list[str] | None = None, *,
                 actor: str = "integration-admin", dry_run: bool = False,
                 source_system: str = "IRIMSV_REGION_V", batch_size: int = 1000,
                 central: PostgresCentralConnector | None = None,
-                staging: MySQLStagingConnector | None = None,
+                target: MySQLStagingConnector | None = None,
                 progress=None) -> dict:
     """Resolve source-side drift first, then target-side, in one invocation."""
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     try:
         source = resolve_source_drift(
             entities, actor=actor, dry_run=dry_run, source_system=source_system,
-            batch_size=batch_size, central=central, staging=staging, progress=progress)
+            batch_size=batch_size, central=central, target=target, progress=progress)
         target = resolve_target_drift(
             entities, actor=actor, dry_run=dry_run, source_system=source_system,
-            batch_size=batch_size, central=central, staging=staging, progress=progress)
+            batch_size=batch_size, central=central, target=target, progress=progress)
         return {
             "dry_run": dry_run,
             "source": source,
@@ -219,7 +220,7 @@ def resolve_drift(resolve_source: bool = True, resolve_target: bool = True,
                   actor: str = "integration-admin", dry_run: bool = False,
                   source_system: str = "IRIMSV_REGION_V", batch_size: int = 1000,
                   central: PostgresCentralConnector | None = None,
-                  staging: MySQLStagingConnector | None = None,
+                  target: MySQLStagingConnector | None = None,
                   progress=None) -> dict:
     """Entry point used by the job handler.
 
@@ -229,15 +230,15 @@ def resolve_drift(resolve_source: bool = True, resolve_target: bool = True,
     if resolve_source and resolve_target:
         return resolve_all(entities, actor=actor, dry_run=dry_run,
                            source_system=source_system, batch_size=batch_size,
-                           central=central, staging=staging, progress=progress)
+                           central=central, target=target, progress=progress)
     if resolve_source:
         return resolve_source_drift(entities, actor=actor, dry_run=dry_run,
                                     source_system=source_system, batch_size=batch_size,
-                                    central=central, staging=staging, progress=progress)
+                                    central=central, target=target, progress=progress)
     if resolve_target:
         return resolve_target_drift(entities, actor=actor, dry_run=dry_run,
                                     source_system=source_system, batch_size=batch_size,
-                                    central=central, staging=staging, progress=progress)
+                                    central=central, target=target, progress=progress)
     return {"dry_run": dry_run, "resolved_count": 0, "skipped_count": 0,
             "resolved": [], "skipped": [], "plan": []}
 
@@ -260,7 +261,7 @@ def _deployed_entities(p, conn, entities: list[str] | None = None) -> list[dict]
 def reset_source(entities: list[str] | None = None, *,
                  actor: str = "integration-admin", dry_run: bool = False,
                  central: PostgresCentralConnector | None = None,
-                 staging: MySQLStagingConnector | None = None,
+                 target: MySQLStagingConnector | None = None,
                  progress=None) -> dict:
     """Drop stored source fingerprints and re-scan every deployed entity from source.
 
@@ -274,7 +275,7 @@ def reset_source(entities: list[str] | None = None, *,
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     resolved, plan = [], []
     try:
         with central.connection() as conn:
@@ -340,20 +341,19 @@ def reset_target(entities: list[str] | None = None, *,
                  actor: str = "integration-admin", dry_run: bool = False,
                  source_system: str = "IRIMSV_REGION_V", batch_size: int = 1000,
                  central: PostgresCentralConnector | None = None,
-                 staging: MySQLStagingConnector | None = None,
+                 target: MySQLStagingConnector | None = None,
                  progress=None) -> dict:
-    """Drop + recreate + reload every deployed entity's staging table.
+    """Re-deliver every deployed entity into the LRMIS target.
 
-    Each staging table is snapshot before the drop (so the admin can restore),
-    then recreated from the current mapping and bulk-loaded from source. The
-    ``target_fingerprint`` is recomputed from the post-refresh state and stored.
-    Use this to give the target side a clean slate when the LRMIS schema has
-    changed or data has gone stale.
+    Each entity's target rows are rewritten (crosswalk-scoped delete + rewrite)
+    from the current source and mapping. The ``target_fingerprint`` is recomputed
+    from the post-refresh state and stored. Use this to give the target side a
+    clean slate when the LRMIS schema has changed or data has gone stale.
     """
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     resolved, plan = [], []
     try:
         with central.connection() as conn:
@@ -367,21 +367,21 @@ def reset_target(entities: list[str] | None = None, *,
 
             if dry_run:
                 with central.connection() as conn:
-                    new_source_fp, new_target_fp = _entity_fingerprints(conn, staging, entity)
+                    new_source_fp, new_target_fp = _entity_fingerprints(conn, target, entity)
                 plan.append({
                     "entity": table, "kind": "target",
                     "current_fingerprint": old_fp,
                     "new_fingerprint": new_target_fp,
                     "changed": bool(old_fp and new_target_fp and old_fp != new_target_fp),
-                    "action": ("refresh staging, update target_fingerprint"
-                               if new_target_fp else "skip - staging table missing"),
+                    "action": ("refresh target, update target_fingerprint"
+                               if new_target_fp else "skip - target table missing"),
                 })
                 continue
 
             refresh_result = ops_service.refresh(
                 entity["source_schema"], [table], entity["target_system"],
                 source_system=source_system, batch_size=batch_size,
-                central=central, staging=staging)
+                central=central)
             row = (refresh_result.get("results") or [{}])[0]
             if row.get("status") != "refreshed":
                 resolved.append({"entity": table, "kind": "target",
@@ -390,7 +390,7 @@ def reset_target(entities: list[str] | None = None, *,
                 continue
 
             with central.connection() as conn:
-                new_source_fp, new_target_fp = _entity_fingerprints(conn, staging, entity)
+                new_source_fp, new_target_fp = _entity_fingerprints(conn, target, entity)
                 p._execute(conn, """
                     UPDATE integration.onboarding_entity
                     SET target_fingerprint = %s, updated_at = now()
@@ -403,7 +403,7 @@ def reset_target(entities: list[str] | None = None, *,
                 """, (entity["id"], json.dumps({
                     "old_fingerprint": old_fp,
                     "new_fingerprint": new_target_fp,
-                    "staging_table": entity.get("staging_table"),
+                    "target_tables": entity.get("lrmis_target_tables"),
                     "rows_loaded": row.get("rows_loaded"),
                 }), actor))
                 conn.commit()
@@ -428,12 +428,12 @@ def reset_all(reset_source_flag: bool = True, reset_target_flag: bool = True,
               actor: str = "integration-admin", dry_run: bool = False,
               source_system: str = "IRIMSV_REGION_V", batch_size: int = 1000,
               central: PostgresCentralConnector | None = None,
-              staging: MySQLStagingConnector | None = None,
+              target: MySQLStagingConnector | None = None,
               progress=None) -> dict:
-    """Reset source fingerprints, target staging tables, or both."""
+    """Reset source fingerprints, re-deliver target footprints, or both."""
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     try:
         result = {"dry_run": dry_run}
         total_resolved = 0
@@ -441,7 +441,7 @@ def reset_all(reset_source_flag: bool = True, reset_target_flag: bool = True,
 
         if reset_source_flag:
             src = reset_source(entities, actor=actor, dry_run=dry_run,
-                               central=central, staging=staging, progress=progress)
+                               central=central, target=target, progress=progress)
             result["source"] = src
             total_resolved += src["total_count"]
             total_skipped += src["skipped_count"]
@@ -449,7 +449,7 @@ def reset_all(reset_source_flag: bool = True, reset_target_flag: bool = True,
         if reset_target_flag:
             tgt = reset_target(entities, actor=actor, dry_run=dry_run,
                                source_system=source_system, batch_size=batch_size,
-                               central=central, staging=staging, progress=progress)
+                               central=central, target=target, progress=progress)
             result["target"] = tgt
             total_resolved += tgt["total_count"]
             total_skipped += tgt["skipped_count"]

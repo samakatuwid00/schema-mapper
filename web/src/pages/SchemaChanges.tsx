@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { approveSchema, getDriftReports, getSchemas, getStatus } from "../api/client";
+import { approveSchema, getDriftReports, getSchemas } from "../api/client";
 import { subscribeJobEvents, type JobEvent } from "../api/sse";
 import CopyButton from "../components/CopyButton";
 import GuardedActionModal from "../components/GuardedActionModal";
 import SchemaTree from "../components/SchemaTree";
 import StatusChip from "../components/StatusChip";
-import type { JobDetail, SchemaSystem } from "../api/types";
+import type { SchemaSystem } from "../api/types";
 import { useJobRunner } from "../hooks/useJobRunner";
 import { label } from "../labels";
 import { errMsg, fmtDate, prettyJson, shortFp } from "../utils";
@@ -18,136 +17,25 @@ interface ApproveTarget {
 }
 
 interface ResetTarget {
-  direction: "source" | "target" | "all" | "path_b";
-}
-
-type View = "source_staging" | "staging_target";
-
-const VIEWS: {
-  key: View;
-  title: string;
-  leftKey: "source" | "staging";
-  rightKey: "staging" | "target_b";
-  leftLabel: string;
-  rightLabel: string;
-  driftPair: string;
-}[] = [
-  {
-    key: "source_staging",
-    title: "Source ↔ Staging",
-    leftKey: "source",
-    rightKey: "staging",
-    leftLabel: "Source",
-    rightLabel: "Staging",
-    driftPair: "source->staging",
-  },
-  {
-    key: "staging_target",
-    title: "Staging ↔ Target",
-    leftKey: "staging",
-    rightKey: "target_b",
-    leftLabel: "Staging",
-    rightLabel: "Target (Path B)",
-    driftPair: "staging->target",
-  },
-];
-
-const RESULT_CAP = 20;
-
-function asStrings(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(String) : [];
-}
-
-/** A named list of result items, truncated at RESULT_CAP with an overflow note. */
-function ResultList({ label, items }: { label: string; items: string[] }) {
-  if (items.length === 0) return null;
-  const shown = items.slice(0, RESULT_CAP);
-  const extra = items.length - shown.length;
-  return (
-    <div style={{ marginTop: 6 }}>
-      <span className="dim">{label} ({items.length}):</span>{" "}
-      {shown.map((t) => (
-        <span key={t} className="badge badge-type mono" style={{ marginRight: 4 }}>
-          {t}
-        </span>
-      ))}
-      {extra > 0 && <span className="dim">… and {extra} more</span>}
-    </div>
-  );
-}
-
-/** Human-readable summary of a completed sweep / retire job's structured result. */
-function CleanupResultView({ job }: { job: JobDetail }) {
-  const result = (job.result ?? null) as Record<string, unknown> | null;
-  if (!result) return <div className="alert alert-ok">Cleanup job complete — job #{job.id}.</div>;
-
-  if (job.job_type === "sweep_staging") {
-    const found = asStrings(result.orphans_found);
-    const dropped = asStrings(result.dropped);
-    const snapshots = asStrings(result.snapshots);
-    const dry = Boolean(result.dry_run);
-    return (
-      <div className="alert alert-ok">
-        <strong>Sweep complete{dry ? " (dry run)" : ""}</strong> — {found.length} orphan
-        {found.length === 1 ? "" : "s"} found, {dropped.length} dropped, {snapshots.length} snapshot
-        {snapshots.length === 1 ? "" : "s"} taken.
-        <ResultList label="Orphans found" items={found} />
-        <ResultList label="Dropped" items={dropped} />
-        <ResultList label="Snapshots" items={snapshots} />
-      </div>
-    );
-  }
-
-  if (job.job_type === "retire_entity") {
-    const source = result.source_table ? String(result.source_table) : "—";
-    const staging = result.staging_table ? String(result.staging_table) : "—";
-    return (
-      <div className="alert alert-ok">
-        <strong>Retire complete</strong> — entity #{String(result.entity_id)} (
-        <span className="mono">{source}</span> <span className="lane-arrow">→</span>{" "}
-        <span className="mono">{staging}</span>),{" "}
-        {result.dropped ? "staging table dropped" : "staging table not dropped"}
-        {result.snapshot ? (
-          <>
-            , snapshot <span className="mono">{String(result.snapshot)}</span>
-          </>
-        ) : null}
-        .
-      </div>
-    );
-  }
-
-  return <div className="alert alert-ok">Cleanup job complete — job #{job.id}.</div>;
+  direction: "source" | "target" | "all";
 }
 
 /**
- * "Schema Changes" surface as two side-by-side schema comparisons:
- * Source ↔ Staging, then (via Next) Staging ↔ Target (Path B). Each view's
- * drift reports are filtered to the matching drift pair.
+ * "Schema Changes" surface: a single Source ↔ Target comparison of the two
+ * live schema fingerprints, with the drift reports recorded between them.
  */
 export default function SchemaChanges() {
-  const [view, setView] = useState<View>("source_staging");
   const [sourceSchema, setSourceSchema] = useState("irimsv");
-  const [stagingTable, setStagingTable] = useState("");
   const [approveInitial, setApproveInitial] = useState(false);
   const [events, setEvents] = useState<JobEvent[]>([]);
   const [approveTarget, setApproveTarget] = useState<ApproveTarget | null>(null);
   const [resetTarget, setResetTarget] = useState<ResetTarget | null>(null);
-  const [retireId, setRetireId] = useState("");
-  const [retireTarget, setRetireTarget] = useState<{ entityId: string } | null>(null);
-  const [sweepTarget, setSweepTarget] = useState(false);
 
   const scan = useJobRunner();
   const monitor = useJobRunner();
   const reset = useJobRunner();
-  const cleanup = useJobRunner();
   const resolveDrift = useJobRunner();
   const [showResolveDrift, setShowResolveDrift] = useState(false);
-
-  const viewIndex = VIEWS.findIndex((v) => v.key === view);
-  const active = VIEWS[viewIndex];
-  const leftKey = active.leftKey;
-  const scanningSource = leftKey === "source";
 
   const schemas = useQuery({
     queryKey: ["schemas", sourceSchema],
@@ -158,15 +46,9 @@ export default function SchemaChanges() {
     queryFn: getDriftReports,
     refetchInterval: 30000,
   });
-  // Deployed entities feed the Retire dropdown (id + source→staging labels).
-  const status = useQuery({ queryKey: ["status"], queryFn: getStatus });
-  const deployedEntities = useMemo(
-    () => (status.data?.entities ?? []).filter((e) => e.status === "deployed"),
-    [status.data],
-  );
 
-  const leftSystem: SchemaSystem | undefined = schemas.data?.[leftKey];
-  const rightSystem: SchemaSystem | undefined = schemas.data?.[active.rightKey];
+  const leftSystem: SchemaSystem | undefined = schemas.data?.source;
+  const rightSystem: SchemaSystem | undefined = schemas.data?.target;
 
   // Live event feed for the active scan job.
   useEffect(() => {
@@ -188,9 +70,7 @@ export default function SchemaChanges() {
   }, [scan.job?.status, reset.job?.status]);
 
   const runScan = () => {
-    const params = scanningSource
-      ? { mode: "source", ...(approveInitial ? { approve_initial: true } : {}) }
-      : { mode: "staging", staging_table: stagingTable };
+    const params = approveInitial ? { approve_initial: true } : {};
     void scan.run({ job_type: "schema_scan", params }).catch(() => undefined);
   };
 
@@ -199,16 +79,14 @@ export default function SchemaChanges() {
     const dir = resetTarget.direction;
     const resetSource = dir === "source" || dir === "all";
     const resetTargetFlag = dir === "target" || dir === "all";
-    const confirmMap: Record<string, string> = { source: "SOURCE", target: "TARGET", all: "RESET ALL", path_b: "PATH B" };
+    const confirmMap: Record<string, string> = { source: "SOURCE", target: "TARGET", all: "RESET ALL" };
     void reset
-      .run(dir === "path_b"
-        ? { job_type: "reset_path_b", params: {}, reason, confirm: typedConfirm ?? "PATH B" }
-        : {
-            job_type: "reset_schemas",
-            params: { reset_source: resetSource, reset_target: resetTargetFlag },
-            reason,
-            confirm: typedConfirm ?? confirmMap[dir] ?? "RESET ALL",
-          })
+      .run({
+        job_type: "reset_schemas",
+        params: { reset_source: resetSource, reset_target: resetTargetFlag },
+        reason,
+        confirm: typedConfirm ?? confirmMap[dir] ?? "RESET ALL",
+      })
       .then(() => setResetTarget(null))
       .catch(() => undefined);
   };
@@ -229,59 +107,25 @@ export default function SchemaChanges() {
     ? (result.paused_entities as unknown[])
     : [];
 
-  const approveBtn = (sideKey: "source" | "staging" | "target_b", system: SchemaSystem) =>
-    sideKey !== "target_b" ? (
-      <button
-        type="button"
-        className="btn btn-sm"
-        onClick={() => setApproveTarget({ fingerprint: system.fingerprint, system: system.system_name })}
-      >
-        Approve fingerprint
-      </button>
-    ) : null;
+  const approveBtn = (system: SchemaSystem) => (
+    <button
+      type="button"
+      className="btn btn-sm"
+      onClick={() => setApproveTarget({ fingerprint: system.fingerprint, system: system.system_name })}
+    >
+      Approve fingerprint
+    </button>
+  );
 
-  const driftReports = useMemo(() => {
-    const list = drift.data ?? [];
-    return list.filter((r) => (r.drift_pair ?? "source->staging") === active.driftPair);
-  }, [drift.data, active.driftPair]);
+  const driftReports = drift.data ?? [];
 
   return (
     <div className="page">
       <h2 className="page-title">Schema Changes</h2>
 
-      {/* ---- View navigation ---- */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <h3 className="section-sub" style={{ margin: 0 }}>
-          {active.title}
-        </h3>
-        <div className="pipeline">
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={viewIndex === 0}
-            aria-label="Previous view"
-            onClick={() => setView(VIEWS[Math.max(0, viewIndex - 1)].key)}
-          >
-            <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" /> Back
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            disabled={viewIndex === VIEWS.length - 1}
-            aria-label="Next view"
-            onClick={() => setView(VIEWS[Math.min(VIEWS.length - 1, viewIndex + 1)].key)}
-          >
-            Next <ArrowRight size={14} strokeWidth={2} aria-hidden="true" />
-          </button>
-        </div>
-      </div>
+      <h3 className="section-sub" style={{ marginTop: 0, marginBottom: 16 }}>
+        Source ↔ Target
+      </h3>
 
       {/* ---- Scan trigger + live progress ---- */}
       <section className="panel">
@@ -292,40 +136,24 @@ export default function SchemaChanges() {
 
         <div className="form-row">
           <label className="field field-inline">
-            <span className="field-label">{scanningSource ? "Source schema" : "Staging schema"}</span>
-            {scanningSource ? (
-              <input
-                className="input input-sm mono"
-                aria-label="Source schema"
-                value={sourceSchema}
-                onChange={(e) => setSourceSchema(e.target.value)}
-              />
-            ) : (
-              <input
-                className="input input-sm mono"
-                aria-label="Staging schema"
-                placeholder="staging table to inspect"
-                value={stagingTable}
-                onChange={(e) => setStagingTable(e.target.value)}
-              />
-            )}
+            <span className="field-label">Source schema</span>
+            <input
+              className="input input-sm mono"
+              aria-label="Source schema"
+              value={sourceSchema}
+              onChange={(e) => setSourceSchema(e.target.value)}
+            />
           </label>
-          {scanningSource && (
-            <label className="checkbox-label dim">
-              <input
-                type="checkbox"
-                checked={approveInitial}
-                onChange={(e) => setApproveInitial(e.target.checked)}
-              />
-              approve initial fingerprints
-            </label>
-          )}
+          <label className="checkbox-label dim">
+            <input
+              type="checkbox"
+              checked={approveInitial}
+              onChange={(e) => setApproveInitial(e.target.checked)}
+            />
+            approve initial fingerprints
+          </label>
           <button type="button" className="btn btn-primary" disabled={scan.running} onClick={runScan}>
-            {scan.running
-              ? "Scanning…"
-              : scanningSource
-                ? "Scan source → staging"
-                : "Scan staging → target"}
+            {scan.running ? "Scanning…" : "Scan source → target"}
           </button>
         </div>
         {scan.submitError && <div className="form-error">{scan.submitError}</div>}
@@ -382,31 +210,31 @@ export default function SchemaChanges() {
         )}
       </section>
 
-      {/* ---- Two schema trees side by side for the active view ---- */}
+      {/* ---- Two schema trees side by side ---- */}
       {schemas.isError && <div className="alert alert-danger">{errMsg(schemas.error)}</div>}
       {(leftSystem || rightSystem) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
           {leftSystem && (
             <SchemaTree
-              title={active.leftLabel}
+              title="Source"
               system={leftSystem}
-              headerExtra={approveBtn(active.leftKey, leftSystem)}
+              headerExtra={approveBtn(leftSystem)}
             />
           )}
           {rightSystem && (
             <SchemaTree
-              title={active.rightLabel}
+              title="Target (LRMIS)"
               system={rightSystem}
-              headerExtra={approveBtn(active.rightKey, rightSystem)}
+              headerExtra={approveBtn(rightSystem)}
             />
           )}
         </div>
       )}
 
-      {/* ---- Drift reports (filtered to the active view's pair) ---- */}
+      {/* ---- Drift reports ---- */}
       <div className="page-title-row">
         <h3 className="section-sub" style={{ margin: 0 }}>
-          {label("drift")} · <span className="mono dim">{active.driftPair}</span>
+          {label("drift")} · <span className="mono dim">source-&gt;target</span>
         </h3>
         <button
           type="button"
@@ -441,9 +269,7 @@ export default function SchemaChanges() {
       {drift.isError && <div className="alert alert-danger">{errMsg(drift.error)}</div>}
       {!drift.isLoading && driftReports.length === 0 && (
         <div className="panel">
-          <p className="dim">
-            No <span className="mono">{active.driftPair}</span> schema changes recorded.
-          </p>
+          <p className="dim">No schema changes recorded.</p>
         </div>
       )}
 
@@ -521,59 +347,9 @@ export default function SchemaChanges() {
         </div>
         <p className="dim" style={{ marginBottom: "0.75rem" }}>
           Manually reset source fingerprints (re-scan all entities from the source system) or
-          truncate and repopulate target staging tables. Use this when schemas have changed and you
-          want a clean start without waiting for drift detection.
+          re-deliver every deployed entity's rows into the target. Use this when schemas have changed
+          and you want a clean start without waiting for drift detection.
         </p>
-
-        {/* Staging table cleanup: stop unbounded growth of lrmis_staging */}
-        <div className="form-row" style={{ marginBottom: 12 }}>
-          <label className="field field-inline">
-            <span className="field-label">Entity to retire</span>
-            <select
-              className="input input-sm mono"
-              aria-label="Entity to retire"
-              value={retireId}
-              onChange={(e) => setRetireId(e.target.value)}
-            >
-              <option value="">
-                {status.isLoading
-                  ? "Loading entities…"
-                  : deployedEntities.length === 0
-                    ? "No deployed entities"
-                    : "Select an entity…"}
-              </option>
-              {deployedEntities.map((e) => (
-                <option key={e.id} value={String(e.id)}>
-                  {e.source_table} → {e.staging_table ?? "—"} ({e.status})
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="btn btn-danger"
-            disabled={cleanup.running || !/^\d+$/.test(retireId.trim())}
-            onClick={() => setRetireTarget({ entityId: retireId.trim() })}
-          >
-            Retire entity
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            style={{ marginLeft: "0.5rem" }}
-            disabled={cleanup.running}
-            onClick={() => setSweepTarget(true)}
-          >
-            Sweep orphan staging tables
-          </button>
-        </div>
-        {cleanup.submitError && <div className="form-error">{cleanup.submitError}</div>}
-        {cleanup.job?.status === "succeeded" && <CleanupResultView job={cleanup.job} />}
-        {cleanup.job?.status === "failed" && (
-          <div className="alert alert-danger">
-            Cleanup failed: {cleanup.job.error_message ?? "unknown error"}
-          </div>
-        )}
 
         {reset.submitError && <div className="form-error">{reset.submitError}</div>}
         {reset.job?.status === "failed" && (
@@ -604,15 +380,6 @@ export default function SchemaChanges() {
           >
             Drop &amp; Restore All
           </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            style={{ marginLeft: "0.5rem" }}
-            disabled={reset.running}
-            onClick={() => setResetTarget({ direction: "path_b" })}
-          >
-            Drop &amp; Restore Path B
-          </button>
         </div>
       </section>
 
@@ -628,19 +395,13 @@ export default function SchemaChanges() {
             </span>
           ) : resetTarget?.direction === "target" ? (
             <span>
-              Drop, recreate, and reload every deployed entity's <strong>target staging table</strong>.
-              Each table is snapshotted before the drop so you can restore if needed.
-            </span>
-          ) : resetTarget?.direction === "path_b" ? (
-            <span>
-              Drop and recreate the <strong>lrmis_target</strong> (Path B) canonical database from the
-              schema DDL — all 51 canonical tables + delivery_audit, lookup data reseeded. Pipeline
-              integration metadata (mappings, proposals) is preserved.
+              Re-deliver every deployed entity's rows into the <strong>lrmis_target</strong> database.
+              Integration data (mappings, proposals) is preserved.
             </span>
           ) : (
             <span>
-              <strong>Full reset:</strong> re-scan source fingerprints AND recreate all target staging
-              tables. Integration metadata is preserved.
+              <strong>Full reset:</strong> re-scan source fingerprints AND re-deliver every deployed
+              entity into the target. Integration metadata is preserved.
             </span>
           )
         }
@@ -649,16 +410,13 @@ export default function SchemaChanges() {
             ? "SOURCE"
             : resetTarget?.direction === "target"
               ? "TARGET"
-              : resetTarget?.direction === "path_b"
-                ? "PATH B"
-                : "RESET ALL"
+              : "RESET ALL"
         }
         warning={
           <div>
             <p>
-              This will affect <strong>all deployed entities</strong>. The operation is idempotent
-              and staging tables are snapshotted before being dropped, but the data load may take
-              several minutes.
+              This will affect <strong>all deployed entities</strong>. The operation is idempotent,
+              but the data load may take several minutes.
             </p>
           </div>
         }
@@ -689,103 +447,20 @@ export default function SchemaChanges() {
       />
 
       <GuardedActionModal
-        open={retireTarget !== null}
-        tier="typed"
-        title={`Retire entity #${retireTarget?.entityId ?? ""}`}
-        description={
-          <span>
-            Drop the staging table for entity{" "}
-            <code className="mono">{retireTarget?.entityId}</code> (snapshotted first) and mark the
-            entity <strong>disabled</strong>. This stops all delivery for that entity.
-          </span>
-        }
-        confirmString={`RETIRE ${retireTarget?.entityId ?? ""}`}
-        warning={
-          <div>
-            <p>
-              The entity's <code className="mono">irimsv_*_staging</code> table is renamed aside
-              (snapshot) and dropped. Delivery for this entity stops. It is restorable only via the
-              snapshot.
-            </p>
-          </div>
-        }
-        actionLabel="Retire"
-        danger
-        busy={cleanup.running}
-        error={cleanup.submitError}
-        onConfirm={(reason) => {
-          if (!retireTarget) return;
-          const id = retireTarget.entityId;
-          void cleanup
-            .run({
-              job_type: "retire_entity",
-              params: { entity_id: Number(id), dry_run: false },
-              reason,
-              confirm: `RETIRE ${id}`,
-            })
-            .then(() => {
-              setRetireTarget(null);
-              setRetireId("");
-            })
-            .catch(() => undefined);
-        }}
-        onClose={() => setRetireTarget(null)}
-      />
-
-      <GuardedActionModal
-        open={sweepTarget}
-        tier="typed"
-        title="Sweep orphan staging tables"
-        description={
-          <span>
-            Drop every <code className="mono">irimsv_*_staging</code> table in{" "}
-            <code className="mono">lrmis_staging</code> that is not referenced by a currently{" "}
-            <strong>deployed</strong> entity. Each is snapshotted before dropping.
-          </span>
-        }
-        confirmString="SWEEP STAGING"
-        warning={
-          <div>
-            <p>
-              Orphaned staging tables left behind by retired or removed entities are removed. They
-              are renamed aside (snapshot) first so they can be restored if needed.
-            </p>
-          </div>
-        }
-        actionLabel="Sweep"
-        danger
-        busy={cleanup.running}
-        error={cleanup.submitError}
-        onConfirm={(reason) => {
-          void cleanup
-            .run({
-              job_type: "sweep_staging",
-              params: { dry_run: false },
-              reason,
-              confirm: "SWEEP STAGING",
-            })
-            .then(() => setSweepTarget(false))
-            .catch(() => undefined);
-        }}
-        onClose={() => setSweepTarget(false)}
-      />
-
-      <GuardedActionModal
         open={showResolveDrift}
         tier="confirm"
         title="Resolve All Drift"
         description={
           <span>
-            Re-scan source schemas, drop and recreate staging tables, update fingerprints, and
-            re-enable all drifted entities. Each staging table is snapshotted before dropping.
+            Re-scan source schemas, re-deliver drifted entities into the target, update fingerprints,
+            and re-enable all drifted entities.
           </span>
         }
         warning={
           <div>
             <p>
-              This affects all entities with unresolved drift. Staging tables are dropped and
-              recreated — data is reloaded from source. The operation may take several minutes
-              depending on the number of entities.
+              This affects all entities with unresolved drift. Data is reloaded from source into the
+              target. The operation may take several minutes depending on the number of entities.
             </p>
           </div>
         }

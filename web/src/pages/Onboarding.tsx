@@ -510,8 +510,9 @@ export default function Onboarding() {
             </span>
           ) : (
             <span>
-              Create the staging table, triggers and routing for{" "}
-              <code className="mono">{proposalTable || `proposal #${proposalId}`}</code>.
+              Set up delivery of{" "}
+              <code className="mono">{proposalTable || `proposal #${proposalId}`}</code> into the
+              LRMIS target.
             </span>
           )
         }
@@ -519,7 +520,7 @@ export default function Onboarding() {
         warning={
           <div>
             <p>
-              <strong>Redeploying a live entity replaces its routing and staging configuration.</strong>
+              <strong>Redeploying a live entity replaces its routing and target mapping.</strong>
             </p>
             <p className="mono">
               entity: {proposalTable} · target: {proposal.data?.proposal.target_system ?? targetSystem}

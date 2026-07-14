@@ -17,6 +17,7 @@ from contextlib import contextmanager
 
 import psycopg2
 import psycopg2.extras
+from psycopg2 import sql
 
 from ._protocols import _DiscoveryMixin
 
@@ -86,11 +87,14 @@ def normalize_pg_columns(col_rows: list[dict],
 class PostgresTargetAdapter(_DiscoveryMixin):
     engine_type = "postgres"
 
-    def __init__(self, dsn: str | None = None, schema: str = "public"):
+    def __init__(self, dsn: str | None = None, schema: str | None = None):
         self.dsn = dsn or os.environ.get(
             "LRMIS_TARGET_PG_DSN",
             "postgresql://postgres:postgres@localhost:5432/lrmis_target")
-        self.schema = schema
+        # The restored old-lrmis dump lives in schema `lrmis`; the worker and
+        # schema-swap construct the adapter with no explicit schema, so fall back
+        # to LRMIS_TARGET_PG_SCHEMA (default `public` for a vanilla target).
+        self.schema = schema or os.environ.get("LRMIS_TARGET_PG_SCHEMA", "public")
 
     def _rows(self, sql: str, params: tuple) -> list[dict]:
         conn = psycopg2.connect(self.dsn)
@@ -113,9 +117,19 @@ class PostgresTargetAdapter(_DiscoveryMixin):
     @contextmanager
     def connection(self):
         """An open connection to the target, for the generic writer's delivery
-        pass (one connection reused across a batch, committed per entity)."""
+        pass (one connection reused across a batch, committed per entity).
+
+        The writer emits unqualified table names, so the session `search_path`
+        is pinned to the adapter's schema (the restored `.backup` lives in
+        `lrmis`, not `public`); without this every write hits `relation ...
+        does not exist`."""
         conn = psycopg2.connect(self.dsn)
         try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("SET search_path TO {}, public").format(
+                        sql.Identifier(self.schema)))
+            conn.commit()
             yield conn
         finally:
             conn.close()

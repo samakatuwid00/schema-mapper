@@ -2,8 +2,8 @@
 
 Structured, print-free counterparts of the src.pipeline cmd_* commands.
 Deploy adds the concurrency guards required by the admin-dashboard OpenSpec
-change: advisory lock, in-lock status re-check, 'deploying' intermediate
-status, and a staging-table snapshot before any redeploy drop.
+change: advisory lock, in-lock status re-check, and a 'deploying' intermediate
+status. Delivery is direct to the LRMIS target (no staging tables).
 """
 from __future__ import annotations
 
@@ -13,11 +13,9 @@ from dataclasses import asdict
 
 from ..connectors import MySQLStagingConnector, PostgresCentralConnector
 from ..mapping_engine import mapping_to_dicts, propose_mapping
-from ..schema_ingest import from_information_schema, schema_fingerprint, table_schema
-from ..schema_models import Schema
+from ..schema_ingest import schema_fingerprint, table_schema
 from ..transform_engine import _ENVELOPE_FIELDS
 from .common import ConflictError, NotFoundError, ValidationError
-from .snapshots import _table_exists, snapshot_staging_table
 
 
 def _pipeline():
@@ -251,151 +249,8 @@ def resolve(proposal_id: int, source_column: str, target_column: str,
             central.close()
 
 
-def deploy(proposal_id: int, by: str,
-           central: PostgresCentralConnector | None = None,
-           staging: MySQLStagingConnector | None = None) -> dict:
-    p = _pipeline()
-    owns = central is None
-    central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
-    lock_key = f"deploy:{proposal_id}"
-    try:
-        with central.connection() as conn:
-            locked = p._fetchval(conn, "SELECT pg_try_advisory_lock(hashtext(%s))", (lock_key,))
-            if not locked:
-                raise ConflictError(f"proposal {proposal_id} is already being deployed")
-            try:
-                proposals = p._query(conn, """
-                    SELECT p.*, e.source_schema, e.source_table, e.target_system,
-                           e.primary_key_columns, e.updated_at_column, e.status AS entity_status,
-                           e.staging_table AS current_staging_table
-                    FROM integration.onboarding_proposal p
-                    JOIN integration.onboarding_entity e ON p.entity_id = e.id
-                    WHERE p.id = %s
-                """, (proposal_id,))
-                if not proposals:
-                    raise NotFoundError(f"proposal {proposal_id} not found")
-                proposal = proposals[0]
-                prev_status = proposal["status"]
-                if prev_status == "deploying":
-                    raise ConflictError(f"proposal {proposal_id} is already being deployed")
-                if prev_status not in ("approved", "auto_approved"):
-                    raise ValidationError(
-                        f"proposal status is '{prev_status}', must be approved or auto_approved")
-
-                p._execute(conn, """
-                    UPDATE integration.onboarding_proposal
-                    SET status = 'deploying', updated_at = now() WHERE id = %s
-                """, (proposal_id,))
-                conn.commit()
-
-                entity_id = proposal["entity_id"]
-                source_schema = proposal["source_schema"]
-                source_table = proposal["source_table"]
-                target_system = proposal["target_system"]
-                pk_columns = proposal["primary_key_columns"]
-                if isinstance(pk_columns, str):
-                    pk_columns = json.loads(pk_columns)
-                staging_table = f"irimsv_{source_table}_staging"
-                redeploy = (proposal["entity_status"] == "deployed"
-                            or _table_exists(staging, staging_table))
-
-                try:
-                    reviews = p._query(conn, """
-                        SELECT * FROM integration.onboarding_field_review
-                        WHERE proposal_id = %s AND status IN ('accepted', 'resolved')
-                    """, (proposal_id,))
-                    mappings = [{
-                        "source_column": r["source_column"],
-                        "target_table": staging_table,
-                        "target_column": r.get("resolved_target_column") or r.get("suggested_target_column"),
-                        "confidence": r["confidence"],
-                        "transform": r.get("resolved_transform") or r["transform"],
-                    } for r in reviews]
-
-                    snapshot = snapshot_staging_table(staging, staging_table) if redeploy else None
-                    p._create_staging_table(staging, staging_table, mappings, pk_columns)
-                    p._create_source_trigger(conn, source_schema, source_table,
-                                             pk_columns, proposal.get("updated_at_column"))
-
-                    from ..connectors import VIEWS_DATABASE
-                    views_db = VIEWS_DATABASE
-                    staging_rows = staging.information_schema(
-                        views_db if "_for_lrmis" in staging_table else "lrmis_staging"
-                    )
-                    staging_schema = from_information_schema(staging_rows, "LRMIS")
-                    staging_tables = [t for t in staging_schema.tables if t.name == staging_table]
-                    staging_fp = None
-                    if staging_tables:
-                        doc_schema = Schema(system_name="LRMIS", tables=staging_tables)
-                        staging_fp = schema_fingerprint(doc_schema)
-                        doc = json.dumps(doc_schema.to_dict())
-                        p._execute(conn, """
-                            INSERT INTO integration.schema_version
-                                (target_system, scope_kind, scope_name, fingerprint,
-                                 schema_document, approved_at, approved_by)
-                            VALUES (%s, 'entity_staging', %s, %s, %s, now(), %s)
-                            ON CONFLICT (target_system, scope_kind, scope_name, fingerprint)
-                            DO UPDATE SET schema_document = EXCLUDED.schema_document, approved_at = now()
-                        """, (target_system, staging_table, staging_fp, doc, by))
-
-                    p._execute(conn, """
-                        UPDATE integration.onboarding_entity
-                        SET status = 'deployed', staging_table = %s, target_fingerprint = %s,
-                            fingerprint_scope_version = 2, deployed_by = %s,
-                            deployed_at = now(), updated_at = now()
-                        WHERE id = %s
-                    """, (staging_table, staging_fp, by, entity_id))
-                    p._execute(conn, """
-                        UPDATE integration.onboarding_proposal
-                        SET status = 'approved', reviewed_by = %s, reviewed_at = now(), updated_at = now()
-                        WHERE id = %s
-                    """, (by, proposal_id))
-                    p._execute(conn, """
-                        INSERT INTO integration.entity_control (source_entity, target_system, enabled)
-                        VALUES (%s, %s, true)
-                        ON CONFLICT (source_entity, target_system)
-                        DO UPDATE SET enabled = true, paused_reason = NULL
-                    """, (source_table, target_system))
-                    p._execute(conn, """
-                        INSERT INTO integration.onboarding_audit
-                            (entity_id, proposal_id, action, details, performed_by)
-                        VALUES (%s, %s, 'deploy', %s, %s)
-                    """, (entity_id, proposal_id,
-                          json.dumps({"staging_table": staging_table, "snapshot": snapshot,
-                                      "redeploy": redeploy}), by))
-                    conn.commit()
-                except Exception:
-                    conn.rollback()
-                    p._execute(conn, """
-                        UPDATE integration.onboarding_proposal
-                        SET status = %s, updated_at = now()
-                        WHERE id = %s AND status = 'deploying'
-                    """, (prev_status, proposal_id))
-                    conn.commit()
-                    raise
-
-                return {
-                    "proposal_id": proposal_id,
-                    "entity_id": entity_id,
-                    "staging_table": staging_table,
-                    "trigger": f"trg_{source_schema}_{source_table}_outbox",
-                    "staging_fingerprint": staging_fp,
-                    "mappings": len(mappings),
-                    "redeploy": redeploy,
-                    "snapshot": snapshot,
-                }
-            finally:
-                p._fetchval(conn, "SELECT pg_advisory_unlock(hashtext(%s))", (lock_key,))
-                conn.commit()
-    finally:
-        if owns:
-            central.close()
-
-
 def onboard_bulk(source_schema: str, tables: list[str], target_system: str, actor: str,
                  central: PostgresCentralConnector | None = None,
-                 staging: MySQLStagingConnector | None = None,
                  progress=None) -> dict:
     """Onboard many tables in one guarded pass (bulk-onboarding spec).
 
@@ -405,10 +260,11 @@ def onboard_bulk(source_schema: str, tables: list[str], target_system: str, acto
     with columns nobody checked. This is the opposite of the CLI's --auto,
     which silently drops mid-confidence mappings.
 
-    Non-destructive: composes deploy() (which snapshots before any redeploy
-    drop) and backfill() (which only enqueues outbox events). It never calls
-    the CLI fast path's drop_staging_table + fetch_and_bulk_insert, so rows
-    reach the target only through the audited delivery worker.
+    Direct delivery: composes `deploy_to_lrmis()` (validates the multi-table
+    LRMIS mapping and sets the entity's target footprint — no staging tables) and
+    `backfill()` (which only enqueues outbox events), so rows reach the target
+    only through the audited delivery worker. A table whose LRMIS mapping fails
+    the coverage gate is recorded as `failed`, never deployed half-mapped.
 
     Resilient: a failure on one table is recorded and the batch continues,
     unlike cmd_onboard which aborts on the first hard exception.
@@ -416,7 +272,6 @@ def onboard_bulk(source_schema: str, tables: list[str], target_system: str, acto
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
     target_system = target_system.upper()
 
     onboarded, needs_review, skipped, failed = [], [], [], []
@@ -452,13 +307,13 @@ def onboard_bulk(source_schema: str, tables: list[str], target_system: str, acto
                     })
                     continue
 
-                deployed = deploy(proposed["proposal_id"], actor,
-                                  central=central, staging=staging)
+                from .lrmis_onboarding import deploy_to_lrmis
+                deployed = deploy_to_lrmis(proposed["proposal_id"], actor, central=central)
                 filled = backfill(table, central=central)
                 onboarded.append({
                     "table": table,
                     "proposal_id": proposed["proposal_id"],
-                    "staging_table": deployed["staging_table"],
+                    "target_tables": deployed["target_tables"],
                     "mappings": deployed["mappings"],
                     "queued": filled["queued"],
                     "skipped_duplicates": filled["skipped"],

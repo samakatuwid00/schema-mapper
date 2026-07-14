@@ -12,6 +12,7 @@ from contextlib import contextmanager
 import pytest
 
 from src.services import onboarding
+from src.services import lrmis_onboarding
 
 
 class _FakeCentral:
@@ -50,9 +51,9 @@ class _Recorder:
             raise RuntimeError(self.raise_on[table])
         return self.proposals[table]
 
-    def deploy(self, proposal_id, actor, central=None, staging=None):
+    def deploy_to_lrmis(self, proposal_id, actor, central=None, registry=None):
         self.deployed.append(proposal_id)
-        return {"staging_table": f"irimsv_t{proposal_id}_staging", "mappings": 4}
+        return {"target_tables": [f"t{proposal_id}"], "mappings": 4}
 
     def backfill(self, table, central=None):
         self.backfilled.append(table)
@@ -73,9 +74,8 @@ def wire(monkeypatch):
         monkeypatch.setattr(onboarding, "_pipeline", lambda: _FakePipeline)
         monkeypatch.setattr(onboarding, "discover", rec.discover)
         monkeypatch.setattr(onboarding, "propose", rec.propose)
-        monkeypatch.setattr(onboarding, "deploy", rec.deploy)
+        monkeypatch.setattr(lrmis_onboarding, "deploy_to_lrmis", rec.deploy_to_lrmis)
         monkeypatch.setattr(onboarding, "backfill", rec.backfill)
-        monkeypatch.setattr(onboarding, "MySQLStagingConnector", lambda: object())
         return rec
     return _wire
 

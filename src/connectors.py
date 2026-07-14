@@ -1,4 +1,4 @@
-"""Database adapters for the authoritative PostgreSQL DB and LRMIS MySQL staging."""
+"""Database adapters for the authoritative PostgreSQL DB and the LRMIS MySQL target."""
 from __future__ import annotations
 
 import os
@@ -100,9 +100,6 @@ class PostgresCentralConnector:
                 return dict(row) if row else None
 
 
-VIEWS_DATABASE = "lrmis_staging_views"
-
-
 class MySQLStagingConnector:
     """Least-privilege writer. It never creates or alters LRMIS tables."""
 
@@ -135,15 +132,9 @@ class MySQLStagingConnector:
     def for_target(cls) -> "MySQLStagingConnector":
         return cls.for_database(os.environ.get("LRMIS_TARGET_DATABASE", "lrmis_target"))
 
-    @staticmethod
-    def is_views_table(table: str) -> bool:
-        return "_for_lrmis" in table
-
     def _qt(self, table: str) -> str:
-        """Return a qualified table name, optionally database-prefixed for views."""
+        """Return the backtick-quoted table name."""
         safe_identifier(table)
-        if self.is_views_table(table):
-            return f"`{VIEWS_DATABASE}`.`{table}`"
         return f"`{table}`"
 
     def _ensure_pool(self):

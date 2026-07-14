@@ -2,7 +2,7 @@
 
 The DB and the reused primitives (``ops.refresh``, ``_entity_fingerprints``) are
 stubbed, so what is exercised is the resolution contract: which paused entities
-are picked up, that the staging refresh runs before the fingerprint is stored,
+are picked up, that the target refresh runs before the fingerprint is stored,
 that the pause is cleared on both tables, that an audit row is written, that
 drift reports flip to resolved once their entities are cleared, and that dry-run
 mutates nothing.
@@ -97,7 +97,7 @@ class _FakePipeline:
 def _entity(id, table, *, source=False, target=False, schema="irimsv"):
     return {
         "id": id, "source_schema": schema, "source_table": table,
-        "target_system": "LRMIS", "staging_table": f"irimsv_{table}_staging",
+        "target_system": "LRMIS", "lrmis_target_tables": [table],
         "source_fingerprint": "src_old", "target_fingerprint": "tgt_old",
         "status": "paused",
         "paused_reason": f"Schema drift detected: source={source}, target={target}",
@@ -125,13 +125,13 @@ def wire(monkeypatch):
         monkeypatch.setattr(dr, "_pipeline", lambda: pipeline)
         monkeypatch.setattr(dr.ops_service, "refresh", refresh)
         monkeypatch.setattr(dr, "_entity_fingerprints",
-                            lambda conn, staging, entity: fingerprints)
+                            lambda conn, target, entity: fingerprints)
         return refresh
     return _wire
 
 
 def _run(fn, pipeline, **kwargs):
-    return fn(central=_FakeCentral(), staging=object(), **kwargs)
+    return fn(central=_FakeCentral(), target=object(), **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ def test_resolve_source_drift_refreshes_and_reenables(wire):
     assert result["resolved"][0] == {"entity": "farmers", "kind": "source",
                                      "old_fingerprint": "src_old",
                                      "new_fingerprint": "src_new", "rows_loaded": 42}
-    # staging was refreshed for exactly this entity
+    # target was refreshed for exactly this entity
     assert refresh.calls == [("irimsv", ("farmers",), "LRMIS")]
     # entity fingerprint updated, pause cleared, delivery re-enabled
     assert pipeline.entities[0]["source_fingerprint"] == "src_new"
@@ -163,7 +163,7 @@ def test_resolve_source_drift_reports_progress(wire):
     pipeline = _FakePipeline([_entity(1, "farmers", source=True)])
     wire(pipeline)
     seen = []
-    dr.resolve_source_drift(central=_FakeCentral(), staging=object(),
+    dr.resolve_source_drift(central=_FakeCentral(), target=object(),
                             progress=lambda i, n, msg: seen.append((i, n)))
     assert (0, 1) in seen and (1, 1) in seen        # per entity, then completion
 
@@ -214,7 +214,7 @@ def test_dry_run_mutates_nothing(wire):
     assert result["plan"][0] == {"entity": "farmers", "kind": "source",
                                  "current_fingerprint": "src_old",
                                  "new_fingerprint": "src_new", "changed": True,
-                                 "action": "refresh staging, update fingerprint, re-enable"}
+                                 "action": "refresh target, update fingerprint, re-enable"}
     # nothing was refreshed or written
     assert refresh.calls == []
     assert pipeline.executed == []
@@ -247,7 +247,7 @@ def test_resolve_drift_direction_flags(wire):
     wire(pipeline)
     # target only
     result = dr.resolve_drift(resolve_source=False, resolve_target=True,
-                              central=_FakeCentral(), staging=object())
+                              central=_FakeCentral(), target=object())
     assert result["resolved_count"] == 1
     assert pipeline.entities[1]["status"] == "deployed"
     assert pipeline.entities[0]["status"] == "paused"          # source not touched

@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SchemaChanges from "../SchemaChanges";
@@ -7,7 +6,6 @@ import SchemaChanges from "../SchemaChanges";
 vi.mock("../../api/client", () => ({
   getSchemas: vi.fn(),
   getDriftReports: vi.fn(),
-  getStatus: vi.fn(),
   approveSchema: vi.fn(),
 }));
 vi.mock("../../api/sse", () => ({ subscribeJobEvents: () => ({ close: () => {} }) }));
@@ -34,53 +32,27 @@ function renderPage() {
   );
 }
 
-describe("SchemaChanges — two-tree comparison views", () => {
+describe("SchemaChanges — source ↔ target comparison", () => {
   beforeEach(() => {
     vi.mocked(api.getSchemas).mockResolvedValue({
       source: tree("IRIMSV"),
-      staging: tree("LRMIS"),
-      target_b: tree("LRMIS_B"),
+      target: tree("LRMIS"),
     } as never);
     vi.mocked(api.getDriftReports).mockResolvedValue([] as never);
-    vi.mocked(api.getStatus).mockResolvedValue({
-      entities: [], outbox_stats: [], queues: [], entity_controls: [],
-      unresolved_quarantine: 0, unresolved_drift: 0,
-    } as never);
   });
 
-  it("shows the source and staging trees, then staging and target after Next", async () => {
-    const user = userEvent.setup();
+  it("shows the source and target trees side by side", async () => {
     renderPage();
-
-    // First view: Source + Staging.
     expect(await screen.findByText("IRIMSV")).toBeInTheDocument();
     expect(screen.getByText("LRMIS")).toBeInTheDocument();
-    expect(screen.queryByText("LRMIS_B")).not.toBeInTheDocument();
-
-    // Advance to the Staging + Target view.
-    await user.click(screen.getByRole("button", { name: /next/i }));
-    expect(await screen.findByText("LRMIS_B")).toBeInTheDocument();
-    expect(screen.queryByText("IRIMSV")).not.toBeInTheDocument();
   });
 
-  it("relabels the scan input per view", async () => {
-    const user = userEvent.setup();
+  it("scans the source (no staging scan mode)", async () => {
     renderPage();
-
-    expect(screen.getByRole("textbox", { name: "Source schema" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /next/i }));
-    expect(await screen.findByRole("textbox", { name: "Staging schema" })).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Source schema" })).not.toBeInTheDocument();
-  });
-
-  it("filters drift reports to the active view's pair label", async () => {
-    const user = userEvent.setup();
-    renderPage();
-    // Source ↔ Staging view defaults to the source->staging pair.
-    expect((await screen.findAllByText("source->staging")).length).toBeGreaterThan(0);
-
-    await user.click(screen.getByRole("button", { name: /next/i }));
-    expect((await screen.findAllByText("staging->target")).length).toBeGreaterThan(0);
+    expect(await screen.findByRole("textbox", { name: "Source schema" })).toBeInTheDocument();
+    // No per-view navigation remains — there is a single source → target scan.
+    expect(screen.getByRole("button", { name: /scan source → target/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Staging schema" })).not.toBeInTheDocument();
   });
 });

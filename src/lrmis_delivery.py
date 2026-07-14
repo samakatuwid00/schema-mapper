@@ -13,12 +13,32 @@ Legacy entities keep the untouched single-table staging path in worker.py.
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 from datetime import datetime, timezone
 
 from .lrmis_registry import get_registry
 from .lrmis_writer import delete_entity_rows, write_source_row
 from .transform_engine import _apply_transform
+
+logger = logging.getLogger(__name__)
+
+# Pulls the declared width out of a target column's data_type, e.g. varchar(75).
+_VARCHAR_LEN = re.compile(r"(?:var)?char\s*\(\s*(\d+)\s*\)", re.IGNORECASE)
+
+
+def _max_varchar_len(registry, table: str, column: str) -> int | None:
+    """The declared width of a target CHAR/VARCHAR column, or None if the column
+    is unknown or not width-bounded. Used to coerce an over-length source string
+    to the target width rather than fail the whole entity's delivery."""
+    if registry is None or not hasattr(registry, "has_table") or not registry.has_table(table):
+        return None
+    col = registry.get_table(table).get_column(column)
+    if col is None:
+        return None
+    m = _VARCHAR_LEN.search(col.data_type or "")
+    return int(m.group(1)) if m else None
 
 
 class _LegacyWriter:
@@ -96,6 +116,12 @@ def build_values_by_table(source_row: dict, mappings: list[dict],
         except Exception as exc:
             errors.append(f"transform failed for {source_col} -> {target_table}.{target_col}: {exc}")
             continue
+        if isinstance(value, str):
+            width = _max_varchar_len(registry, target_table, target_col)
+            if width is not None and len(value) > width:
+                logger.warning("truncating %s.%s: source value %d chars > column width %d",
+                               target_table, target_col, len(value), width)
+                value = value[:width]
         values_by_table.setdefault(target_table, {})[target_col] = value
     return values_by_table, errors
 
@@ -332,21 +358,6 @@ def refresh_entity(target_conn, central_conn, *, entity_name: str,
 # ---------------------------------------------------------------------------
 # Loading an entity's multi-table mappings from its approved proposal
 # ---------------------------------------------------------------------------
-
-def is_path_b_entity(central_conn, source_entity: str, target_system: str = "LRMIS") -> bool:
-    """True when the entity has been onboarded to the LRMIS target (its
-    lrmis_target_tables footprint is set). Legacy entities return False and
-    stay on the single-table staging path."""
-    with central_conn.cursor() as cur:
-        cur.execute("""
-            SELECT lrmis_target_tables IS NOT NULL
-            FROM integration.onboarding_entity
-            WHERE source_table = %s AND target_system = %s
-            ORDER BY updated_at DESC LIMIT 1
-        """, (source_entity, target_system))
-        row = cur.fetchone()
-    return bool(row and row[0])
-
 
 def load_entity_mappings(central_conn, source_entity: str,
                          target_system: str = "LRMIS") -> list[dict]:

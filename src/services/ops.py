@@ -1,4 +1,4 @@
-"""Operational services: status/health reads, reconcile, monitor, refresh,
+"""Operational services: status/health reads, monitor, refresh,
 replay, kill switches, approvals, and schema trees."""
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from ..connectors import MySQLStagingConnector, PostgresCentralConnector
 from ..integration_store import replay as _replay
 from ..mapping_repository import approve as _approve_mapping
 from .common import ConflictError, NotFoundError, ValidationError
-from .snapshots import list_snapshots, restore_snapshot, snapshot_staging_table
 
 
 def _pipeline():
@@ -157,26 +156,21 @@ def list_proposals(central: PostgresCentralConnector | None = None,
 
 
 def get_schema_trees(central: PostgresCentralConnector | None = None,
-                     staging: MySQLStagingConnector | None = None,
                      source_schema: str = "irimsv",
                      target: MySQLStagingConnector | None = None) -> dict:
-    """Three trees: source (IRIMSV), staging (Path A lrmis_staging), and
-    target_b (Path B lrmis_target canonical contract)."""
+    """Two trees: source (IRIMSV) and target (the real lrmis_target contract)."""
     from ..schema_ingest import from_information_schema, schema_fingerprint
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
     target = target or MySQLStagingConnector.for_target()
     try:
         with central.connection() as conn:
             src = p._discover_source_schema(conn, source_schema)
-        stg = from_information_schema(staging.information_schema(), "LRMIS")
-        tgt_b = from_information_schema(target.information_schema(), "LRMIS_B")
+        tgt = from_information_schema(target.information_schema(), "LRMIS")
         return {
             "source": {"fingerprint": schema_fingerprint(src), **src.to_dict()},
-            "staging": {"fingerprint": schema_fingerprint(stg), **stg.to_dict()},
-            "target_b": {"fingerprint": schema_fingerprint(tgt_b), **tgt_b.to_dict()},
+            "target": {"fingerprint": schema_fingerprint(tgt), **tgt.to_dict()},
         }
     finally:
         if owns:
@@ -339,82 +333,37 @@ def approve_schema(fingerprint: str, target_system: str, by: str,
             central.close()
 
 
-def reconcile(entity_name: str,
-              central: PostgresCentralConnector | None = None,
-              staging: MySQLStagingConnector | None = None) -> dict:
-    p = _pipeline()
-    owns = central is None
-    central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
-    try:
-        with central.connection() as conn:
-            entities = p._query(conn, """
-                SELECT * FROM integration.onboarding_entity
-                WHERE source_table = %s AND status = 'deployed'
-            """, (entity_name,))
-            if not entities:
-                raise NotFoundError(f"entity '{entity_name}' not found or not deployed")
-            entity = entities[0]
-            staging_table = entity["staging_table"]
-            delivered = p._query(conn, """
-                SELECT external_reference, payload_checksum FROM integration.outbox
-                WHERE source_entity = %s AND status = 'delivered'
-            """, (entity_name,))
-        with staging.connection() as sconn:
-            with sconn.cursor(dictionary=True) as cur:
-                cur.execute(f"SELECT external_reference, payload_checksum FROM `{staging_table}`")
-                staging_rows = cur.fetchall()
+def _entity_fingerprints(conn, target: MySQLStagingConnector, entity: dict) -> tuple[str | None, str | None]:
+    """Fingerprint this entity's source object and its real LRMIS target footprint.
 
-        central_refs = {r["external_reference"]: r["payload_checksum"] for r in delivered}
-        staging_refs = {r["external_reference"]: r["payload_checksum"] for r in staging_rows}
-        missing_in_staging = sorted(set(central_refs) - set(staging_refs))
-        missing_in_central = sorted(set(staging_refs) - set(central_refs))
-        mismatches = sorted(ref for ref in set(central_refs) & set(staging_refs)
-                            if central_refs[ref] != staging_refs[ref])
-        return {
-            "entity": entity_name,
-            "staging_table": staging_table,
-            "central_delivered": len(delivered),
-            "staging_rows": len(staging_rows),
-            "missing_in_staging": missing_in_staging[:50],
-            "missing_in_staging_count": len(missing_in_staging),
-            "missing_in_central": missing_in_central[:50],
-            "missing_in_central_count": len(missing_in_central),
-            "checksum_mismatches": mismatches[:50],
-            "checksum_mismatch_count": len(mismatches),
-            "status": "OK" if not missing_in_staging and not mismatches else "MISMATCH",
-        }
-    finally:
-        if owns:
-            central.close()
-
-
-def _entity_fingerprints(conn, staging: MySQLStagingConnector, entity: dict) -> tuple[str | None, str | None]:
-    """Fingerprint only this entity's source object and exact staging table."""
-    from ..connectors import VIEWS_DATABASE
-    from ..schema_ingest import from_information_schema, schema_fingerprint, table_schema
+    The target side covers exactly the entity's ``lrmis_target_tables`` (read from
+    the real ``lrmis_target`` database via ``target``), never the whole schema —
+    unrelated tables would otherwise pause every entity."""
+    from ..schema_ingest import (from_information_schema, schema_fingerprint,
+                                  schema_subset, table_schema)
 
     p = _pipeline()
     current_source = p._discover_source_schema(conn, entity["source_schema"])
     source_contract = table_schema(current_source, entity["source_table"])
     source_fp = schema_fingerprint(source_contract) if source_contract else None
 
-    staging_table = entity.get("staging_table")
+    target_tables = entity.get("lrmis_target_tables")
+    if isinstance(target_tables, str):
+        target_tables = json.loads(target_tables)
     target_fp = None
-    if staging_table:
-        database = VIEWS_DATABASE if staging.is_views_table(staging_table) else None
-        target = from_information_schema(staging.information_schema(database), "LRMIS")
-        target_contract = table_schema(target, staging_table)
-        target_fp = schema_fingerprint(target_contract) if target_contract else None
+    if target_tables:
+        observed = from_information_schema(target.information_schema(), "LRMIS")
+        contract = schema_subset(observed, target_tables)
+        target_fp = schema_fingerprint(contract) if contract.tables else None
     return source_fp, target_fp
 
 
 def monitor(central: PostgresCentralConnector | None = None,
-            staging: MySQLStagingConnector | None = None) -> dict:
+            target: MySQLStagingConnector | None = None) -> dict:
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     try:
         with central.connection() as conn:
             entities = p._query(conn, """
@@ -422,7 +371,7 @@ def monitor(central: PostgresCentralConnector | None = None,
             """)
             results, paused = [], []
             for entity in entities:
-                new_source_fp, new_target_fp = _entity_fingerprints(conn, staging, entity)
+                new_source_fp, new_target_fp = _entity_fingerprints(conn, target, entity)
                 legacy = int(entity.get("fingerprint_scope_version") or 1) < 2
                 source_drift = bool(not legacy and entity.get("source_fingerprint")
                                     and entity["source_fingerprint"] != new_source_fp)
@@ -467,7 +416,7 @@ def monitor(central: PostgresCentralConnector | None = None,
 
 def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
                                    central: PostgresCentralConnector | None = None,
-                                   staging: MySQLStagingConnector | None = None) -> dict:
+                                   target: MySQLStagingConnector | None = None) -> dict:
     """Convert legacy whole-database fingerprints to isolated entity contracts.
 
     Only entities paused by the old schema-drift monitor are eligible for
@@ -477,7 +426,7 @@ def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
+    target = target or MySQLStagingConnector.for_target()
     converted, skipped = [], []
     try:
         with central.connection() as conn:
@@ -488,12 +437,12 @@ def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
                 ORDER BY source_schema, source_table
             """)
             for entity in entities:
-                source_fp, target_fp = _entity_fingerprints(conn, staging, entity)
+                source_fp, target_fp = _entity_fingerprints(conn, target, entity)
                 if not source_fp or not target_fp:
                     skipped.append({
                         "entity": entity["source_table"],
                         "source_schema": entity["source_schema"],
-                        "reason": "source object missing" if not source_fp else "staging table missing",
+                        "reason": "source object missing" if not source_fp else "target footprint missing",
                     })
                     continue
                 was_drift_pause = (
@@ -503,7 +452,7 @@ def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
                 converted.append({
                     "entity": entity["source_table"],
                     "source_schema": entity["source_schema"],
-                    "staging_table": entity["staging_table"],
+                    "target_tables": entity.get("lrmis_target_tables"),
                     "will_reenable": was_drift_pause,
                 })
                 if not apply:
@@ -530,7 +479,7 @@ def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
                 """, (entity["id"], json.dumps({
                     "source_schema": entity["source_schema"],
                     "source_table": entity["source_table"],
-                    "staging_table": entity["staging_table"],
+                    "target_tables": entity.get("lrmis_target_tables"),
                     "reenabled": was_drift_pause,
                 }), actor))
             if apply:
@@ -548,131 +497,66 @@ def refresh(source_schema: str, source_tables: list[str], target_system: str,
             source_system: str = "IRIMSV_REGION_V", batch_size: int = 1000,
             schedule: str | None = None,
             central: PostgresCentralConnector | None = None,
-            staging: MySQLStagingConnector | None = None,
             progress=None) -> dict:
-    """Drop + recreate + reload staging tables, snapshotting each before the drop."""
-    from ..fast_refresh import fetch_and_bulk_insert, generate_refresh_sql
-    from ..integration_store import approved_mapping
+    """Re-deliver each entity's current source rows into the real LRMIS target.
+
+    Replaces the legacy staging drop+recreate+reload: instead of rebuilding an
+    ``irimsv_*_staging`` table, this delegates to the direct-delivery primitive
+    (:func:`nightly_refresh.redeliver_all` -> ``lrmis_delivery.refresh_entity``),
+    which does a crosswalk-scoped delete + rewrite straight into the target. Only
+    entities already deployed to the target (``lrmis_target_tables`` set) can
+    refresh; anything else is reported as skipped. ``batch_size`` is retained for
+    signature compatibility (redelivery streams per entity).
+    """
+    from .nightly_refresh import redeliver_all
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
-    results = []
     try:
-        for i, table in enumerate(source_tables):
-            if progress:
-                progress(i, len(source_tables), f"refreshing {table}")
+        with central.connection() as conn:
+            entities = p._query(conn, """
+                SELECT id, source_schema, source_table, primary_key_columns,
+                       source_system, lrmis_target_tables
+                FROM integration.onboarding_entity
+                WHERE source_schema = %s AND source_table = ANY(%s)
+                  AND target_system = %s
+                ORDER BY source_table
+            """, (source_schema, list(source_tables), target_system))
+
+        found = {e["source_table"] for e in entities}
+        on_target = [e for e in entities if e.get("lrmis_target_tables") is not None]
+        on_target_names = {e["source_table"] for e in on_target}
+        for e in on_target:
+            if not e.get("source_system"):
+                e["source_system"] = source_system
+
+        delivered = redeliver_all(on_target, target_system, progress) if on_target else []
+
+        results = []
+        for r in delivered:
+            # Normalise to the shape drift_resolution / the CLI consume.
+            r.setdefault("table", r.get("entity"))
+            r["rows_loaded"] = r.get("written", 0)
+            results.append(r)
+        for table in source_tables:
+            if table not in on_target_names:
+                reason = ("entity is not deployed to the LRMIS target"
+                          if table in found else
+                          "no LRMIS-target entity - run onboard/deploy first")
+                results.append({"table": table, "status": "skipped", "error": reason})
+
+        if schedule and on_target:
             with central.connection() as conn:
-                mapping = approved_mapping(conn, table, target_system)
-                if not mapping:
-                    results.append({"table": table, "status": "skipped",
-                                    "error": "no approved mapping - run onboard first"})
-                    continue
-                mappings = mapping["mappings"]
-                if isinstance(mappings, str):
-                    mappings = json.loads(mappings)
-                target_table = mapping.get("target_table", f"irimsv_{table}_staging")
-
-                source_schema_obj = p._discover_source_schema(conn, source_schema)
-                source_table_obj = source_schema_obj.get_table(table)
-                if not source_table_obj:
-                    results.append({"table": table, "status": "skipped",
-                                    "error": f"source table {source_schema}.{table} not found"})
-                    continue
-
-                # Use stored primary_key_columns from the entity (set at deploy time)
-                # rather than re-detecting via information_schema, which can fail when
-                # PK constraints are not visible to the querying role.
-                # If a stored PK column no longer exists in the source table (e.g. the
-                # entity was deployed with a fallback ["id"]), fall back to detecting
-                # actual PK columns from the live source schema.
-                entity_row = p._fetchval(conn, """
-                    SELECT primary_key_columns FROM integration.onboarding_entity
-                    WHERE source_schema = %s AND source_table = %s AND target_system = %s
-                """, (source_schema, table, target_system))
-                pk_cols = json.loads(entity_row) if isinstance(entity_row, str) else (entity_row or [])
-                source_col_names = {c.name for c in source_table_obj.columns}
-                if not pk_cols or not all(c in source_col_names for c in pk_cols):
-                    live_pk = [c.name for c in source_table_obj.columns if c.is_primary_key]
-                    if live_pk:
-                        pk_cols = live_pk
-                    elif "id" in source_col_names:
-                        pk_cols = ["id"]
-                    else:
-                        # No declared PK and no id column: let generate_refresh_sql
-                        # key each row off a content hash instead of a column that
-                        # does not exist.
-                        pk_cols = []
-
-                updated_at_col = next(
-                    (c.name for c in source_table_obj.columns
-                     if c.name.lower() in ("updated_at", "modified_at", "last_updated", "timestamp")),
-                    None,
-                )
-
-                snapshot = snapshot_staging_table(staging, target_table)
-
-                target_schema = p._discover_target_schema(conn, target_system)
-                deploy_mappings = []
-                for m in mappings:
-                    target_col = m.get("target_column")
-                    if not target_col:
-                        continue
-                    deploy_mappings.append({
-                        "source_column": m["source_column"],
-                        "target_table": target_table,
-                        "target_column": target_col,
-                        "confidence": m.get("confidence", 0.0),
-                        "transform": m.get("transform", "none"),
-                        "col_type": p._infer_column_type(target_schema, target_table, target_col),
-                    })
-                p._create_staging_table(staging, target_table, deploy_mappings, pk_cols)
-
-                sql = generate_refresh_sql(source_schema, table, target_table, mappings,
-                                           source_system, pk_cols, updated_at_column=updated_at_col)
-                columns = ["event_id", "external_reference", "source_system", "operation",
-                           "source_updated_at", "mapping_version", "payload_checksum",
-                           "active", "accepted_at"]
-                for m in mappings:
-                    tc = m.get("target_column")
-                    if tc and tc not in columns:
-                        columns.append(tc)
-                count = fetch_and_bulk_insert(conn, staging, sql, target_table, columns, batch_size)
-
-                p._execute(conn, """
-                    UPDATE integration.onboarding_entity
-                    SET status = 'deployed', staging_table = %s, deployed_by = %s,
-                        deployed_at = now(), updated_at = now()
-                    WHERE source_schema = %s AND source_table = %s AND target_system = %s
-                """, (target_table, source_system, source_schema, table, target_system))
-                conn.commit()
-                if schedule:
+                for e in on_target:
                     p._execute(conn, """
-                        INSERT INTO integration.onboarding_audit (entity_id, action, details, performed_by)
-                        VALUES ((SELECT id FROM integration.onboarding_entity
-                                 WHERE source_schema = %s AND source_table = %s AND target_system = %s),
-                                'schedule', %s, %s)
-                    """, (source_schema, table, target_system,
-                          json.dumps({"schedule": schedule}), source_system))
-                    conn.commit()
-                results.append({"table": table, "status": "refreshed", "target_table": target_table,
-                                "rows_loaded": count, "snapshot": snapshot})
+                        INSERT INTO integration.onboarding_audit
+                            (entity_id, action, details, performed_by)
+                        VALUES (%s, 'schedule', %s, %s)
+                    """, (e["id"], json.dumps({"schedule": schedule}), source_system))
+                conn.commit()
         return {"results": results}
     finally:
         if owns:
             central.close()
 
 
-def restore_staging_snapshot(table: str, snapshot: str | None = None,
-                             staging: MySQLStagingConnector | None = None) -> dict:
-    staging = staging or MySQLStagingConnector()
-    try:
-        restored = restore_snapshot(staging, table, snapshot)
-    except ValueError as exc:
-        raise NotFoundError(str(exc)) from exc
-    return {"table": table, "restored_from": restored}
-
-
-def staging_snapshots(table: str, staging: MySQLStagingConnector | None = None) -> dict:
-    staging = staging or MySQLStagingConnector()
-    return {"table": table, "snapshots": list_snapshots(staging, table)}

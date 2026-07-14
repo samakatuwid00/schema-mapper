@@ -163,7 +163,7 @@ def test_onboard_bulk_rejects_empty_table_list(operator_client, monkeypatch):
 
 def test_data_browse_routes_require_auth(anon_client):
     for path in ("/api/data/tables", "/api/data/rows?side=source&table=x",
-                 "/api/data/compare?entity=a&external_reference=b"):
+                 "/api/data/compare-source-target?entity=a&pk=b"):
         assert anon_client.get(path).status_code == 401
 
 

@@ -64,7 +64,7 @@ def test_unknown_table_is_rejected_before_any_sql(allowlist):
     central = _FakeCentral()
     with pytest.raises(NotFoundError):
         data_browser.fetch_rows("source", "pg_shadow", central=central,
-                                staging=_FakeStaging())
+                                target=_FakeStaging())
     assert central.calls == []  # nothing touched the database
 
 
@@ -72,20 +72,20 @@ def test_sort_column_not_in_table_is_rejected(allowlist):
     central = _FakeCentral()
     with pytest.raises(ValidationError):
         data_browser.fetch_rows("source", "farmers", sort="1;DROP TABLE farmers",
-                                central=central, staging=_FakeStaging())
+                                central=central, target=_FakeStaging())
     assert central.calls == []
 
 
 def test_unknown_side_is_rejected(allowlist):
     with pytest.raises(ValidationError):
         data_browser.fetch_rows("prod", "farmers", central=_FakeCentral(),
-                                staging=_FakeStaging())
+                                target=_FakeStaging())
 
 
 def test_bad_direction_is_rejected(allowlist):
     with pytest.raises(ValidationError):
         data_browser.fetch_rows("source", "farmers", direction="; DROP",
-                                central=_FakeCentral(), staging=_FakeStaging())
+                                central=_FakeCentral(), target=_FakeStaging())
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ def test_bad_direction_is_rejected(allowlist):
 def test_page_size_is_clamped_not_rejected(allowlist):
     central = _FakeCentral()
     result = data_browser.fetch_rows("source", "farmers", size=10_000,
-                                     central=central, staging=_FakeStaging())
+                                     central=central, target=_FakeStaging())
     assert result["size"] == connectors.MAX_PAGE_SIZE
     fetch = [c for c in central.calls if c[0] == "fetch"][0]
     assert fetch[3] == connectors.MAX_PAGE_SIZE
@@ -104,7 +104,7 @@ def test_page_size_is_clamped_not_rejected(allowlist):
 def test_page_below_one_is_clamped(allowlist):
     central = _FakeCentral()
     result = data_browser.fetch_rows("source", "farmers", page=0, size=2,
-                                     central=central, staging=_FakeStaging())
+                                     central=central, target=_FakeStaging())
     assert result["page"] == 1
     fetch = [c for c in central.calls if c[0] == "fetch"][0]
     assert fetch[4] == 0  # offset
@@ -113,14 +113,14 @@ def test_page_below_one_is_clamped(allowlist):
 def test_valid_sort_reaches_the_connector(allowlist):
     central = _FakeCentral()
     data_browser.fetch_rows("source", "farmers", sort="full_name", direction="desc",
-                            central=central, staging=_FakeStaging())
+                            central=central, target=_FakeStaging())
     fetch = [c for c in central.calls if c[0] == "fetch"][0]
     assert fetch[5] == "full_name" and fetch[6] == "desc"
 
 
-def test_target_side_reads_staging(allowlist):
+def test_target_side_reads_the_target(allowlist):
     result = data_browser.fetch_rows("target", "irimsv_farmers_staging",
-                                     central=_FakeCentral(), staging=_FakeStaging())
+                                     central=_FakeCentral(), target=_FakeStaging())
     assert result["rows"] == [{"external_reference": "uuid-1"}]
     assert result["total"] == 1
 

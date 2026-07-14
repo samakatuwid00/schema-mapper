@@ -9,6 +9,7 @@ Nothing here imports the engine, so it is safe to import from anywhere.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 
 
@@ -64,6 +65,34 @@ OLD_LRMIS = TargetPlugin(
     app_assign_non_autoincrement=False,
     reference_tables={t: {} for t in _OLD_LRMIS_LOOKUPS},
 )
+
+
+# ---------------------------------------------------------------------------
+# Config-driven plugin selection
+#
+# The generic writer defaults to `LRMIS`, but the delivery/worker/schema-swap
+# paths must pick the plugin that matches the live target — otherwise a swap to
+# the old-lrmis Postgres would run with the LRMIS plugin and INSERT into its
+# seeded lookups (region, gender, …) instead of resolving them. Selection is by
+# the `LRMIS_TARGET_PLUGIN` env var so a target change is pure configuration.
+# ---------------------------------------------------------------------------
+PLUGINS = {p.name: p for p in (LRMIS, OLD_LRMIS)}
+
+
+def get_plugin(name: str | None) -> TargetPlugin:
+    """Resolve a plugin by name (case-insensitive). Unknown/empty -> LRMIS."""
+    if not name:
+        return LRMIS
+    return PLUGINS.get(name.strip().upper(), LRMIS)
+
+
+def resolve_plugin() -> TargetPlugin:
+    """The plugin selected by config (`LRMIS_TARGET_PLUGIN`), default LRMIS.
+
+    A Postgres old-lrmis target sets `LRMIS_TARGET_PLUGIN=OLD_LRMIS` so its 24
+    seeded lookup tables resolve (never insert) and only source-carried rows are
+    written."""
+    return get_plugin(os.environ.get("LRMIS_TARGET_PLUGIN"))
 
 # The delivery-audit envelope table (LRMIS/MySQL). Recreated by init_lrmis_target;
 # lives here because it is a Path-B/LRMIS concept, not part of the generic engine.

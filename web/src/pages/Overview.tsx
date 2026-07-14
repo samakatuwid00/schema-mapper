@@ -2,16 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  createJob,
-  getSnapshots,
   getStatus,
   getWorkerStatus,
   listJobs,
-  restoreSnapshot,
   toggleEntity,
 } from "../api/client";
 import type { OnboardingEntity, StatusResponse } from "../api/types";
-import GuardedActionModal from "../components/GuardedActionModal";
 import HealthCard from "../components/HealthCard";
 import PipelineDiagram from "../components/PipelineDiagram";
 import Sparkline from "../components/Sparkline";
@@ -34,78 +30,8 @@ function controlFor(status: StatusResponse | undefined, entity: OnboardingEntity
   );
 }
 
-function SnapshotsModal({
-  entity,
-  onClose,
-}: {
-  entity: OnboardingEntity;
-  onClose: () => void;
-}) {
-  const table = entity.staging_table ?? entity.source_table;
-  const [restoreTarget, setRestoreTarget] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const { data, isLoading } = useQuery({
-    queryKey: ["snapshots", table],
-    queryFn: () => getSnapshots(table),
-  });
-  const restore = useMutation({
-    mutationFn: (args: { snapshot: string; reason: string }) =>
-      restoreSnapshot({ table, snapshot: args.snapshot, reason: args.reason }),
-    onSuccess: () => {
-      setRestoreTarget(null);
-      onClose();
-    },
-    onError: (err) => setError(errMsg(err)),
-  });
-
-  return (
-    <div className="modal-overlay" role="presentation" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3 className="modal-title">
-            Snapshots — <span className="mono">{table}</span>
-          </h3>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        {isLoading && <p className="dim">Loading…</p>}
-        {data && data.snapshots.length === 0 && <p className="dim">No snapshots for this table.</p>}
-        <ul className="snapshot-list">
-          {data?.snapshots.map((snap) => (
-            <li key={snap} className="snapshot-row">
-              <span className="mono">{snap}</span>
-              <button type="button" className="btn btn-sm" onClick={() => setRestoreTarget(snap)}>
-                Restore
-              </button>
-            </li>
-          ))}
-        </ul>
-        {error && <div className="form-error">{error}</div>}
-        <GuardedActionModal
-          open={restoreTarget !== null}
-          tier="confirm"
-          danger
-          title={`Restore snapshot of ${table}`}
-          description={
-            <span>
-              Restore <code className="mono">{restoreTarget}</code> over the current staging table.
-            </span>
-          }
-          actionLabel="Restore snapshot"
-          busy={restore.isPending}
-          error={restore.isError ? errMsg(restore.error) : null}
-          onConfirm={(reason) => restore.mutate({ snapshot: restoreTarget as string, reason })}
-          onClose={() => setRestoreTarget(null)}
-        />
-      </div>
-    </div>
-  );
-}
-
 export default function Overview() {
   const queryClient = useQueryClient();
-  const [snapshotEntity, setSnapshotEntity] = useState<OnboardingEntity | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: status, isLoading } = useQuery({
@@ -153,12 +79,6 @@ export default function Overview() {
   const toggle = useMutation({
     mutationFn: toggleEntity,
     onSuccess: invalidate,
-    onError: (err) => setActionError(errMsg(err)),
-  });
-
-  const reconcile = useMutation({
-    mutationFn: (entity: string) => createJob({ job_type: "reconcile", params: { entity } }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["jobs"] }),
     onError: (err) => setActionError(errMsg(err)),
   });
 
@@ -253,10 +173,8 @@ export default function Overview() {
               <th>Entity</th>
               <th>Target</th>
               <th>Status</th>
-              <th>Staging table</th>
               <th>Deployed</th>
               <th>Kill switch</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -275,7 +193,6 @@ export default function Overview() {
                       title={entity.paused_reason ?? undefined}
                     />
                   </td>
-                  <td className="mono dim">{entity.staging_table ?? "—"}</td>
                   <td className="dim">
                     {entity.deployed_at ? `${fmtDate(entity.deployed_at)} by ${entity.deployed_by ?? "?"}` : "—"}
                   </td>
@@ -296,29 +213,12 @@ export default function Overview() {
                       {enabled ? "Disable" : "Enable"}
                     </button>
                   </td>
-                  <td className="row-actions">
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => reconcile.mutate(entity.source_table)}
-                      title="Run reconcile job for this entity"
-                    >
-                      Reconcile
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => setSnapshotEntity(entity)}
-                    >
-                      Snapshots
-                    </button>
-                  </td>
                 </tr>
               );
             })}
             {status && status.entities.length === 0 && (
               <tr>
-                <td colSpan={7} className="dim">
+                <td colSpan={5} className="dim">
                   No tables connected yet — go to <Link to="/tables">Tables</Link> to onboard them.
                 </td>
               </tr>
@@ -327,10 +227,6 @@ export default function Overview() {
         </table>
         </div>
       </section>
-
-      {snapshotEntity && (
-        <SnapshotsModal entity={snapshotEntity} onClose={() => setSnapshotEntity(null)} />
-      )}
     </div>
   );
 }

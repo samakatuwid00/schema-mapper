@@ -36,43 +36,6 @@ def claim_events(conn, target_system: str, limit: int) -> list[dict]:
         return events
 
 
-def approved_mapping(conn, source_entity: str, target_system: str) -> dict | None:
-    """Look for approved mapping in both mapping_version and onboarding_proposal tables."""
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        # First, check the legacy mapping_version table
-        cur.execute("""
-            SELECT * FROM integration.mapping_version
-            WHERE source_entity = %s AND target_system = %s AND status = 'approved'
-        """, (source_entity, target_system))
-        row = cur.fetchone()
-        if row:
-            return dict(row)
-
-        # If not found, check the new onboarding_proposal table
-        cur.execute("""
-            SELECT p.*, e.source_table, e.staging_table, e.target_system, e.target_fingerprint
-            FROM integration.onboarding_proposal p
-            JOIN integration.onboarding_entity e ON p.entity_id = e.id
-            WHERE e.source_table = %s AND e.target_system = %s
-              AND p.status IN ('approved', 'auto_approved')
-               AND (e.status = 'deployed' OR (e.status = 'paused' AND e.paused_reason LIKE 'Schema drift detected:%%'))
-            ORDER BY p.created_at DESC
-            LIMIT 1
-        """, (source_entity, target_system))
-        row = cur.fetchone()
-        if row:
-            # Convert onboarding_proposal to mapping_version format
-            result = dict(row)
-            result["id"] = result["id"]
-            result["version"] = 1
-            result["target_table"] = result.get("staging_table", f"irimsv_{source_entity}_staging")
-            result["mappings"] = result.get("mappings", [])
-            result["schema_fingerprint"] = result.get("target_fingerprint", "")
-            return result
-
-        return None
-
-
 def save_projection(conn, event: dict, mapping: dict, payload: dict):
     payload_hash = checksum(payload)
     with conn.cursor() as cur:

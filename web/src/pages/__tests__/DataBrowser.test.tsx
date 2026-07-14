@@ -7,8 +7,7 @@ import DataBrowser from "../DataBrowser";
 vi.mock("../../api/client", () => ({
   getDataTables: vi.fn(),
   getDataRows: vi.fn(),
-  compareRow: vi.fn(),
-  compareStagingTarget: vi.fn(),
+  compareSourceTarget: vi.fn(),
 }));
 
 import * as api from "../../api/client";
@@ -22,11 +21,11 @@ const TABLES = {
         columns: 2,
         rows: 2,
         entity_status: "deployed",
-        staging_table: "stg_farmers",
+        target_tables: ["farmers"],
       },
     ],
   },
-  target: { database: "lrmis_staging", tables: [] },
+  target: { database: "lrmis_target", tables: [] },
 };
 
 const ROWS = {
@@ -89,19 +88,27 @@ describe("DataBrowser", () => {
     vi.mocked(api.getDataTables).mockResolvedValue({
       ...TABLES,
       target: {
-        database: "lrmis_staging",
-        tables: [{ table: "stg_farmers", source_table: "farmers", columns: 2, rows: 2, entity_status: "deployed" }],
+        database: "lrmis_target",
+        tables: [{ table: "tgt_farmers", source_table: "farmers", columns: 2, rows: 2, entity_status: "deployed" }],
       },
     });
     renderBrowser();
 
     expect(await screen.findByText("farmers")).toBeInTheDocument();
-    expect(screen.queryByText("stg_farmers")).not.toBeInTheDocument();
+    expect(screen.queryByText("tgt_farmers")).not.toBeInTheDocument();
 
-    // Path A staging is now the "Staging DB" option (a third "Target DB" = Path B).
+    // The two sides are Source DB and the real Target DB (lrmis_target).
     await user.selectOptions(screen.getByRole("combobox", { name: /database/i }), "target");
-    expect(await screen.findByText("stg_farmers")).toBeInTheDocument();
+    expect(await screen.findByText("tgt_farmers")).toBeInTheDocument();
     expect(screen.queryByTitle("farmers")).not.toBeInTheDocument();
+  });
+
+  it("offers exactly the source and target database options", async () => {
+    renderBrowser();
+    await screen.findByText("farmers");
+    expect(screen.getByRole("option", { name: "Source DB" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Target DB" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Staging DB" })).not.toBeInTheDocument();
   });
 
   it("exposes no insert / edit / delete controls (read-only)", async () => {

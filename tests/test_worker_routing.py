@@ -1,11 +1,9 @@
-"""Worker routing (Phase 5): Path B entities go to lrmis_target; every other
-entity takes the untouched legacy staging path, and a pure-legacy batch never
-opens a target connection."""
+"""Worker delivery (retire-legacy-staging §1): a SINGLE delivery path — every
+approved event is delivered directly via `_deliver_path_b` into the real target.
+The legacy single-table staging route and the per-entity fork are gone."""
 from __future__ import annotations
 
 from contextlib import contextmanager
-
-import pytest
 
 from src import worker
 
@@ -27,50 +25,39 @@ class _Central:
         pass
 
 
-@pytest.fixture()
-def routed(monkeypatch):
-    legacy, path_b = [], []
-    monkeypatch.setattr(worker, "_deliver_legacy",
-                        lambda conn, staging, event, result: legacy.append(event["source_entity"]))
-    monkeypatch.setattr(worker, "_deliver_path_b",
-                        lambda conn, target, event, result, agent=None: path_b.append(event["source_entity"]))
-    return legacy, path_b
-
-
 def _events(*names):
     return [{"source_entity": n, "target_system": "LRMIS"} for n in names]
 
 
-def test_legacy_entities_take_legacy_path_and_open_no_target(monkeypatch, routed):
-    legacy, path_b = routed
-    monkeypatch.setattr(worker, "claim_events", lambda conn, ts, n: _events("customer", "authors"))
-    monkeypatch.setattr(worker, "is_path_b_entity", lambda conn, e, ts: False)
+def test_every_event_delivers_via_direct_path(monkeypatch):
+    delivered = []
+    monkeypatch.setattr(worker, "_deliver_path_b",
+                        lambda conn, target, event, result, agent=None:
+                        delivered.append(event["source_entity"]))
+    monkeypatch.setattr(worker, "claim_events",
+                        lambda conn, ts, n: _events("schools", "customer", "authors"))
 
-    def _no_target():
-        raise AssertionError("must not open a target connection for a legacy-only batch")
-    monkeypatch.setattr(worker.MySQLStagingConnector, "for_target", staticmethod(_no_target))
+    opened = {"n": 0}
 
-    result = worker.process_once(central=_Central(), staging=object())
-    assert legacy == ["customer", "authors"]
-    assert path_b == []
-    assert result["lrmis"] == 0
+    def _open(holder):
+        opened["n"] += 1
+        holder["conn"] = object()
+
+    monkeypatch.setattr(worker, "_open_target", _open)
+
+    result = worker.process_once(central=_Central())
+    assert delivered == ["schools", "customer", "authors"]   # all via the one path
+    assert result["lrmis"] == 3
+    assert opened["n"] == 1                                   # target opened once, lazily
 
 
-def test_path_b_entities_route_to_target(monkeypatch, routed):
-    legacy, path_b = routed
-    monkeypatch.setattr(worker, "claim_events", lambda conn, ts, n: _events("schools", "customer"))
-    monkeypatch.setattr(worker, "is_path_b_entity",
-                        lambda conn, e, ts: e == "schools")
+def test_empty_batch_opens_no_target(monkeypatch):
+    monkeypatch.setattr(worker, "claim_events", lambda conn, ts, n: [])
 
-    class _FakeTargetConnector:
-        @contextmanager
-        def connection(self_):
-            yield object()
+    def _no_open(holder):
+        raise AssertionError("must not open a target connection for an empty batch")
 
-    monkeypatch.setattr(worker.MySQLStagingConnector, "for_target",
-                        staticmethod(lambda: _FakeTargetConnector()))
+    monkeypatch.setattr(worker, "_open_target", _no_open)
 
-    result = worker.process_once(central=_Central(), staging=object())
-    assert path_b == ["schools"]
-    assert legacy == ["customer"]
-    assert result["lrmis"] == 1
+    result = worker.process_once(central=_Central())
+    assert result["claimed"] == 0 and result["lrmis"] == 0

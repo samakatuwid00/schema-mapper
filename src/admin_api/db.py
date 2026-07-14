@@ -4,7 +4,6 @@ from __future__ import annotations
 from ..connectors import MySQLStagingConnector, PostgresCentralConnector
 
 _central: PostgresCentralConnector | None = None
-_staging: MySQLStagingConnector | None = None
 _target: MySQLStagingConnector | None = None
 
 
@@ -13,13 +12,6 @@ def central() -> PostgresCentralConnector:
     if _central is None:
         _central = PostgresCentralConnector()
     return _central
-
-
-def staging() -> MySQLStagingConnector:
-    global _staging
-    if _staging is None:
-        _staging = MySQLStagingConnector()
-    return _staging
 
 
 def target() -> MySQLStagingConnector:

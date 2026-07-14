@@ -52,17 +52,30 @@ python scripts/lrmis_cutover.py              # status
 `.env`: keep `LRMIS_STAGING_SSL_DISABLED=false` — MySQL 8.4's
 caching_sha2_password cannot authenticate over an unencrypted connection.
 
-## Remaining (Phases 8–9, deferred — destructive)
+## Phases 8–9 — done via `retire-legacy-staging`
 
-Not done, on purpose. They are the final cutover and are irreversible against a
-system with 75 live entities:
+The final cutover is carried by the `retire-legacy-staging` OpenSpec change:
 
-- **Phase 9** — migrate each legacy entity: re-propose against the LRMIS target
-  schema, deploy_to_lrmis, backfill/refresh, verify counts, retire the old
-  `irimsv_*_staging` table.
-- **Phase 8** — only once every entity is migrated: remove the views/staging
-  code paths (`VIEWS_DATABASE`, `is_views_table`, `_qt` routing, snapshots view
-  logic — still used by 9 modules and the active `view_proposer` feature) and
-  drop `lrmis_staging` / `lrmis_staging_views`.
+- **Phase 9 (migrate entities)** — DONE. Its migration gate (`scripts/cutover.py
+  --precheck`) migrated the real legacy-only entities to the direct LRMIS target
+  and disabled the artifacts/dupes; the gate now passes (0 blocking).
+- **Phase 8 (remove staging code)** — DONE. The worker collapsed to one delivery
+  path; the staging DDL/refresh/snapshot/cleanup code, the interactive `onboard`
+  CLI, `fast_refresh`, and `ops.reconcile` were deleted; the connector's views
+  routing (`VIEWS_DATABASE`, `is_views_table`, `_qt`) was removed; the drift/
+  monitor/scan machinery and the data browser now observe **source ↔ the real
+  `lrmis_target`** only (three-way collapsed to two-way).
+- **Drop the databases** — PREPPED, NOT RUN. `scripts/drop_legacy_staging.py`
+  backs up then drops `lrmis_staging` / `lrmis_staging_views` behind an exact
+  typed `--confirm`. Run it deliberately, with the backup, then apply the §4.3
+  compose/.env edits. NOTE: that MySQL container also hosts `lrmis_target` — drop
+  the databases, not the container, and keep `LRMIS_STAGING_HOST/PORT/USER/PASSWORD`.
 
-Run these deliberately, one entity at a time, with backups.
+**Operational note (fingerprint rebaseline):** the drift monitor's *target*
+fingerprint now describes the real `lrmis_target` tables instead of the old
+staging table. After deploying/migrating an entity, run
+`python scripts/rebaseline_entity_fingerprints.py --by <you> --apply` once, or the
+next `monitor`/`schema_scan` will flag a one-time spurious target-drift.
+
+Superseded: the staging tasks in `simplify-source-to-target-delivery` and the
+whole `improve-staging-cleanup` change are obsolete — staging is being retired.

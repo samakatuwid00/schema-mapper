@@ -229,6 +229,21 @@ def _update(mysql_conn, table: str, pk: str, pk_value, values: dict) -> None:
         cur.execute(sql, (*assignable.values(), pk_value))
 
 
+def _row_exists(mysql_conn, table: str, pk: str, pk_value) -> bool:
+    """True if a row with this primary key still lives in the target.
+
+    Guards the crosswalk fast-path: if the target was reset/rebuilt but
+    integration.id_crosswalk was not cleared, a stale entry points at an id
+    that no longer exists. Trusting it would UPDATE zero rows (silently) and
+    hand the dead id to a child's foreign key, tripping the FK constraint.
+    """
+    with mysql_conn.cursor() as cur:
+        cur.execute(
+            f"SELECT 1 FROM {_quote(table)} WHERE {_quote(pk)} = %s LIMIT 1",
+            (pk_value,))
+        return cur.fetchone() is not None
+
+
 def _write_app_assigned_row(mysql_conn, central_conn, table: str, values: dict,
                             registry: LrmisRegistry, *, source_system: str,
                             source_entity: str, external_reference: str,
@@ -239,9 +254,12 @@ def _write_app_assigned_row(mysql_conn, central_conn, table: str, values: dict,
 
     existing = _crosswalk_lookup(central_conn, source_system, source_entity,
                                  external_reference, target_system, table)
-    if existing is not None:
+    if existing is not None and _row_exists(mysql_conn, table, pk, existing):
         _update(mysql_conn, table, pk, existing, values)
         return existing
+    # A stale crosswalk entry (target reset without clearing the crosswalk)
+    # falls through to re-match/re-allocate; _crosswalk_record below upserts,
+    # refreshing the dead pointer.
 
     # A real match must never be duplicated: two IRIMSV schools resolving to
     # the same physical station is exactly the case natural-key matching
@@ -297,7 +315,7 @@ def write_source_row(mysql_conn, central_conn, *, source_entity: str,
         pk = meta.primary_key[0] if meta.primary_key else None
         existing = _crosswalk_lookup(central_conn, source_system, source_entity,
                                      external_reference, target_system, table)
-        if existing is not None and pk:
+        if existing is not None and pk and _row_exists(mysql_conn, table, pk, existing):
             _update(mysql_conn, table, pk, existing, values)
             target_id: object = existing
         else:

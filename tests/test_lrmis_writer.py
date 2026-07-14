@@ -243,7 +243,8 @@ def test_repeated_allocation_is_sequential():
 
 
 def test_existing_crosswalk_row_updates_station_instead_of_reallocating():
-    mysql = _mysql()
+    # crosswalk hit AND the target row still exists (SELECT 1 -> truthy)
+    mysql = _mysql([("SELECT 1 FROM", (1,))])
     central = FakeConn([("id_crosswalk", ("55",))])
 
     ids = write_source_row(mysql, central, source_entity="schools",
@@ -253,6 +254,25 @@ def test_existing_crosswalk_row_updates_station_instead_of_reallocating():
     assert ids["station"] == "55"
     assert mysql.statements_on("station", "UPDATE")
     assert not mysql.statements_on("station", "INSERT")
+
+
+def test_stale_station_crosswalk_reallocates_when_target_row_missing():
+    """A crosswalk entry left dangling by a target reset must not be trusted:
+    the guard's SELECT 1 finds no row, so the writer re-allocates and re-inserts
+    rather than handing a dead id to a child FK."""
+    mysql = _mysql([("id_sequence", None)])  # no "SELECT 1 FROM" match -> row absent
+    central = FakeConn([
+        ("id_crosswalk", ("55",)),   # crosswalk points at a since-deleted station
+        ("id_sequence", _sequence()),
+    ])
+
+    ids = write_source_row(mysql, central, source_entity="schools",
+                           external_reference="uuid-3b",
+                           values_by_table={"station": {"geoloc": "x"}}, registry=REG)
+
+    assert ids["station"] == DEFAULT_ID_SEQUENCE_START      # fresh id, not "55"
+    assert mysql.statements_on("station", "INSERT")
+    assert not mysql.statements_on("station", "UPDATE")
 
 
 def test_self_referencing_fk_is_never_auto_filled_on_station():
@@ -293,7 +313,10 @@ def test_writes_parents_first_and_propagates_fk_to_children():
 
 def test_beis_crosswalk_update_path_is_independent_of_station():
     """Regression: station's write path must not consume beis's crosswalk row."""
-    mysql = _mysql([("SELECT `id` FROM `station`", (7,))])
+    mysql = _mysql([
+        ("SELECT `id` FROM `station`", (7,)),
+        ("SELECT 1 FROM", (1,)),   # beis's crosswalk row still exists in target
+    ])
     central = FakeConn([
         ("station", None),   # station: no existing crosswalk row -> resolves by pk instead
         ("beis", ("55",)),   # beis: existing crosswalk row -> update, not insert
@@ -309,6 +332,24 @@ def test_beis_crosswalk_update_path_is_independent_of_station():
     assert ids["beis"] == "55"
     assert mysql.statements_on("beis", "UPDATE")
     assert not mysql.statements_on("beis", "INSERT")
+
+
+def test_stale_beis_crosswalk_reinserts_when_target_row_missing():
+    """The general (non-app-assigned) crosswalk path is guarded too: a stale beis
+    crosswalk (target reset, crosswalk kept) re-inserts rather than UPDATE-ing a
+    row that no longer exists and silently losing the write."""
+    mysql = _mysql([("SELECT `id` FROM `station`", (7,))])  # no "SELECT 1" -> beis row absent
+    central = FakeConn([("station", None), ("beis", ("55",))])
+
+    write_source_row(
+        mysql, central,
+        source_entity="schools", external_reference="uuid-5b",
+        values_by_table={"station": {"id": 7}, "beis": {"beis_id": "B-1"}},
+        registry=REG,
+    )
+
+    assert mysql.statements_on("beis", "INSERT")
+    assert not mysql.statements_on("beis", "UPDATE")
 
 
 def test_new_beis_row_records_exactly_one_crosswalk_upsert():

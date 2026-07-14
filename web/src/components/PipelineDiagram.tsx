@@ -1,5 +1,5 @@
 /**
- * The signature Overview visual: source -> sync queue -> staging, with pulses
+ * The signature Overview visual: source -> sync queue -> target, with pulses
  * whose motion tracks real throughput and whose color reflects queue health.
  * Pure SVG/CSS; honors prefers-reduced-motion via the global guard in styles.css.
  */

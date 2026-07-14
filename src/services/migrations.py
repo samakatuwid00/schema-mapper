@@ -1,7 +1,7 @@
 """Tracked, checksummed, advisory-lock-guarded SQL migration runner (central Postgres).
 
-MySQL staging DDL stays on the programmatic _create_staging_table path by
-design - this runner only manages the ordered central-database files below.
+This runner only manages the ordered central-database migration files below;
+the LRMIS target schema is provisioned separately (scripts/init_lrmis_target).
 """
 from __future__ import annotations
 

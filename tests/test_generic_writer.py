@@ -240,6 +240,24 @@ def test_writer_is_plugin_driven():
     assert w._is_reference("station") and not w._is_app_assigned("station")
 
 
+def test_resolve_plugin_is_config_driven(monkeypatch):
+    """The worker/schema-swap paths pick the plugin by LRMIS_TARGET_PLUGIN so a
+    swap to old-lrmis resolves its seeded lookups instead of inserting them."""
+    from src.adapters.lrmis_plugin import get_plugin, resolve_plugin, LRMIS, OLD_LRMIS
+    assert get_plugin(None) is LRMIS                     # unset -> LRMIS
+    assert get_plugin("old_lrmis") is OLD_LRMIS          # case-insensitive
+    assert get_plugin("nope") is LRMIS                   # unknown -> safe default
+    monkeypatch.delenv("LRMIS_TARGET_PLUGIN", raising=False)
+    assert resolve_plugin() is LRMIS
+    monkeypatch.setenv("LRMIS_TARGET_PLUGIN", "OLD_LRMIS")
+    assert resolve_plugin() is OLD_LRMIS
+    # and the selected plugin makes a seeded lookup resolve-only, not app-assigned
+    reg = LrmisRegistry.from_discovery(
+        [_col("region", "id", 1, key="PRI", dtype="varchar(10)")], [])
+    w = GenericWriter(get_dialect("postgres"), reg, plugin=resolve_plugin())
+    assert w._is_reference("region") and not w._is_app_assigned("region")
+
+
 def test_truncate_and_rebuild_children_first_skipping_reference():
     w = GenericWriter(get_dialect("postgres"), REG)
     t = FakeTarget()

@@ -37,3 +37,6 @@ sql/real_test_*.sql
 /lrmis_dump.sql
 /irimsv_data.dump
 *.dump
+
+# leftover corrupted git-internal files quarantined during index/multi-pack-index repair (2026-07-13); safe to delete manually
+_git_repair_quarantine/

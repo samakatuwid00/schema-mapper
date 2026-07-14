@@ -337,7 +337,8 @@ def _default_redeliver(target_adapter, entities, *, central=None,
                      "delivery; rows not written."),
         }
     from ..delivery import GenericWriter
-    writer = GenericWriter(target_adapter.dialect(), registry)
+    from ..adapters.lrmis_plugin import resolve_plugin
+    writer = GenericWriter(target_adapter.dialect(), registry, plugin=resolve_plugin())
     results = redeliver_all(entities, target_system=target_system,
                             target=target_adapter, writer=writer, registry=registry)
     return {"status": "applied", "entities": results}

@@ -563,7 +563,7 @@ export default function MappingReview() {
         open={deployTarget !== null}
         tier="confirm"
         title={`Deploy ${deployTarget?.label ?? ""} to the LRMIS target`}
-        description="Send this entity's data directly into the real LRMIS tables (Path B). Non-destructive — no tables are created and staging is untouched. After it deploys, backfill the entity to populate the target."
+        description="Send this entity's data directly into the real LRMIS tables. Non-destructive — no tables are created. After it deploys, backfill the entity to populate the target."
         actionLabel="Deploy to target"
         busy={deployRunner.running}
         error={deployRunner.submitError}

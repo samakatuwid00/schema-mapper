@@ -5,7 +5,6 @@ from src.integration_store import checksum
 from src.schema_ingest import from_information_schema, schema_fingerprint
 from src.schema_models import Column, Schema, Table
 from src.transform_engine import transform_row
-from src.worker import _outbound_row
 from src.connectors import MySQLStagingConnector
 
 
@@ -34,18 +33,6 @@ def test_envelope_fields_are_supplied_after_business_validation():
     row, errors = transform_row({"name": "Teacher"}, config, target)
     assert row == {"cust_nm": "Teacher"}
     assert errors == []
-
-
-def test_outbound_contract_and_soft_deactivation():
-    event = {
-        "event_id": uuid4(), "external_reference": uuid4(), "source_system": "IRIMSV_REGION_V",
-        "operation": "deactivate", "source_updated_at": datetime.now(timezone.utc),
-        "payload_checksum": checksum({"id": 1}),
-    }
-    output = _outbound_row(event, {"version": 3}, {"cust_nm": "Teacher"})
-    assert output["active"] is False
-    assert output["mapping_version"] == 3
-    assert output["external_reference"] == str(event["external_reference"])
 
 
 def test_mysql_identifier_validation_happens_before_connection():

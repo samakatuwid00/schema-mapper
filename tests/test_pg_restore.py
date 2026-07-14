@@ -45,7 +45,11 @@ def test_refuses_plain_sql_with_default_command(tmp_path):
         restore_pg_backup(backup_path=plain, dsn="postgresql://x/y", dry_run=True)
 
 
-def test_refuses_when_unconfigured(tmp_path):
+def test_refuses_when_unconfigured(tmp_path, monkeypatch):
+    # assert the "no dsn / no restore command" refusal — so the env must actually
+    # be unconfigured (.env is auto-loaded at import and may set these).
+    monkeypatch.delenv("LRMIS_TARGET_PG_DSN", raising=False)
+    monkeypatch.delenv("LRMIS_TARGET_RESTORE_CMD", raising=False)
     backup = _write(tmp_path, "t.backup", b"PGDMP\x01")
     with pytest.raises(ValidationError):
         restore_pg_backup(backup_path=backup, dsn=None, dry_run=True)

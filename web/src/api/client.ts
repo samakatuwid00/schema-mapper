@@ -1,9 +1,7 @@
 import type {
   AdminUser,
   AuditRow,
-  CompareResponse,
   SourceTargetCompareResponse,
-  StagingTargetCompareResponse,
   CreateJobPayload,
   CreateJobResponse,
   DataRowsParams,
@@ -19,7 +17,6 @@ import type {
   ProposalSummary,
   QuarantineRow,
   SchemasResponse,
-  SnapshotsResponse,
   StatusResponse,
   User,
   WorkerStatus,
@@ -142,17 +139,6 @@ export const getDataRows = (params: DataRowsParams) =>
     })}`,
   );
 
-export const compareRow = (entity: string, externalReference: string) =>
-  get<CompareResponse>(
-    `/api/data/compare${qs({ entity, external_reference: externalReference })}`,
-  );
-
-/** Compare a Path A staging row against its Path B (lrmis_target) row by primary key. */
-export const compareStagingTarget = (stagingTable: string, pk: string) =>
-  get<StagingTargetCompareResponse>(
-    `/api/data/compare-staging-target${qs({ staging_table: stagingTable, pk })}`,
-  );
-
 /** Compare a source row (by primary key) against the exact rows it produced in the LRMIS target. */
 export const compareSourceTarget = (entity: string, pk: string) =>
   get<SourceTargetCompareResponse>(
@@ -163,11 +149,6 @@ export const compareSourceTarget = (entity: string, pk: string) =>
 
 export const getAudit = (params: { limit?: number; actor?: string; action?: string } = {}) =>
   get<AuditRow[]>(`/api/audit${qs(params)}`);
-
-// ---- Snapshots ----
-
-export const getSnapshots = (table: string) =>
-  get<SnapshotsResponse>(`/api/snapshots/${encodeURIComponent(table)}`);
 
 // ---- One-click / guarded actions ----
 
@@ -200,9 +181,6 @@ export const resolveMapping = (payload: {
 
 export const getLrmisSchema = () =>
   get<{ tables: Record<string, string[]> }>("/api/lrmis-schema");
-
-export const restoreSnapshot = (payload: { table: string; snapshot?: string; reason: string }) =>
-  post<unknown>("/api/actions/restore-snapshot", payload);
 
 // ---- Jobs ----
 

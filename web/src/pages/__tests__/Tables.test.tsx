@@ -24,11 +24,11 @@ const TABLES = {
   source: {
     schema: "irimsv",
     tables: [
-      { table: "farmers", columns: 3, rows: 10, entity_status: null, staging_table: null },
-      { table: "parcels", columns: 4, rows: 20, entity_status: null, staging_table: null },
+      { table: "farmers", columns: 3, rows: 10, entity_status: null, target_tables: [] },
+      { table: "parcels", columns: 4, rows: 20, entity_status: null, target_tables: [] },
     ],
   },
-  target: { database: "lrmis_staging", tables: [] },
+  target: { database: "lrmis_target", tables: [] },
 };
 
 const STATUS = {

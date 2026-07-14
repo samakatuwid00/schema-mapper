@@ -21,9 +21,8 @@ from ..services import migrations as migrations_service
 from ..services import nightly_refresh as nightly_refresh_service
 from ..services import ops as ops_service
 from ..services import scan as scan_service
-from ..services import staging_cleanup as cleanup_service
 from ..services.lrmis_onboarding import bulk_deploy_to_lrmis, bulk_propose_lrmis, deploy_to_lrmis
-from ..services.onboarding import backfill, deploy, discover, onboard_bulk, propose
+from ..services.onboarding import backfill, discover, onboard_bulk, propose
 from . import db
 from .audit import write_audit
 from .settings import JOB_HEARTBEAT_SECONDS, JOB_STALE_SECONDS, JOB_WORKERS
@@ -62,11 +61,8 @@ class JobContext:
 # ---------------------------------------------------------------------------
 
 def _h_schema_scan(params, ctx: JobContext):
-    mode = params.get("mode", "source")
-    if mode not in ("source", "staging"):
-        raise ValidationError(f"mode must be 'source' or 'staging', got {mode!r}")
     return scan_service.scan(approve_initial=bool(params.get("approve_initial")),
-                             by=params.get("_actor"), mode=mode)
+                             by=params.get("_actor"))
 
 
 def _h_discover(params, ctx):
@@ -80,7 +76,10 @@ def _h_propose(params, ctx):
 
 
 def _h_deploy(params, ctx):
-    return deploy(int(params["proposal_id"]), params["_actor"])
+    # Aliased to the direct LRMIS deploy (retire-legacy-staging §2.3): the legacy
+    # single-table staging deploy is retired, so the "deploy" action now deploys
+    # to the real target, identical to "deploy_lrmis".
+    return deploy_to_lrmis(int(params["proposal_id"]), params["_actor"])
 
 
 def _h_deploy_lrmis(params, ctx):
@@ -131,10 +130,6 @@ def _h_onboard_bulk(params, ctx: JobContext):
         params.get("target_system", "LRMIS").upper(), params["_actor"],
         progress=lambda i, n, msg: ctx.progress(i, n, msg),
     )
-
-
-def _h_reconcile(params, ctx):
-    return ops_service.reconcile(params["entity"])
 
 
 def _h_monitor(params, ctx):
@@ -258,26 +253,6 @@ def _h_reset_path_b(params, ctx: JobContext):
     )
 
 
-def _h_retire_entity(params, ctx: JobContext):
-    entity_id = params.get("entity_id")
-    if entity_id is None:
-        raise ValidationError("entity_id is required")
-    return cleanup_service.retire_entity(
-        int(entity_id),
-        dry_run=_as_bool(params.get("dry_run")),
-        central=db.central(),
-        staging=db.staging(),
-    )
-
-
-def _h_sweep_staging(params, ctx: JobContext):
-    return cleanup_service.sweep_orphans(
-        dry_run=_as_bool(params.get("dry_run")),
-        central=db.central(),
-        staging=db.staging(),
-    )
-
-
 JOB_HANDLERS = {
     "schema_scan": _h_schema_scan,
     "discover": _h_discover,
@@ -288,7 +263,6 @@ JOB_HANDLERS = {
     "bulk_propose_lrmis": _h_bulk_propose_lrmis,
     "backfill": _h_backfill,
     "onboard_bulk": _h_onboard_bulk,
-    "reconcile": _h_reconcile,
     "monitor": _h_monitor,
     "refresh": _h_refresh,
     "refresh_all": _h_refresh_all,
@@ -301,8 +275,6 @@ JOB_HANDLERS = {
     "resolve_drift": _h_resolve_drift,
     "reset_schemas": _h_reset_schemas,
     "reset_path_b": _h_reset_path_b,
-    "retire_entity": _h_retire_entity,
-    "sweep_staging": _h_sweep_staging,
 }
 
 ADMIN_ONLY_JOBS = {"migration_apply", "nightly_refresh"}
@@ -325,8 +297,6 @@ _SCOPED = {
     "resolve_drift": lambda p: "resolve-drift",
     "reset_schemas": lambda p: "reset-schemas",
     "reset_path_b": lambda p: "reset-path-b",
-    "sweep_staging": lambda p: "sweep-staging",
-    "retire_entity": lambda p: f"retire:{p.get('entity_id')}",
 }
 
 

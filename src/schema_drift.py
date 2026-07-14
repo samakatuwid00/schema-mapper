@@ -66,7 +66,7 @@ def impacted_entities(conn, target_system: str, differences: list[dict]) -> list
 
 def record_drift(conn, target_system: str, previous_fingerprint: str | None,
                  observed_fingerprint: str, differences: list[dict],
-                 drift_pair: str = "source->staging") -> list[str]:
+                 drift_pair: str = "source->target") -> list[str]:
     impacted = impacted_entities(conn, target_system, differences)
     breaking = any(d.get("breaking") for d in differences)
     with conn.cursor() as cur:

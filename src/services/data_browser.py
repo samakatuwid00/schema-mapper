@@ -12,15 +12,15 @@ Nothing in this module writes. Page size is capped at MAX_PAGE_SIZE.
 """
 from __future__ import annotations
 
+import json
 import os
 
 from ..connectors import MAX_PAGE_SIZE, MySQLStagingConnector, PostgresCentralConnector
 from .common import NotFoundError, ValidationError
 
 SOURCE = "source"
-TARGET = "target"          # Path A: lrmis_staging
-PATH_B = "path_b"          # Path B: lrmis_target (canonical LRMIS tables)
-SIDES = (SOURCE, TARGET, PATH_B)
+TARGET = "target"          # lrmis_target (canonical LRMIS tables)
+SIDES = (SOURCE, TARGET)
 
 DEFAULT_PAGE_SIZE = 25
 
@@ -29,44 +29,15 @@ def _source_schema() -> str:
     return os.environ.get("SOURCE_SCHEMA", "irimsv")
 
 
-def _staging_database() -> str:
-    return os.environ.get("LRMIS_STAGING_DATABASE", "lrmis_staging")
-
-
 def _target_database() -> str:
     return os.environ.get("LRMIS_TARGET_DATABASE", "lrmis_target")
 
 
-def _canonical_name(staging_table: str) -> str:
-    """Reduce a staging table name to its canonical LRMIS table name.
-
-    ``irimsv_parcels_staging`` -> ``parcels``; ``staging_parcels`` -> ``parcels``.
-    Used to line a Path A staging table up with its Path B canonical table.
-    """
-    name = staging_table
-    if name.startswith("irimsv_"):
-        name = name[len("irimsv_"):]
-    if name.endswith("_staging"):
-        name = name[: -len("_staging")]
-    if name.startswith("staging_"):
-        name = name[len("staging_"):]
-    return name
-
-
-def _match_staging_table(path_b_table: str, staging_names: set[str],
-                         by_canonical: dict[str, str]) -> str | None:
-    """The Path A staging table that corresponds to a Path B canonical table.
-
-    Priority: an entity whose staging table normalises to this canonical name
-    (authoritative), then the ``staging_`` / ``irimsv_*_staging`` prefix fallback.
-    """
-    match = by_canonical.get(path_b_table)
-    if match:
-        return match
-    for candidate in (f"staging_{path_b_table}", f"irimsv_{path_b_table}_staging"):
-        if candidate in staging_names:
-            return candidate
-    return None
+def _target_tables(entity: dict) -> list[str]:
+    value = entity.get("lrmis_target_tables")
+    if isinstance(value, str):
+        value = json.loads(value)
+    return value or []
 
 
 def _pipeline():
@@ -93,10 +64,10 @@ def _source_columns(central: PostgresCentralConnector, schema: str) -> dict[str,
     }
 
 
-def _target_columns(staging: MySQLStagingConnector) -> dict[str, list[dict]]:
-    """table -> [{name, data_type, nullable, is_primary_key}] for the staging database."""
+def _target_columns(target: MySQLStagingConnector) -> dict[str, list[dict]]:
+    """table -> [{name, data_type, nullable, is_primary_key}] for the target database."""
     grouped: dict[str, list[dict]] = {}
-    for row in staging.information_schema():
+    for row in target.information_schema():
         r = {k.lower(): v for k, v in row.items()}
         grouped.setdefault(r["table_name"], []).append({
             "name": r["column_name"],
@@ -107,23 +78,20 @@ def _target_columns(staging: MySQLStagingConnector) -> dict[str, list[dict]]:
     return grouped
 
 
-def _columns_for(side: str, central, staging, schema: str, target=None) -> dict[str, list[dict]]:
+def _columns_for(side: str, central, schema: str, target=None) -> dict[str, list[dict]]:
     if side == SOURCE:
         return _source_columns(central, schema)
     if side == TARGET:
-        return _target_columns(staging)
-    if side == PATH_B:
-        # Path B reuses the staging column reader against the lrmis_target DB.
         return _target_columns(target or MySQLStagingConnector.for_target())
     raise ValidationError(f"side must be one of {SIDES}, got {side!r}")
 
 
 def _resolve(side: str, table: str, sort: str | None,
-             central, staging, schema: str, target=None) -> list[dict]:
+             central, schema: str, target=None) -> list[dict]:
     """Allowlist the table and sort column; return the table's column metadata."""
     if side not in SIDES:
         raise ValidationError(f"side must be one of {SIDES}, got {side!r}")
-    tables = _columns_for(side, central, staging, schema, target)
+    tables = _columns_for(side, central, schema, target)
     if table not in tables:
         raise NotFoundError(f"table {table!r} is not browsable on the {side} side")
     columns = tables[table]
@@ -137,31 +105,29 @@ def _resolve(side: str, table: str, sort: str | None,
 # ---------------------------------------------------------------------------
 
 def list_browsable_tables(central: PostgresCentralConnector | None = None,
-                          staging: MySQLStagingConnector | None = None,
                           source_schema: str | None = None,
                           target: MySQLStagingConnector | None = None) -> dict:
-    """All three sides' tables with column and row counts, plus the entity link.
+    """Both sides' tables with column and row counts, plus the entity link.
 
-    ``source`` = IRIMSV, ``target`` = Path A ``lrmis_staging``, ``path_b`` =
-    Path B ``lrmis_target``. Each Path B table is annotated with the staging
-    table it corresponds to, so the UI can offer a staging<->target comparison.
+    ``source`` = IRIMSV, ``target`` = the real ``lrmis_target``. Each target
+    table is annotated with the source entity that delivers into it (if any).
     """
     p = _pipeline()
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
     target = target or MySQLStagingConnector.for_target()
     schema = source_schema or _source_schema()
     try:
         with central.connection() as conn:
             entities = p._query(conn, """
-                SELECT source_table, staging_table, status, target_system
+                SELECT source_table, status, target_system, lrmis_target_tables
                 FROM integration.onboarding_entity
             """)
         by_source = {e["source_table"]: e for e in entities}
-        by_staging = {e["staging_table"]: e for e in entities if e["staging_table"]}
-        staging_names = set(by_staging)
-        by_canonical = {_canonical_name(st): st for st in staging_names}
+        by_target: dict[str, dict] = {}
+        for e in entities:
+            for t in _target_tables(e):
+                by_target.setdefault(t, e)
 
         source_tables = []
         for name, cols in sorted(_source_columns(central, schema).items()):
@@ -171,35 +137,23 @@ def list_browsable_tables(central: PostgresCentralConnector | None = None,
                 "columns": len(cols),
                 "rows": central.count_rows(schema, name),
                 "entity_status": entity["status"] if entity else None,
-                "staging_table": entity["staging_table"] if entity else None,
+                "target_tables": _target_tables(entity) if entity else [],
             })
 
         target_tables = []
-        for name, cols in sorted(_target_columns(staging).items()):
-            entity = by_staging.get(name)
+        for name, cols in sorted(_target_columns(target).items()):
+            entity = by_target.get(name)
             target_tables.append({
                 "table": name,
                 "columns": len(cols),
-                "rows": staging.count_rows(name),
+                "rows": target.count_rows(name),
                 "entity_status": entity["status"] if entity else None,
                 "source_table": entity["source_table"] if entity else None,
             })
 
-        path_b_tables = []
-        for name, cols in sorted(_target_columns(target).items()):
-            staging_table = _match_staging_table(name, staging_names, by_canonical)
-            path_b_tables.append({
-                "table": name,
-                "columns": len(cols),
-                "rows": target.count_rows(name),
-                # The Path A staging table this canonical table can be compared to.
-                "staging_table": staging_table,
-            })
-
         return {
             "source": {"schema": schema, "tables": source_tables},
-            "target": {"database": _staging_database(), "tables": target_tables},
-            "path_b": {"database": _target_database(), "tables": path_b_tables},
+            "target": {"database": _target_database(), "tables": target_tables},
         }
     finally:
         if owns:
@@ -209,18 +163,16 @@ def list_browsable_tables(central: PostgresCentralConnector | None = None,
 def fetch_rows(side: str, table: str, page: int = 1, size: int = DEFAULT_PAGE_SIZE,
                sort: str | None = None, direction: str = "asc",
                central: PostgresCentralConnector | None = None,
-               staging: MySQLStagingConnector | None = None,
                source_schema: str | None = None,
                target: MySQLStagingConnector | None = None) -> dict:
     """One page of rows. Size is clamped, never rejected, so a UI cannot wedge."""
     owns = central is None
     central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
     schema = source_schema or _source_schema()
-    if side == PATH_B and target is None:
+    if side == TARGET and target is None:
         target = MySQLStagingConnector.for_target()
     try:
-        columns = _resolve(side, table, sort, central, staging, schema, target)
+        columns = _resolve(side, table, sort, central, schema, target)
         if direction.lower() not in ("asc", "desc"):
             raise ValidationError(f"direction must be asc or desc, got {direction!r}")
         size = max(1, min(int(size), MAX_PAGE_SIZE))
@@ -230,12 +182,9 @@ def fetch_rows(side: str, table: str, page: int = 1, size: int = DEFAULT_PAGE_SI
         if side == SOURCE:
             total = central.count_rows(schema, table)
             rows = central.fetch_rows(schema, table, size, offset, sort, direction)
-        elif side == PATH_B:
+        else:
             total = target.count_rows(table)
             rows = target.fetch_rows(table, size, offset, sort, direction)
-        else:
-            total = staging.count_rows(table)
-            rows = staging.fetch_rows(table, size, offset, sort, direction)
 
         return {
             "side": side,
@@ -252,86 +201,16 @@ def fetch_rows(side: str, table: str, page: int = 1, size: int = DEFAULT_PAGE_SI
             central.close()
 
 
-def compare_row(entity: str, external_reference: str,
-                central: PostgresCentralConnector | None = None,
-                staging: MySQLStagingConnector | None = None,
-                source_schema: str | None = None) -> dict:
-    """Match one logical record across both sides on its external_reference UUID.
-
-    The source table has no external_reference column, so the source row is
-    located through the outbox event that carries the payload for that UUID.
-    """
-    p = _pipeline()
-    owns = central is None
-    central = central or PostgresCentralConnector()
-    staging = staging or MySQLStagingConnector()
-    schema = source_schema or _source_schema()
-    try:
-        with central.connection() as conn:
-            entities = p._query(conn, """
-                SELECT * FROM integration.onboarding_entity WHERE source_table = %s
-            """, (entity,))
-            if not entities:
-                raise NotFoundError(f"entity {entity!r} not found")
-            row = entities[0]
-            staging_table = row["staging_table"]
-
-            events = p._query(conn, """
-                SELECT payload, status, operation, created_at, processed_at
-                FROM integration.outbox
-                WHERE source_entity = %s AND external_reference = %s
-                ORDER BY created_at DESC LIMIT 1
-            """, (entity, str(external_reference)))
-
-        source_row = events[0]["payload"] if events else None
-        delivery_status = events[0]["status"] if events else None
-
-        target_row = None
-        if staging_table:
-            target_row = staging.fetch_row_by(staging_table, "external_reference",
-                                              str(external_reference))
-
-        fields = []
-        if source_row and target_row:
-            for key in sorted(set(source_row) | set(target_row)):
-                src, tgt = source_row.get(key), target_row.get(key)
-                present = key in source_row and key in target_row
-                fields.append({
-                    "field": key,
-                    "source": src,
-                    "target": tgt,
-                    # Only compare fields carried on both sides; the target adds
-                    # envelope columns the source never had.
-                    "matches": present and str(src) == str(tgt),
-                    "compared": present,
-                })
-
-        return {
-            "entity": entity,
-            "external_reference": str(external_reference),
-            "staging_table": staging_table,
-            "delivery_status": delivery_status,
-            "source_row": source_row,
-            "target_row": target_row,
-            "missing_in_target": target_row is None,
-            "missing_in_source": source_row is None,
-            "fields": fields,
-        }
-    finally:
-        if owns:
-            central.close()
-
-
 def compare_source_target(entity: str, primary_key_value,
                           target_system: str = "LRMIS",
                           central: PostgresCentralConnector | None = None,
                           target: MySQLStagingConnector | None = None) -> dict:
     """Match one source row to the exact rows it produced in the LRMIS target.
 
-    Direct source -> target (Path B) check, keyed on the source row's primary
-    key: derive the same deterministic external_reference the pipeline uses, find
-    every target row the writer recorded in the crosswalk, and compare per mapping
-    — `source_col -> table.column`, source value (after transform) vs the delivered
+    Direct source -> target check, keyed on the source row's primary key: derive
+    the same deterministic external_reference the pipeline uses, find every target
+    row the writer recorded in the crosswalk, and compare per mapping —
+    `source_col -> table.column`, source value (after transform) vs the delivered
     target value. A stale legacy-staging crosswalk row is ignored.
     """
     import json as _json
@@ -421,63 +300,3 @@ def compare_source_target(entity: str, primary_key_value,
     finally:
         if owns:
             central.close()
-
-
-def compare_staging_target(staging_table: str, primary_key_value,
-                           staging: MySQLStagingConnector | None = None,
-                           target: MySQLStagingConnector | None = None,
-                           central: PostgresCentralConnector | None = None) -> dict:
-    """Compare one Path A staging row against its Path B canonical row by PK.
-
-    Both databases share the LRMIS column layout, so the two rows are matched on
-    the canonical primary key and compared field by field. ``central`` is
-    accepted for router symmetry but never opened — this is a pure MySQL read.
-    """
-    staging = staging or MySQLStagingConnector()
-    target = target or MySQLStagingConnector.for_target()
-
-    staging_cols = _target_columns(staging)
-    if staging_table not in staging_cols:
-        raise NotFoundError(f"staging table {staging_table!r} is not browsable")
-
-    path_b_table = _canonical_name(staging_table)
-    target_cols = _target_columns(target)
-    if path_b_table not in target_cols:
-        raise NotFoundError(
-            f"no Path B (lrmis_target) table matches staging table "
-            f"{staging_table!r} (looked for {path_b_table!r})")
-
-    columns = target_cols[path_b_table]
-    pk_col = next((c["name"] for c in columns if c["is_primary_key"]), None)
-    if pk_col is None:
-        pk_col = "id" if any(c["name"] == "id" for c in columns) else columns[0]["name"]
-
-    staging_names = {c["name"] for c in staging_cols[staging_table]}
-    staging_row = (staging.fetch_row_by(staging_table, pk_col, primary_key_value)
-                   if pk_col in staging_names else None)
-    target_row = target.fetch_row_by(path_b_table, pk_col, primary_key_value)
-
-    fields = []
-    if staging_row and target_row:
-        for key in sorted(set(staging_row) | set(target_row)):
-            s_val, t_val = staging_row.get(key), target_row.get(key)
-            present = key in staging_row and key in target_row
-            fields.append({
-                "field": key,
-                "staging": s_val,
-                "target": t_val,
-                "matches": present and str(s_val) == str(t_val),
-                "compared": present,
-            })
-
-    return {
-        "staging_table": staging_table,
-        "path_b_table": path_b_table,
-        "primary_key": pk_col,
-        "primary_key_value": primary_key_value,
-        "staging_row": staging_row,
-        "target_row": target_row,
-        "missing_in_target": target_row is None,
-        "missing_in_staging": staging_row is None,
-        "fields": fields,
-    }

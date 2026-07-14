@@ -1,4 +1,4 @@
-"""Observe LRMIS staging metadata, record drift, and selectively pause mappings."""
+"""Observe the LRMIS target metadata, record drift, and selectively pause mappings."""
 from __future__ import annotations
 
 import argparse
@@ -18,7 +18,7 @@ from src.schema_models import Schema
 def observe(approve_initial: bool = False, approved_by: str | None = None,
             auto_resolve: bool = False) -> dict:
     target = os.environ.get("LRMIS_TARGET_SYSTEM", "LRMIS")
-    mysql = MySQLStagingConnector()
+    mysql = MySQLStagingConnector.for_target()
     central = PostgresCentralConnector()
     observed = from_information_schema(mysql.information_schema(), target)
     fingerprint = schema_fingerprint(observed)

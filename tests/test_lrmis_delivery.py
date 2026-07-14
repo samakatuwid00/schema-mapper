@@ -76,6 +76,39 @@ def test_skips_writer_managed_pk_and_fk_columns():
     assert values == {"masterlist": {"qty": 5}}
 
 
+def test_over_length_string_is_coerced_to_target_column_width():
+    from src.lrmis_registry import LrmisRegistry, parse_ddl
+    reg = LrmisRegistry(parse_ddl(
+        "CREATE TABLE `station_address` (\n"
+        "  `id` int NOT NULL AUTO_INCREMENT,\n"
+        "  `street` varchar(10),\n"
+        "  `note` text,\n"
+        "  PRIMARY KEY (`id`)\n"
+        ") ENGINE=InnoDB;"))
+    values, errors = D.build_values_by_table(
+        {"addr": "0123456789ABCDEF", "long_note": "x" * 500},
+        [mp("addr", "station_address", "street"),       # 16 chars -> varchar(10)
+         mp("long_note", "station_address", "note")],   # TEXT: unbounded, untouched
+        reg)
+    assert errors == []
+    assert values["station_address"]["street"] == "0123456789"   # truncated to varchar(10)
+    assert values["station_address"]["note"] == "x" * 500        # TEXT untouched
+
+
+def test_under_width_string_is_left_intact():
+    from src.lrmis_registry import LrmisRegistry, parse_ddl
+    reg = LrmisRegistry(parse_ddl(
+        "CREATE TABLE `station_address` (\n"
+        "  `id` int NOT NULL AUTO_INCREMENT,\n"
+        "  `street` varchar(75),\n"
+        "  PRIMARY KEY (`id`)\n"
+        ") ENGINE=InnoDB;"))
+    values, errors = D.build_values_by_table(
+        {"addr": "Main St"}, [mp("addr", "station_address", "street")], reg)
+    assert errors == []
+    assert values["station_address"]["street"] == "Main St"
+
+
 # ---------------------------------------------------------------------------
 # resolve_cross_entity_fks
 # ---------------------------------------------------------------------------

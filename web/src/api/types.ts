@@ -23,7 +23,6 @@ export interface OnboardingEntity {
   source_schema: string;
   source_table: string;
   target_system: string;
-  staging_table: string | null;
   status: EntityStatus;
   paused_reason?: string | null;
   deployed_by?: string | null;
@@ -99,7 +98,7 @@ export interface DriftReport {
   breaking: boolean;
   created_at: string;
   resolved_at?: string | null;
-  /** Which database pair this report compares: 'source->staging' | 'staging->target'. */
+  /** Which database pair this report compares: 'source->target'. */
   drift_pair?: string;
 }
 
@@ -126,10 +125,8 @@ export interface SchemaSystem {
 
 export interface SchemasResponse {
   source: SchemaSystem;
-  /** Path A: lrmis_staging contract. */
-  staging: SchemaSystem;
-  /** Path B: lrmis_target canonical contract. */
-  target_b: SchemaSystem;
+  /** lrmis_target canonical contract. */
+  target: SchemaSystem;
 }
 
 // ---- Proposals / mappings ----
@@ -181,13 +178,6 @@ export interface AuditRow {
   performed_at: string;
 }
 
-// ---- Snapshots ----
-
-export interface SnapshotsResponse {
-  table: string;
-  snapshots: string[];
-}
-
 // ---- Jobs ----
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled" | string;
@@ -198,15 +188,12 @@ export type JobType =
   | "propose"
   | "monitor"
   | "worker_run"
-  | "reconcile"
   | "deploy"
   | "backfill"
   | "refresh"
   | "migration_apply"
   | "resolve_drift"
-  | "reset_schemas"
-  | "retire_entity"
-  | "sweep_staging";
+  | "reset_schemas";
 
 export interface JobSummary {
   id: number;
@@ -280,8 +267,8 @@ export interface AdminUser {
 
 // ---- Data browser ----
 
-/** source = IRIMSV, target = Path A lrmis_staging, path_b = Path B lrmis_target. */
-export type DataSide = "source" | "target" | "path_b";
+/** source = IRIMSV, target = the real lrmis_target. */
+export type DataSide = "source" | "target";
 
 /** One column's metadata as returned by the row-page endpoint. */
 export interface DataColumn {
@@ -297,10 +284,11 @@ export interface SourceTableSummary {
   columns: number;
   rows: number;
   entity_status: EntityStatus | null;
-  staging_table: string | null;
+  /** The lrmis_target tables this source table is delivered into. */
+  target_tables: string[];
 }
 
-/** A staging/target-side table in the browser rail. */
+/** A target-side (lrmis_target) table in the browser rail. */
 export interface TargetTableSummary {
   table: string;
   columns: number;
@@ -309,20 +297,9 @@ export interface TargetTableSummary {
   source_table: string | null;
 }
 
-/** A Path B (lrmis_target) canonical table in the browser rail. */
-export interface PathBTableSummary {
-  table: string;
-  columns: number;
-  rows: number;
-  /** The Path A staging table this canonical table can be compared against. */
-  staging_table: string | null;
-}
-
 export interface DataTablesResponse {
   source: { schema: string; tables: SourceTableSummary[] };
   target: { database: string; tables: TargetTableSummary[] };
-  /** Path B lrmis_target. Optional so older API responses stay assignable. */
-  path_b?: { database: string; tables: PathBTableSummary[] };
 }
 
 export type DataRow = Record<string, unknown>;
@@ -346,50 +323,6 @@ export interface DataRowsParams {
   sort?: string;
   direction?: "asc" | "desc";
   sourceSchema?: string;
-}
-
-/** One field of a source↔target row comparison. */
-export interface CompareField {
-  field: string;
-  source: unknown;
-  target: unknown;
-  /** True only when the field is carried on both sides and the values match. */
-  matches: boolean;
-  /** False for envelope-only columns the target adds that the source never had. */
-  compared: boolean;
-}
-
-export interface CompareResponse {
-  entity: string;
-  external_reference: string;
-  staging_table: string | null;
-  delivery_status: string | null;
-  source_row: Record<string, unknown> | null;
-  target_row: Record<string, unknown> | null;
-  missing_in_target: boolean;
-  missing_in_source: boolean;
-  fields: CompareField[];
-}
-
-/** One field of a staging (Path A) <-> target (Path B) row comparison. */
-export interface StagingTargetField {
-  field: string;
-  staging: unknown;
-  target: unknown;
-  matches: boolean;
-  compared: boolean;
-}
-
-export interface StagingTargetCompareResponse {
-  staging_table: string;
-  path_b_table: string;
-  primary_key: string;
-  primary_key_value: unknown;
-  staging_row: Record<string, unknown> | null;
-  target_row: Record<string, unknown> | null;
-  missing_in_target: boolean;
-  missing_in_staging: boolean;
-  fields: StagingTargetField[];
 }
 
 export interface SourceTargetCompareResponse {

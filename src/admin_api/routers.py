@@ -106,7 +106,7 @@ def drift_reports():
 
 @reads_router.get("/schemas")
 def schemas(source_schema: str = "irimsv"):
-    return ops_service.get_schema_trees(central=db.central(), staging=db.staging(),
+    return ops_service.get_schema_trees(central=db.central(),
                                         source_schema=source_schema, target=db.target())
 
 
@@ -135,11 +135,6 @@ def audit_log(limit: int = 200, actor: str | None = None, action: str | None = N
     return list_audit(limit=limit, actor=actor, action=action)
 
 
-@reads_router.get("/snapshots/{table}")
-def snapshots(table: str):
-    return ops_service.staging_snapshots(table, staging=db.staging())
-
-
 @reads_router.get("/views/proposals")
 def view_proposals(status: str | None = None):
     return view_proposer.list_view_proposals(status=status, central=db.central())
@@ -158,8 +153,7 @@ def data_tables(response: Response, source_schema: str | None = None,
                 user: AdminUser = Depends(require_operator)):
     _no_store(response)
     return data_browser_service.list_browsable_tables(
-        central=db.central(), staging=db.staging(), source_schema=source_schema,
-        target=db.target())
+        central=db.central(), source_schema=source_schema, target=db.target())
 
 
 @data_router.get("/rows")
@@ -173,31 +167,7 @@ def data_rows(response: Response, side: str, table: str, page: int = 1,
                  details={"page": page, "size": size, "sort": sort}):
         return data_browser_service.fetch_rows(
             side, table, page=page, size=size, sort=sort, direction=direction,
-            central=db.central(), staging=db.staging(), source_schema=source_schema,
-            target=db.target())
-
-
-@data_router.get("/compare-staging-target")
-def data_compare_staging_target(response: Response, staging_table: str, pk: str,
-                                user: AdminUser = Depends(require_operator)):
-    """Read-only staging (Path A) vs target (Path B) row comparison by primary key."""
-    _no_store(response)
-    with audited(user.username, "data_browse", target_type="path_b",
-                 target_id=staging_table, details={"pk": pk}):
-        return data_browser_service.compare_staging_target(
-            staging_table, pk, staging=db.staging(), target=db.target())
-
-
-@data_router.get("/compare")
-def data_compare(response: Response, entity: str, external_reference: str,
-                 source_schema: str | None = None,
-                 user: AdminUser = Depends(require_operator)):
-    _no_store(response)
-    with audited(user.username, "data_compare", target_type="entity", target_id=entity,
-                 details={"external_reference": external_reference}):
-        return data_browser_service.compare_row(
-            entity, external_reference, central=db.central(), staging=db.staging(),
-            source_schema=source_schema)
+            central=db.central(), source_schema=source_schema, target=db.target())
 
 
 @data_router.get("/compare-source-target")
@@ -293,21 +263,6 @@ def resolve_field(body: ResolveBody, user: AdminUser = Depends(require_operator)
                        target_table=body.target_table, central=db.central())
 
 
-class RestoreSnapshotBody(BaseModel):
-    table: str
-    snapshot: str | None = None
-    reason: str | None = None
-
-
-@actions_router.post("/restore-snapshot")
-def restore_snapshot(body: RestoreSnapshotBody, user: AdminUser = Depends(require_operator)):
-    reason = _require_reason(body.reason)
-    with audited(user.username, "restore_snapshot", target_type="staging_table",
-                 target_id=body.table, reason=reason):
-        return ops_service.restore_staging_snapshot(body.table, body.snapshot,
-                                                    staging=db.staging())
-
-
 class GenerateViewBody(BaseModel):
     entity_id: int
     source_schema: str = "irimsv"
@@ -355,7 +310,7 @@ class JobBody(BaseModel):
 _CONFIRM_MODAL_JOBS = {"deploy", "deploy_lrmis", "bulk_deploy_lrmis", "bulk_propose_lrmis",
                        "backfill", "onboard_bulk"}
 _ONE_CLICK_JOBS = {"schema_scan", "discover", "propose", "monitor",
-                   "worker_run", "reconcile", "replay", "entity_toggle",
+                   "worker_run", "replay", "entity_toggle",
                    "cancel_queue"}
 
 
@@ -409,14 +364,6 @@ def submit_job(body: JobBody, user: AdminUser = Depends(require_operator)):
         _require_reason(body.reason)
         if not params.get("dry_run"):
             _require_typed_confirm(body.confirm, "PATH B")
-    elif job_type == "retire_entity":                # typed-confirmation tier (destructive)
-        _require_reason(body.reason)
-        if not params.get("dry_run"):
-            _require_typed_confirm(body.confirm, f"RETIRE {params.get('entity_id')}")
-    elif job_type == "sweep_staging":                # typed-confirmation tier (destructive)
-        _require_reason(body.reason)
-        if not params.get("dry_run"):
-            _require_typed_confirm(body.confirm, "SWEEP STAGING")
     elif job_type == "nightly_refresh":              # typed-confirmation tier (destructive)
         if not params.get("dry_run"):                # a dry-run mutates nothing
             _require_reason(body.reason)

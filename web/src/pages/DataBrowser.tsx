@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, GitCompareArrows, KeyRound, Search } from "lucide-react";
-import { compareSourceTarget, compareStagingTarget, getDataRows, getDataTables } from "../api/client";
+import { compareSourceTarget, getDataRows, getDataTables } from "../api/client";
 import type {
   DataColumn,
   DataSide,
-  PathBTableSummary,
   SourceTableSummary,
   SourceTargetCompareResponse,
-  StagingTargetCompareResponse,
   TargetTableSummary,
 } from "../api/types";
 import StatusChip from "../components/StatusChip";
@@ -20,15 +18,12 @@ const PAGE_SIZES = [10, 25, 50, 100] as const;
 /** Internal side value -> segmented-control label. */
 const SIDE_LABEL: Record<DataSide, string> = {
   source: "Source DB",
-  target: "Staging DB",
-  path_b: "Target DB",
+  target: "Target DB",
 };
 
 interface Selection {
   side: DataSide;
   table: string;
-  /** The staging table this row set can be compared against (source & path_b sides). */
-  stagingTable: string | null;
 }
 
 /** Render one cell value with the read-only conventions the spec requires. */
@@ -49,7 +44,7 @@ function Cell({ value }: { value: unknown }) {
   return <>{String(value)}</>;
 }
 
-/** A field-by-field comparison table shared by both comparison modals. */
+/** A field-by-field comparison table. */
 function CompareFields({
   fields,
   leftLabel,
@@ -209,73 +204,6 @@ function SourceTargetModal({
   );
 }
 
-/** Staging (Path A) ↔ Target (Path B) comparison of one row (matched by primary key). */
-function StagingTargetModal({
-  stagingTable,
-  pk,
-  onClose,
-}: {
-  stagingTable: string;
-  pk: string;
-  onClose: () => void;
-}) {
-  const { data, isLoading, isError, error, refetch } = useQuery<StagingTargetCompareResponse>({
-    queryKey: ["staging-target-compare", stagingTable, pk],
-    queryFn: () => compareStagingTarget(stagingTable, pk),
-  });
-
-  return (
-    <ModalShell
-      title={<>Staging ↔ Target — <span className="mono">{stagingTable}</span></>}
-      subtitle={
-        <>
-          <span className="dim">{data?.primary_key ?? "primary key"}</span>{" "}
-          <span className="mono">{pk}</span>
-          {data?.path_b_table && (
-            <>
-              <span className="lane-arrow">↔</span>
-              <span className="mono">{data.path_b_table}</span>
-            </>
-          )}
-        </>
-      }
-      onClose={onClose}
-    >
-      {isLoading && <p className="dim">Loading comparison…</p>}
-      {isError && (
-        <div className="alert alert-danger">
-          {errMsg(error)}{" "}
-          <button type="button" className="btn btn-ghost btn-xs" onClick={() => void refetch()}>
-            retry
-          </button>
-        </div>
-      )}
-      {data && (
-        <>
-          {data.missing_in_target && (
-            <div className="alert alert-danger" style={{ marginBottom: 12 }}>
-              No matching row in the Path B target (<span className="mono">{data.path_b_table}</span>).
-            </div>
-          )}
-          {data.missing_in_staging && (
-            <div className="alert alert-info" style={{ marginBottom: 12 }}>
-              No matching row in the staging table for this primary key.
-            </div>
-          )}
-          <CompareFields
-            leftLabel="Staging"
-            rightLabel="Target"
-            fields={data.fields.map((f) => ({
-              field: f.field, left: f.staging, right: f.target,
-              matches: f.matches, compared: f.compared,
-            }))}
-          />
-        </>
-      )}
-    </ModalShell>
-  );
-}
-
 /** One selectable table row in the left rail. */
 function RailRow({
   name,
@@ -319,23 +247,22 @@ export default function DataBrowser() {
   const [direction, setDirection] = useState<"asc" | "desc">("asc");
   const [compareMode, setCompareMode] = useState(false);
   const [stCompare, setStCompare] = useState<{ entity: string; pk: string } | null>(null);
-  const [ptCompare, setPtCompare] = useState<{ stagingTable: string; pk: string } | null>(null);
 
   const tables = useQuery({
     queryKey: ["data-tables", SOURCE_SCHEMA],
     queryFn: () => getDataTables(SOURCE_SCHEMA),
   });
 
-  // Auto-select the first source table (falling back to the first staging table).
+  // Auto-select the first source table (falling back to the first target table).
   useEffect(() => {
     if (selected || !tables.data) return;
     const src = tables.data.source.tables[0];
     if (src) {
-      setSelected({ side: "source", table: src.table, stagingTable: src.staging_table });
+      setSelected({ side: "source", table: src.table });
       return;
     }
     const tgt = tables.data.target.tables[0];
-    if (tgt) setSelected({ side: "target", table: tgt.table, stagingTable: null });
+    if (tgt) setSelected({ side: "target", table: tgt.table });
   }, [tables.data, selected]);
 
   // Reset paging/sort whenever the selected table changes.
@@ -345,7 +272,6 @@ export default function DataBrowser() {
     setDirection("asc");
     setCompareMode(false);
     setStCompare(null);
-    setPtCompare(null);
   }, [selected?.side, selected?.table]);
 
   const rows = useQuery({
@@ -364,13 +290,6 @@ export default function DataBrowser() {
     placeholderData: keepPreviousData,
   });
 
-  const pathBTables = tables.data?.path_b?.tables ?? [];
-  // Staging tables that have a Path B counterpart → staging side can compare to target.
-  const stagingWithPathB = useMemo(
-    () => new Set(pathBTables.map((t) => t.staging_table).filter((s): s is string => Boolean(s))),
-    [pathBTables],
-  );
-
   const filtered = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     const match = <T extends { table: string }>(list: T[]) =>
@@ -378,29 +297,18 @@ export default function DataBrowser() {
     return {
       source: match<SourceTableSummary>(tables.data?.source.tables ?? []),
       target: match<TargetTableSummary>(tables.data?.target.tables ?? []),
-      path_b: match<PathBTableSummary>(pathBTables),
     };
-  }, [tables.data, pathBTables, filter]);
+  }, [tables.data, filter]);
 
   const columns: DataColumn[] = rows.data?.columns ?? [];
   const pkColumn = columns.find((c) => c.is_primary_key)?.name;
 
-  // Comparison availability.
-  const canCompare =
-    selected?.side === "source"
-      ? Boolean(pkColumn) // Source → Target (by source primary key)
-      : selected?.side === "target"
-        ? stagingWithPathB.has(selected.table) // Staging ↔ Target (by PK)
-        : selected?.side === "path_b"
-          ? Boolean(selected.stagingTable) // Target ↔ Staging (by PK)
-          : false;
-  const compareByPk = selected?.side === "target" || selected?.side === "path_b";
-  const compareStagingTableName =
-    selected?.side === "target" ? selected.table : selected?.stagingTable ?? null;
+  // Comparison is offered on the source side only: a source row against the
+  // exact rows it produced in the LRMIS target (matched by primary key).
+  const canCompare = selected?.side === "source" && Boolean(pkColumn);
 
   const hiddenNote = hideViews ? " (view-generated hidden)" : "";
-  const activeList =
-    railSide === "source" ? filtered.source : railSide === "target" ? filtered.target : filtered.path_b;
+  const activeList = railSide === "source" ? filtered.source : filtered.target;
   const visibleTables = activeList.filter((t) => {
     if (!hideViews) return true;
     return !t.table.includes("_for_lrmis");
@@ -409,9 +317,7 @@ export default function DataBrowser() {
   const railHeader =
     railSide === "source"
       ? `Source (${tables.data?.source.schema ?? SOURCE_SCHEMA})`
-      : railSide === "target"
-        ? `Staging (${tables.data?.target.database ?? "lrmis_staging"})`
-        : `Target (${tables.data?.path_b?.database ?? "lrmis_target"})`;
+      : `Target (${tables.data?.target.database ?? "lrmis_target"})`;
 
   const onSort = (col: string) => {
     if (sort === col) {
@@ -423,27 +329,15 @@ export default function DataBrowser() {
     setPage(1);
   };
 
-  const selectFromRail = (t: SourceTableSummary | TargetTableSummary | PathBTableSummary) => {
-    if (railSide === "source") {
-      const s = t as SourceTableSummary;
-      setSelected({ side: "source", table: s.table, stagingTable: s.staging_table });
-    } else if (railSide === "target") {
-      setSelected({ side: "target", table: t.table, stagingTable: null });
-    } else {
-      const b = t as PathBTableSummary;
-      setSelected({ side: "path_b", table: b.table, stagingTable: b.staging_table });
-    }
+  const selectFromRail = (t: SourceTableSummary | TargetTableSummary) => {
+    setSelected({ side: railSide, table: t.table });
   };
 
   const startRowCompare = (row: Record<string, unknown>) => {
-    if (!pkColumn) return;
+    if (!pkColumn || selected?.side !== "source") return;
     const pkVal = row[pkColumn];
     if (pkVal === null || pkVal === undefined) return;
-    if (selected?.side === "source") {
-      setStCompare({ entity: selected.table, pk: String(pkVal) });
-    } else if (compareByPk && compareStagingTableName) {
-      setPtCompare({ stagingTable: compareStagingTableName, pk: String(pkVal) });
-    }
+    setStCompare({ entity: selected.table, pk: String(pkVal) });
   };
 
   const rowCompareEnabled = (row: Record<string, unknown>): boolean => {
@@ -488,7 +382,7 @@ export default function DataBrowser() {
               onChange={(e) => setRailSide(e.target.value as DataSide)}
               aria-label="Database to browse"
             >
-              {(["source", "target", "path_b"] as DataSide[]).map((s) => (
+              {(["source", "target"] as DataSide[]).map((s) => (
                 <option key={s} value={s}>
                   {SIDE_LABEL[s]}
                 </option>
@@ -554,11 +448,7 @@ export default function DataBrowser() {
                     type="button"
                     className={`btn btn-sm${compareMode ? " btn-primary" : ""}`}
                     onClick={() => setCompareMode((v) => !v)}
-                    title={
-                      selected?.side === "source"
-                        ? "Compare a source row against the rows it produced in the LRMIS target"
-                        : "Compare a staging row against its Path B target row by primary key"
-                    }
+                    title="Compare a source row against the rows it produced in the LRMIS target"
                   >
                     <GitCompareArrows size={13} strokeWidth={2} aria-hidden="true" />{" "}
                     {compareMode ? "Comparing" : "Compare"}
@@ -641,9 +531,7 @@ export default function DataBrowser() {
                                   title={
                                     !enabled
                                       ? "No primary key on this row"
-                                      : selected?.side === "source"
-                                        ? "Compare this source row against its LRMIS target rows"
-                                        : "Compare this row against its Path B target"
+                                      : "Compare this source row against its LRMIS target rows"
                                   }
                                   onClick={() => enabled && startRowCompare(row)}
                                 >
@@ -729,13 +617,6 @@ export default function DataBrowser() {
           entity={stCompare.entity}
           pk={stCompare.pk}
           onClose={() => setStCompare(null)}
-        />
-      )}
-      {ptCompare !== null && (
-        <StagingTargetModal
-          stagingTable={ptCompare.stagingTable}
-          pk={ptCompare.pk}
-          onClose={() => setPtCompare(null)}
         />
       )}
     </div>

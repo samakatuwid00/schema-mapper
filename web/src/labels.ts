@@ -20,11 +20,10 @@ export const LABELS: Record<string, string> = {
   quarantine: "Blocked rows",
   dead_letter: "Failed rows",
   drift: "Schema change detected",
-  refresh: "Rebuild staging table",
+  refresh: "Rebuild target data",
   fingerprint: "Schema version",
   onboard_bulk: "Onboard tables",
   worker: "Delivery worker",
-  reconcile: "Compare source vs target",
   replay: "Retry row",
 };
 
@@ -59,15 +58,13 @@ export const DESCRIPTIONS: Record<string, string> = {
   drift:
     "The source schema changed since the last check, so a mapping may need updating.",
   refresh:
-    "Rebuilds the staging table so it matches the current source schema.",
+    "Re-delivers an entity's rows into the target so it matches the current source data.",
   fingerprint:
     "A short signature of a schema's shape, used to detect when it changes.",
   onboard_bulk:
     "Sets up several tables for syncing in one pass instead of one at a time.",
   worker:
     "The background process that delivers queued rows to the target database.",
-  reconcile:
-    "Compares source and target row counts to confirm they are in agreement.",
   replay:
     "Sends a single failed or blocked row through delivery again.",
 };

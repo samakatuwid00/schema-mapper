@@ -8,7 +8,6 @@ Usage:
     python -m src.pipeline resolve --proposal ID --source-column X --target-column Y [--transform Z]
     python -m src.pipeline deploy --proposal ID --by ADMIN
     python -m src.pipeline backfill --entity E
-    python -m src.pipeline reconcile --entity E
     python -m src.pipeline monitor
     python -m src.pipeline onboard --source-schema S --source-table T --target-system T
 """
@@ -28,11 +27,11 @@ from typing import Optional
 import psycopg2
 import psycopg2.extras
 
-from .connectors import PostgresCentralConnector, MySQLStagingConnector, VIEWS_DATABASE
+from .connectors import PostgresCentralConnector
 from .schema_models import Schema, Table, Column
-from .schema_ingest import parse_ddl, from_information_schema, schema_fingerprint, table_schema
+from .schema_ingest import parse_ddl, schema_fingerprint, table_schema
 from .mapping_engine import propose_mapping, FieldMapping, mapping_to_dicts
-from .transform_engine import transform_row, _ENVELOPE_FIELDS
+from .transform_engine import _ENVELOPE_FIELDS
 
 log = logging.getLogger(__name__)
 
@@ -131,171 +130,6 @@ def _discover_source_schema(conn, source_schema: str) -> Schema:
         system_name=source_schema,
         tables=[Table(name=n, columns=cols) for n, cols in sorted(grouped.items())],
     )
-
-
-def _detect_collation(staging: MySQLStagingConnector, database: str) -> str:
-    """Query target MySQL for default collation."""
-    try:
-        with staging.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = %s",
-                    (database,),
-                )
-                row = cur.fetchone()
-                return row[0] if row else "utf8mb4_unicode_ci"
-    except Exception:
-        return "utf8mb4_unicode_ci"
-
-
-def _infer_column_type(target_schema: Schema, target_table: str, target_column: str) -> str:
-    """Map target column type to MySQL DDL type."""
-    TYPE_MAP = {
-        "string": "VARCHAR(255)",
-        "text": "TEXT",
-        "integer": "INT",
-        "float": "DECIMAL(18,2)",
-        "boolean": "TINYINT(1)",
-        "date": "DATE",
-        "datetime": "DATETIME(6)",
-        "uuid": "CHAR(36)",
-        "json": "JSON",
-    }
-    table = target_schema.get_table(target_table)
-    if table:
-        col = table.get_column(target_column)
-        if col:
-            return TYPE_MAP.get(col.data_type, "VARCHAR(255)")
-    return "VARCHAR(255)"
-
-
-def _detect_cross_table_candidates(
-    conn,
-    source_schema: str,
-    source_table: str,
-    rejected_columns: list[str],
-    target_system: str,
-) -> list[dict]:
-    """
-    For each rejected source column, check if it appears in ANY other target table.
-    Returns list of cross-table candidates with confidence scores.
-    """
-    if not rejected_columns:
-        return []
-
-    target_schema = _discover_target_schema(conn, target_system)
-    if not target_schema:
-        return []
-
-    candidates = []
-    for col_name in rejected_columns:
-        for table in target_schema.tables:
-            for tcol in table.columns:
-                if tcol.name.lower() == col_name.lower():
-                    candidates.append({
-                        "source_schema": source_schema,
-                        "source_table": source_table,
-                        "source_column": col_name,
-                        "target_system": target_system,
-                        "target_table": table.name,
-                        "target_column": tcol.name,
-                        "confidence": 0.5,
-                    })
-
-    return candidates
-
-
-def _run_worker_batch(
-    central: PostgresCentralConnector,
-    staging: MySQLStagingConnector,
-    source_table: str,
-    batch_size: int = 100,
-) -> tuple[int, int, int, bool]:
-    """
-    Process ONE batch of outbox events.
-    Returns: (delivered, failed, quarantined, has_more)
-    """
-    from .integration_store import (
-        approved_mapping, claim_events, delivered as mark_delivered,
-        quarantine, retry_or_dead_letter, save_projection,
-    )
-
-    TARGET_SYSTEM = os.environ.get("LRMIS_TARGET_SYSTEM", "LRMIS")
-    MAX_ATTEMPTS = int(os.environ.get("SYNC_MAX_ATTEMPTS", "8"))
-
-    delivered_count = 0
-    failed_count = 0
-    quarantined_count = 0
-
-    with central.connection() as conn:
-        events = claim_events(conn, TARGET_SYSTEM, batch_size)
-        has_more = len(events) == batch_size
-
-        for event in events:
-            mapping = approved_mapping(conn, event["source_entity"], event["target_system"])
-            if not mapping:
-                quarantine(conn, event, ["no approved mapping for entity"], None)
-                quarantined_count += 1
-                continue
-
-            mappings = mapping["mappings"]
-            if isinstance(mappings, str):
-                mappings = json.loads(mappings)
-
-            target_schema = _target_schema(conn, mapping["schema_fingerprint"])
-            if not target_schema:
-                quarantine(conn, event, ["mapping schema version is not approved"], mapping["id"])
-                quarantined_count += 1
-                continue
-
-            transformed, errors = transform_row(
-                event["payload"], {"mappings": mappings}, target_schema
-            )
-            if errors:
-                quarantine(conn, event, errors, mapping["id"])
-                quarantined_count += 1
-                continue
-
-            outbound = _outbound_row(event, mapping, transformed)
-            save_projection(conn, event, mapping, outbound)
-            try:
-                staging.upsert(mapping["target_table"], outbound)
-                mark_delivered(conn, event, mapping)
-                delivered_count += 1
-            except Exception as exc:
-                retry_or_dead_letter(conn, event, exc, MAX_ATTEMPTS)
-                failed_count += 1
-
-        conn.commit()
-
-    return delivered_count, failed_count, quarantined_count, has_more
-
-
-def _target_schema(conn, fingerprint: str) -> Schema | None:
-    """Get target schema from schema_version table."""
-    row = _fetchval(conn, """
-        SELECT schema_document FROM integration.schema_version
-        WHERE target_system = %s AND fingerprint = %s AND approved_at IS NOT NULL
-        ORDER BY CASE scope_kind WHEN 'entity_staging' THEN 0 ELSE 1 END
-        LIMIT 1
-    """, (os.environ.get("LRMIS_TARGET_SYSTEM", "LRMIS"), fingerprint))
-    return Schema.from_dict(row) if row else None
-
-
-def _outbound_row(event: dict, mapping: dict, transformed: dict) -> dict:
-    """Build outbound row for MySQL staging."""
-    active = event["operation"] != "deactivate"
-    transformed.setdefault("active", active)
-    return {
-        "event_id": str(event["event_id"]),
-        "external_reference": str(event["external_reference"]),
-        "source_system": event["source_system"],
-        "operation": event["operation"],
-        "source_updated_at": event["source_updated_at"].astimezone(timezone.utc).replace(tzinfo=None),
-        "mapping_version": mapping["version"],
-        "payload_checksum": event["payload_checksum"],
-        **transformed,
-    }
 
 
 def _discover_target_schema(conn, target_system: str, target_schema_fingerprint: str = None) -> Schema | None:
@@ -475,7 +309,6 @@ def cmd_discover(args):
 def cmd_propose(args):
     """Propose mappings using Gemini AI."""
     central = PostgresCentralConnector()
-    staging = MySQLStagingConnector()
 
     with central.connection() as conn:
         # Get entity
@@ -723,168 +556,26 @@ def cmd_resolve(args):
 
 
 def cmd_deploy(args):
-    """Deploy a proposal: create staging table, trigger, and enable entity."""
+    """Deploy a proposal to the real LRMIS target (direct, multi-table).
+
+    The legacy single-table staging deploy is retired (retire-legacy-staging §2.3);
+    this validates the multi-table LRMIS mapping and sets the entity's target
+    footprint — no staging table."""
     from .services.common import ServiceError
-    from .services.onboarding import deploy as deploy_service
+    from .services.lrmis_onboarding import deploy_to_lrmis
 
     try:
-        result = deploy_service(args.proposal, args.by)
+        result = deploy_to_lrmis(args.proposal, args.by)
     except ServiceError as exc:
         print(f"Error: {exc}")
         sys.exit(1)
 
     print(json.dumps(result, indent=2, default=str))
     print(f"\nDeployment complete!")
-    print(f"  Staging table: {result['staging_table']}")
-    print(f"  Trigger: integration.{result['trigger']}")
-    if result.get("snapshot"):
-        print(f"  Pre-drop snapshot: {result['snapshot']}")
+    print(f"  Target tables: {result['target_tables']}")
     print(f"\nNext steps:")
     print(f"  python -m src.pipeline backfill --entity <source_table>")
     print(f"  python -m src.worker")
-
-
-def _create_staging_table(staging: MySQLStagingConnector, table_name: str,
-                          mappings: list[dict], pk_columns: list[str]):
-    """Create the MySQL staging table with proper schema."""
-    # Route view-generated tables to the views database
-    if "_for_lrmis" in table_name:
-        qt = f"`{VIEWS_DATABASE}`.`{table_name}`"
-    else:
-        qt = f"`{table_name}`"
-
-    # Build column definitions from mappings
-    columns = [
-        "`event_id` CHAR(36) NOT NULL",
-        "`external_reference` CHAR(36) NOT NULL",
-        "`source_system` VARCHAR(40) NOT NULL",
-        "`operation` VARCHAR(20) NOT NULL",
-        "`source_updated_at` DATETIME(6) NOT NULL",
-        "`mapping_version` INT NOT NULL",
-        "`payload_checksum` CHAR(64) NOT NULL",
-    ]
-
-    # Track which columns we've already added (envelope fields)
-    envelope_fields = {"event_id", "external_reference", "source_system", "operation",
-                       "source_updated_at", "mapping_version", "payload_checksum", "active", "accepted_at"}
-
-    # Add mapped business columns (skip envelope fields)
-    for m in mappings:
-        col_name = m["target_column"]
-        if col_name in envelope_fields:
-            continue  # Skip - already defined as envelope field
-        # Default type - in production, derive from target contract
-        col_type = "VARCHAR(255)"
-        nullable = "NULL"
-        columns.append(f"`{col_name}` {col_type} {nullable}")
-        envelope_fields.add(col_name)  # Track to avoid duplicates
-
-    columns.append("`active` TINYINT(1) NOT NULL DEFAULT 1")
-    columns.append("`accepted_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)")
-
-    # Drop table if exists (for redeployment)
-    with staging.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(f"DROP TABLE IF EXISTS {qt}")
-        conn.commit()
-
-    create_sql = f"CREATE TABLE {qt} (\n"
-    create_sql += ",\n".join(f"  {c}" for c in columns)
-    create_sql += f",\n  PRIMARY KEY (`event_id`)"
-    create_sql += f",\n  UNIQUE KEY `uk_external_reference` (`external_reference`)"
-    create_sql += "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-
-    with staging.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(create_sql)
-        conn.commit()
-    print(f"  Created table: {table_name}")
-
-
-def _is_view(conn, schema: str, table: str) -> bool:
-    row = _query(conn, """
-        SELECT table_type FROM information_schema.tables
-        WHERE table_schema = %s AND table_name = %s
-    """, (schema, table))
-    return bool(row) and row[0]["table_type"] == "VIEW"
-
-
-def _create_source_trigger(conn, source_schema: str, source_table: str,
-                           pk_columns: list[str], updated_at_column: str | None):
-    """Create or replace a reusable PostgreSQL trigger function and trigger.
-    Skips trigger creation if the source is a view (views cannot have row-level triggers).
-    """
-    if _is_view(conn, source_schema, source_table):
-        log.info("Skipping trigger for view %s.%s — use backfill/refresh for sync", source_schema, source_table)
-        return
-
-    # Create the reusable trigger function (if not exists)
-    trigger_func_sql = """
-        CREATE OR REPLACE FUNCTION integration.enqueue_entity_change() RETURNS trigger AS $func$
-        DECLARE
-            record_json JSONB;
-            record_ref UUID;
-            op integration.event_operation;
-            pk_values TEXT := '';
-            src_schema TEXT;
-            src_table TEXT;
-        BEGIN
-            src_schema := TG_ARGV[0];
-            src_table := TG_ARGV[1];
-
-            IF TG_OP = 'DELETE' THEN
-                record_json := to_jsonb(OLD);
-            ELSE
-                record_json := to_jsonb(NEW);
-            END IF;
-
-            -- Build PK values from trigger arguments (skip first two which are schema/table)
-            FOR i IN 2..array_length(TG_ARGV, 1) LOOP
-                IF i > 2 THEN pk_values := pk_values || '|'; END IF;
-                pk_values := pk_values || COALESCE(record_json ->> TG_ARGV[i], '');
-            END LOOP;
-
-            -- Generate deterministic external reference using uuid_generate_v5
-            record_ref := uuid_generate_v5(
-                '12345678-1234-5678-1234-567812345678'::uuid,
-                src_schema || '|' || src_table || '|' || pk_values
-            );
-
-            op := CASE WHEN TG_OP = 'DELETE' THEN 'deactivate'::integration.event_operation
-                       WHEN TG_OP = 'INSERT' THEN 'insert'::integration.event_operation
-                       ELSE 'update'::integration.event_operation END;
-
-            IF TG_OP = 'DELETE' THEN
-                record_json := record_json || jsonb_build_object('active', false, 'deactivated_at', now());
-            END IF;
-
-            INSERT INTO integration.outbox
-                (source_entity, external_reference, operation, payload, payload_checksum, source_updated_at)
-            VALUES
-                (src_table, record_ref, op, record_json,
-                 encode(digest(record_json::text, 'sha256'), 'hex'), now());
-
-            RETURN COALESCE(NEW, OLD);
-        END;
-        $func$ LANGUAGE plpgsql;
-    """
-    _execute(conn, trigger_func_sql)
-
-    # Drop existing trigger if any
-    _execute(conn, f"""
-        DROP TRIGGER IF EXISTS trg_{source_schema}_{source_table}_outbox ON {source_schema}.{source_table}
-    """)
-
-    # Create trigger with arguments
-    pk_args = ", ".join(f"'{col}'" for col in pk_columns)
-    trigger_args = f"'{source_schema}', '{source_table}', {pk_args}"
-
-    _execute(conn, f"""
-        CREATE TRIGGER trg_{source_schema}_{source_table}_outbox
-        AFTER INSERT OR UPDATE OR DELETE ON {source_schema}.{source_table}
-        FOR EACH ROW EXECUTE FUNCTION integration.enqueue_entity_change({trigger_args})
-    """)
-    print(f"  Created trigger: trg_{source_schema}_{source_table}_outbox")
 
 
 def cmd_backfill(args):
@@ -978,77 +669,9 @@ def cmd_backfill(args):
     central.close()
 
 
-def cmd_reconcile(args):
-    """Reconcile external references and payload checksums between central and staging."""
-    central = PostgresCentralConnector()
-    staging = MySQLStagingConnector()
-
-    with central.connection() as conn:
-        # Get entity
-        entities = _query(conn, """
-            SELECT * FROM integration.onboarding_entity
-            WHERE source_table = %s AND status = 'deployed'
-        """, (args.entity,))
-        if not entities:
-            print(f"Error: Entity '{args.entity}' not found or not deployed.")
-            sys.exit(1)
-        entity = entities[0]
-
-        staging_table = entity["staging_table"]
-        source_table = entity["source_table"]
-
-        # Get delivered events from central
-        delivered = _query(conn, """
-            SELECT external_reference, payload_checksum
-            FROM integration.outbox
-            WHERE source_entity = %s AND status = 'delivered'
-        """, (source_table,))
-
-        # Get staging records
-        with staging.connection() as sconn:
-            with sconn.cursor(dictionary=True) as cur:
-                cur.execute(f"SELECT external_reference, payload_checksum FROM `{staging_table}`")
-                staging_rows = cur.fetchall()
-
-        # Compare
-        central_refs = {row["external_reference"]: row["payload_checksum"] for row in delivered}
-        staging_refs = {row["external_reference"]: row["payload_checksum"] for row in staging_rows}
-
-        missing_in_staging = set(central_refs.keys()) - set(staging_refs.keys())
-        missing_in_central = set(staging_refs.keys()) - set(central_refs.keys())
-        checksum_mismatches = {
-            ref for ref in set(central_refs.keys()) & set(staging_refs.keys())
-            if central_refs[ref] != staging_refs[ref]
-        }
-
-        print(f"\nReconciliation: {source_table} -> {staging_table}")
-        print("=" * 60)
-        print(f"Central delivered: {len(delivered)}")
-        print(f"Staging rows: {len(staging_rows)}")
-        print(f"Missing in staging: {len(missing_in_staging)}")
-        print(f"Missing in central: {len(missing_in_central)}")
-        print(f"Checksum mismatches: {len(checksum_mismatches)}")
-
-        if missing_in_staging:
-            print(f"\nMissing in staging (first 5):")
-            for ref in list(missing_in_staging)[:5]:
-                print(f"  - {ref}")
-
-        if checksum_mismatches:
-            print(f"\nChecksum mismatches (first 5):")
-            for ref in list(checksum_mismatches)[:5]:
-                print(f"  - {ref}")
-
-        status = "OK" if not missing_in_staging and not checksum_mismatches else "MISMATCH"
-        print(f"\nStatus: {status}")
-
-    central.close()
-
-
 def cmd_monitor(args):
     """Monitor source and target schema drift."""
     central = PostgresCentralConnector()
-    staging = MySQLStagingConnector()
 
     with central.connection() as conn:
         # Get all deployed entities
@@ -1141,7 +764,7 @@ def cmd_status(args):
 
 
 def cmd_refresh(args):
-    """Refresh staging tables by dropping and recreating with fresh data."""
+    """Re-deliver entities into the LRMIS target from the current source rows."""
     from .services.ops import get_status, refresh as refresh_service
     from .terminal_ui import print_header, print_onboarding_status
 
@@ -1162,343 +785,6 @@ def cmd_refresh(args):
 
     status = get_status()
     print_onboarding_status(status["entities"], status["outbox_stats"])
-
-
-# ---------------------------------------------------------------------------
-# Onboard command (end-to-end)
-# ---------------------------------------------------------------------------
-
-def _onboard_single_table(
-    conn,
-    central: PostgresCentralConnector,
-    staging: MySQLStagingConnector,
-    source_schema: str,
-    source_table: str,
-    target_system: str,
-    auto: bool,
-    batch_size: int,
-    operator: str,
-) -> dict:
-    """Onboard a single table end-to-end. Returns result dict."""
-    from .terminal_ui import (
-        console, print_header, print_field_mapping_table,
-        prompt_yes_no, prompt_text, print_progress,
-        print_deployment_summary, print_cross_table_candidates,
-    )
-
-    result = {
-        "source_schema": source_schema,
-        "source_table": source_table,
-        "status": "pending",
-        "mappings_accepted": 0,
-        "cross_table": 0,
-        "source_count": 0,
-        "backfill_count": 0,
-        "worker_delivered": 0,
-    }
-
-    print_header(f"Onboarding: {source_schema}.{source_table}")
-
-    # Step 1: Discover
-    log.info("Step 1/6: Discovering source schema...")
-    source_schema_obj = _discover_source_schema(conn, source_schema)
-    source_table_obj = source_schema_obj.get_table(source_table)
-    if not source_table_obj:
-        log.error("Table %s.%s not found", source_schema, source_table)
-        return result
-
-    target_schema = _discover_target_schema(conn, target_system)
-    pk_cols = [c.name for c in source_table_obj.columns if c.is_primary_key]
-    if not pk_cols:
-        pk_cols = ["id"]
-    updated_at_col = None
-    for c in source_table_obj.columns:
-        if c.name.lower() in ("updated_at", "modified_at", "last_updated", "timestamp", "updated_at"):
-            updated_at_col = c.name
-            break
-
-    candidates = _rank_target_tables(source_table_obj, target_schema) if target_schema else []
-    log.info("Source: %s.%s (%d columns)", source_schema, source_table, len(source_table_obj.columns))
-    if candidates:
-        log.info("Best target match: %s (score: %.2f)", candidates[0]["table"], candidates[0]["score"])
-
-    entity = _get_or_create_entity(conn, source_schema, source_table, target_system, pk_cols, updated_at_col)
-
-    # Check if already deployed
-    if entity.get("status") == "deployed":
-        log.info("Table %s.%s is already deployed (staging: %s). Skipping.", source_schema, source_table, entity.get("staging_table"))
-        return {
-            "source_schema": source_schema,
-            "source_table": source_table,
-            "status": "already_deployed",
-            "mappings_accepted": 0,
-            "cross_table": 0,
-            "source_count": 0,
-            "backfill_count": 0,
-            "worker_delivered": 0,
-        }
-
-    # Step 2: Propose
-    log.info("Step 2/6: Calling Gemini AI for mapping proposal...")
-    source_fp = schema_fingerprint(source_schema_obj)
-    target_fp = schema_fingerprint(target_schema) if target_schema else ""
-
-    try:
-        mappings_raw = propose_mapping(source_table_obj, target_schema)
-        gemini_response = {"mappings": mapping_to_dicts(mappings_raw)}
-    except Exception as e:
-        log.error("Gemini error: %s", e)
-        mappings_raw = []
-        gemini_response = None
-
-    mappings = mapping_to_dicts(mappings_raw) if mappings_raw else []
-
-    # Step 3: Interactive review
-    log.info("Step 3/6: Reviewing field mappings...")
-    accepted = []
-    rejected = []
-    pending = []
-
-    for m in mappings:
-        confidence = m.get("confidence", 0.0)
-        target_col = m.get("target_column")
-        if confidence >= CONFIDENCE_THRESHOLD:
-            m["status"] = "accepted"
-            accepted.append(m)
-        elif confidence == 0.0 or target_col is None or target_col == "?":
-            m["status"] = "rejected"
-            rejected.append(m)
-        else:
-            m["status"] = "pending"
-            pending.append(m)
-
-    if not auto:
-        print_field_mapping_table(mappings)
-
-    if not auto:
-        if prompt_yes_no("\nAccept all high-confidence (>=0.95) mappings?", default=True):
-            for m in pending:
-                m["status"] = "accepted"
-                accepted.append(m)
-            pending = []
-        else:
-            still_pending = []
-            for i, m in enumerate(pending):
-                if prompt_yes_no(
-                    f"  {m['source_column']} -> {m.get('target_column', '?')} ({m['confidence']:.2f})?",
-                    default=True,
-                ):
-                    m["status"] = "accepted"
-                    accepted.append(m)
-                else:
-                    custom = prompt_text(
-                        f"  Enter custom target column (or press Enter to skip):", default=""
-                    )
-                    if custom:
-                        m["target_column"] = custom
-                        m["status"] = "accepted"
-                        accepted.append(m)
-                    else:
-                        still_pending.append(m)
-            pending = still_pending
-
-    # Save proposal
-    proposal_id = _create_proposal(
-        conn, entity["id"], source_fp, target_fp,
-        mappings, [], [], gemini_response,
-        len(accepted), len(pending), len(rejected),
-    )
-
-    # Update accepted/rejected statuses
-    for m in accepted:
-        _execute(conn, """
-            UPDATE integration.onboarding_field_review
-            SET status = 'accepted'
-            WHERE proposal_id = %s AND source_column = %s
-        """, (proposal_id, m["source_column"]))
-
-    for m in rejected:
-        _execute(conn, """
-            UPDATE integration.onboarding_field_review
-            SET status = 'rejected'
-            WHERE proposal_id = %s AND source_column = %s
-        """, (proposal_id, m["source_column"]))
-
-    # Mark proposal as approved
-    _execute(conn, """
-        UPDATE integration.onboarding_proposal
-        SET status = 'approved', reviewed_by = %s, reviewed_at = now(), updated_at = now()
-        WHERE id = %s
-    """, (operator, proposal_id))
-    conn.commit()
-
-    result["mappings_accepted"] = len(accepted)
-
-    # Step 4: Deploy
-    log.info("Step 4/6: Deploying staging table and trigger...")
-    staging_table = f"irimsv_{source_table}_staging"
-
-    # Build accepted mappings for deploy
-    deploy_mappings = []
-    for m in accepted:
-        target_col = m.get("target_column")
-        transform = m.get("transform", "none")
-        deploy_mappings.append({
-            "source_column": m["source_column"],
-            "target_table": staging_table,
-            "target_column": target_col,
-            "confidence": m["confidence"],
-            "transform": transform,
-        })
-
-    if not auto:
-        collation = _detect_collation(staging, "lrmis_staging")
-        col_types = []
-        for dm in deploy_mappings:
-            col_type = _infer_column_type(target_schema, staging_table, dm["target_column"])
-            col_types.append({"name": dm["target_column"], "type": col_type})
-        print_deployment_summary(
-            f"{source_schema}.{source_table}", staging_table, col_types, collation
-        )
-        if not prompt_yes_no("Deploy staging table + trigger?", default=True):
-            log.info("Deployment cancelled by user")
-            return result
-
-    # Create staging table
-    _create_staging_table(staging, staging_table, deploy_mappings, pk_cols)
-
-    # Create trigger
-    _create_source_trigger(conn, source_schema, source_table, pk_cols, updated_at_col)
-
-    # Save schema version
-    is_view_table = "_for_lrmis" in staging_table
-    staging_schema_name = VIEWS_DATABASE if is_view_table else "lrmis_staging"
-    staging_rows = staging.information_schema(staging_schema_name)
-    staging_schema = from_information_schema(staging_rows, "LRMIS")
-    staging_tables = [t for t in staging_schema.tables if t.name == staging_table]
-    if staging_tables:
-        staging_fp = schema_fingerprint(Schema(system_name="LRMIS", tables=staging_tables))
-        staging_doc = Schema(system_name="LRMIS", tables=staging_tables).to_dict()
-        _execute(conn, """
-            INSERT INTO integration.schema_version
-                (target_system, scope_kind, scope_name, fingerprint,
-                 schema_document, approved_at, approved_by)
-            VALUES (%s, 'entity_staging', %s, %s, %s, now(), %s)
-            ON CONFLICT (target_system, scope_kind, scope_name, fingerprint)
-            DO UPDATE SET schema_document = EXCLUDED.schema_document, approved_at = now()
-        """, (target_system, staging_table, staging_fp, json.dumps(staging_doc), operator))
-
-    # Update entity status
-    _execute(conn, """
-        UPDATE integration.onboarding_entity
-        SET status = 'deployed', staging_table = %s, target_fingerprint = %s,
-            fingerprint_scope_version = 2, deployed_by = %s,
-            deployed_at = now(), updated_at = now()
-        WHERE id = %s
-    """, (staging_table, staging_fp, operator, entity["id"]))
-
-    # Create entity_control
-    _execute(conn, """
-        INSERT INTO integration.entity_control (source_entity, target_system, enabled)
-        VALUES (%s, %s, true)
-        ON CONFLICT (source_entity, target_system) DO UPDATE SET enabled = true, paused_reason = NULL
-    """, (source_table, target_system))
-
-    # Audit
-    _execute(conn, """
-        INSERT INTO integration.onboarding_audit (entity_id, proposal_id, action, details, performed_by)
-        VALUES (%s, %s, 'deploy', %s, %s)
-    """, (entity["id"], proposal_id, json.dumps({"staging_table": staging_table}), operator))
-
-    conn.commit()
-    log.info("Staging table created: %s", staging_table)
-
-    # Step 5: Fast Backfill (drop + recreate + bulk load)
-    log.info("Step 5/6: Fast backfill...")
-    from .fast_refresh import generate_refresh_sql, fetch_and_bulk_insert, drop_staging_table
-
-    # Drop and recreate staging table for fresh data
-    drop_staging_table(staging, staging_table)
-    _create_staging_table(staging, staging_table, deploy_mappings, pk_cols)
-
-    # Generate SQL and bulk insert
-    sql = generate_refresh_sql(
-        source_schema, source_table, staging_table,
-        mappings, operator.upper(), pk_cols,
-        updated_at_column=updated_at_col,
-    )
-    log.debug("Generated SQL:\n%s", sql)
-
-    # Build column list for MySQL insert (must match SELECT order from generate_refresh_sql)
-    columns = [
-        "event_id", "external_reference", "source_system", "operation",
-        "source_updated_at", "mapping_version", "payload_checksum",
-        "active", "accepted_at",
-    ]
-    envelope_fields = set(columns)
-    for m in mappings:
-        target_col = m.get("target_column")
-        if target_col and target_col not in envelope_fields:
-            columns.append(target_col)
-            envelope_fields.add(target_col)
-
-    count = fetch_and_bulk_insert(conn, staging, sql, staging_table, columns, batch_size)
-    result["source_count"] = count
-    result["backfill_count"] = count
-    log.info("Loaded %d rows into %s", count, staging_table)
-
-    if not auto:
-        log.info("Backfill complete: %d rows loaded", count)
-
-    # Cross-table candidates
-    rejected_columns = [m["source_column"] for m in rejected]
-    cross_candidates = _detect_cross_table_candidates(
-        conn, source_schema, source_table, rejected_columns, target_system
-    )
-
-    if cross_candidates and not auto:
-        print_cross_table_candidates(cross_candidates)
-        if prompt_yes_no("Save these as cross-table candidates?", default=True):
-            for c in cross_candidates:
-                _execute(conn, """
-                    INSERT INTO integration.onboarding_field_review
-                        (proposal_id, source_column, suggested_target_table, suggested_target_column,
-                         confidence, transform, reasoning, status, cross_table_candidate)
-                    VALUES (%s, %s, %s, %s, %s, 'none', 'cross-table candidate', 'pending', true)
-                """, (proposal_id, c["source_column"], c["target_table"], c["target_column"], c["confidence"]))
-            conn.commit()
-            result["cross_table"] = len(cross_candidates)
-
-    result["status"] = "deployed"
-    return result
-
-
-def cmd_onboard(args):
-    """Onboard one or more tables end-to-end."""
-    from .terminal_ui import print_final_summary, console
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%H:%M:%S",
-    )
-
-    central = PostgresCentralConnector()
-    staging = MySQLStagingConnector()
-
-    tables = [t.strip() for t in args.source_table.split(",")]
-    results = []
-
-    for table in tables:
-        with central.connection() as conn:
-            result = _onboard_single_table(
-                conn, central, staging, args.source_schema, table,
-                args.target_system, args.auto, args.batch_size, args.by,
-            )
-            results.append(result)
-
-    print_final_summary(results)
-    central.close()
 
 
 # ---------------------------------------------------------------------------
@@ -1541,10 +827,6 @@ def main():
     p_backfill = subparsers.add_parser("backfill", help="Backfill existing records")
     p_backfill.add_argument("--entity", required=True, help="Entity/table name")
 
-    # reconcile
-    p_reconcile = subparsers.add_parser("reconcile", help="Reconcile central vs staging")
-    p_reconcile.add_argument("--entity", required=True, help="Entity/table name")
-
     # monitor
     p_monitor = subparsers.add_parser("monitor", help="Monitor schema drift")
 
@@ -1552,22 +834,13 @@ def main():
     p_status = subparsers.add_parser("status", help="Show onboarding status for all entities")
 
     # refresh
-    p_refresh = subparsers.add_parser("refresh", help="Refresh staging tables (drop + recreate + load)")
+    p_refresh = subparsers.add_parser("refresh", help="Re-deliver entities into the LRMIS target from source")
     p_refresh.add_argument("--source-schema", required=True, help="Source schema name")
     p_refresh.add_argument("--source-table", required=True, help="Source table(s), comma-separated")
     p_refresh.add_argument("--target-system", required=True, help="Target system name")
     p_refresh.add_argument("--source-system", default="IRIMSV_REGION_V", help="Source system name")
     p_refresh.add_argument("--batch-size", type=int, default=1000, help="MySQL batch size")
     p_refresh.add_argument("--schedule", default=None, help="Schedule (e.g., daily, weekly, monthly)")
-
-    # onboard
-    p_onboard = subparsers.add_parser("onboard", help="Onboard one or more tables end-to-end")
-    p_onboard.add_argument("--source-schema", required=True, help="Source schema name")
-    p_onboard.add_argument("--source-table", required=True, help="Source table(s), comma-separated")
-    p_onboard.add_argument("--target-system", required=True, help="Target system name")
-    p_onboard.add_argument("--auto", action="store_true", help="Non-interactive mode")
-    p_onboard.add_argument("--batch-size", type=int, default=100, help="Worker batch size")
-    p_onboard.add_argument("--by", default="pipeline", help="Operator name")
 
     args = parser.parse_args()
 
@@ -1578,9 +851,7 @@ def main():
         "resolve": cmd_resolve,
         "deploy": cmd_deploy,
         "backfill": cmd_backfill,
-        "reconcile": cmd_reconcile,
         "monitor": cmd_monitor,
-        "onboard": cmd_onboard,
         "status": cmd_status,
         "refresh": cmd_refresh,
     }

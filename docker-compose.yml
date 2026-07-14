@@ -36,6 +36,22 @@ services:
       - lrmis_staging_data:/var/lib/mysql
       - ./sql/lrmis_staging_init.sql:/docker-entrypoint-initdb.d/01_staging.sql
 
+  # Postgres "old-lrmis" delivery target (generic-engine schema swap). Restored
+  # from lrmis_db/old-lrmis.backup (PGDMP, schema `lrmis`, 66 tables). Ports
+  # 5433/5440 are taken by central/real_source, so this uses 5442.
+  oldlrmis_target_db:
+    image: postgres:17
+    container_name: schema_mapper_oldlrmis_target
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: oldlrmis
+    ports:
+      - "5442:5432"
+    volumes:
+      - oldlrmis_target_data:/var/lib/postgresql/data
+
 volumes:
   central_db_data:
   lrmis_staging_data:
+  oldlrmis_target_data:
