@@ -3,28 +3,62 @@
 ## Purpose
 TBD - created by archiving change generic-ai-db-migration-engine. Update Purpose after archive.
 ## Requirements
-### Requirement: One-command schema swap with gated re-map
+### Requirement: One-command schema swap with gated re-map, either side
 
-The system SHALL provide a single command (`sync-engine schema-swap`) that adopts a new target schema (or a new target engine), re-maps only the affected deployed entities, and re-delivers the kept entities. Non-destructive steps (re-discover, diff, propose re-maps) SHALL run first; the destructive recreate and re-deliver SHALL require explicit confirmation.
+The system SHALL provide a single command (`sync-engine schema-swap`) that
+accepts a `side` parameter of `source` or `target` (defaulting to `target`
+so existing behavior is unchanged), adopts a new schema on that side (or a
+new engine, target-side only), re-maps only the affected deployed entities,
+and re-delivers the kept entities. Non-destructive steps (re-discover, diff,
+propose re-maps) SHALL run first; the destructive recreate and re-deliver
+(target side) or the approval of a re-map (source side) SHALL require
+explicit confirmation.
 
-#### Scenario: Dry-run previews the swap
+#### Scenario: Dry-run previews the swap (target, unchanged default)
 
-- **WHEN** an admin runs `sync-engine schema-swap --dry-run` after re-pointing the target
-- **THEN** the system re-discovers the new target schema, diffs it against the last approved fingerprint, and reports the affected deployed entities plus proposed re-mappings — changing nothing
+- **WHEN** an admin runs `sync-engine schema-swap --dry-run` (or
+  `--side target --dry-run`) after re-pointing the target
+- **THEN** the system re-discovers the new target schema, diffs it against
+  the last approved fingerprint, and reports the affected deployed entities
+  plus proposed re-mappings — changing nothing
 
-#### Scenario: Confirmed apply recreates and re-delivers
+#### Scenario: Confirmed apply recreates and re-delivers (target)
 
 - **WHEN** an admin runs `sync-engine schema-swap --confirm`
-- **THEN** the system recreates the target from the new schema, re-seeds the FK-closure lookup tables, and re-delivers only the kept (selectively onboarded) entities — leaving un-onboarded entities out
+- **THEN** the system recreates the target from the new schema, re-seeds the
+  FK-closure lookup tables, and re-delivers only the kept (selectively
+  onboarded) entities — leaving un-onboarded entities out
 
-### Requirement: Ingest the new target schema by discovery
+#### Scenario: Dry-run previews a source-side swap
 
-The schema-swap flow SHALL obtain the new target structure from `adapter.discover_schema()` against a live target database, including when the schema originates from a `pg_dump`/`.backup` archive (restore first, then discover). It SHALL NOT parse a binary dump archive directly.
+- **WHEN** an admin runs `sync-engine schema-swap --side source --dry-run`
+  after IRIMSV is restructured or replaced
+- **THEN** the system re-discovers the new source schema, diffs it against
+  the last approved source contract, and reports the affected entities plus
+  proposed re-mappings — issuing no DDL/DML against the source
+
+### Requirement: Ingest the new schema by discovery, source or target
+
+The schema-swap flow SHALL obtain the new structure from the adapter
+matching the requested `side` (`get_target_adapter` for `side=target`,
+`get_source_adapter` for `side=source`) against a live database, including
+when a target schema originates from a `pg_dump`/`.backup` archive (restore
+first, then discover). It SHALL NOT parse a binary dump archive directly.
 
 #### Scenario: New Postgres target from a .backup
 
-- **WHEN** the new target is a Postgres database restored from `old-lrmis.backup`
-- **THEN** the swap flow discovers its `information_schema`, rebuilds the registry (FK graph + topological order) from the discovered structure, and uses the Postgres dialect for all generated SQL
+- **WHEN** the new target is a Postgres database restored from
+  `old-lrmis.backup`
+- **THEN** the swap flow discovers its `information_schema`, rebuilds the
+  registry (FK graph + topological order) from the discovered structure, and
+  uses the Postgres dialect for all generated SQL
+
+#### Scenario: Restructured source discovered via the source adapter
+
+- **WHEN** `side=source` is requested against a restructured IRIMSV database
+- **THEN** the swap flow discovers the source's live structure through
+  `PostgresSourceAdapter` and diffs it against the approved source contract,
+  not the target's `lrmis_target_tables` footprint
 
 ### Requirement: Affected-entity detection
 
