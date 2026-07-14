@@ -1,16 +1,16 @@
 # Graph Report - schema_mapper  (2026-07-14)
 
 ## Corpus Check
-- 304 files · ~170,768 words
+- 309 files · ~174,397 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3176 nodes · 5390 edges · 250 communities (211 shown, 39 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 109 edges (avg confidence: 0.54)
+- 3251 nodes · 5501 edges · 247 communities (211 shown, 36 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 111 edges (avg confidence: 0.54)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b2202336`
+- Built from commit: `978b38df`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -245,21 +245,17 @@
 - [[_COMMUNITY_Community 241|Community 241]]
 - [[_COMMUNITY_Community 242|Community 242]]
 - [[_COMMUNITY_Community 243|Community 243]]
-- [[_COMMUNITY_Community 244|Community 244]]
 - [[_COMMUNITY_Community 245|Community 245]]
 - [[_COMMUNITY_Community 246|Community 246]]
-- [[_COMMUNITY_Community 247|Community 247]]
-- [[_COMMUNITY_Community 248|Community 248]]
-- [[_COMMUNITY_Community 249|Community 249]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `PostgresCentralConnector` - 84 edges
-2. `ValidationError` - 64 edges
+2. `ValidationError` - 65 edges
 3. `LrmisRegistry` - 48 edges
 4. `Table` - 47 edges
 5. `Schema` - 47 edges
 6. `MySQLStagingConnector` - 45 edges
-7. `NotFoundError` - 40 edges
+7. `NotFoundError` - 44 edges
 8. `Column` - 37 edges
 9. `GenericWriter` - 35 edges
 10. `AdminUser` - 30 edges
@@ -269,69 +265,69 @@
   docker-compose.real-test.yml → docker-compose.yml
 - `real_target_db (MySQL 8.0.40 Real-Test Service)` --semantically_similar_to--> `lrmis_staging_db (MySQL 8.4 Service)`  [INFERRED] [semantically similar]
   docker-compose.real-test.yml → docker-compose.yml
-- `test_factory_resolves_engines()` --calls--> `get_target_adapter()`  [EXTRACTED]
-  tests/test_target_adapters.py → src/adapters/__init__.py
 - `_FakeConnector` --uses--> `SourceAdapter`  [INFERRED]
   tests/test_adapter_conformance.py → src/adapters/_protocols.py
 - `_FakeConnector` --uses--> `TargetAdapter`  [INFERRED]
   tests/test_adapter_conformance.py → src/adapters/_protocols.py
+- `_CCursor` --uses--> `TargetPlugin`  [INFERRED]
+  tests/test_generic_writer.py → src/adapters/lrmis_plugin.py
 
 ## Import Cycles
 - None detected.
 
-## Communities (250 total, 39 thin omitted)
+## Communities (247 total, 36 thin omitted)
 
 ### Community 0 - "Schema Drift Monitoring"
 Cohesion: 0.11
-Nodes (13): test_mysql_identifier_validation_happens_before_connection(), _clamp_mysql_dates(), MySQLStagingConnector, Least-privilege writer. It never creates or alters LRMIS tables., A connector to a different database on the same server (same creds).          Us, Return the backtick-quoted table name., Reject anything that is not a bare SQL identifier.      Callers must additionall, Bulk insert using executemany for better performance. (+5 more)
+Nodes (15): test_mysql_identifier_validation_happens_before_connection(), _clamp_mysql_dates(), MySQLStagingConnector, Least-privilege writer. It never creates or alters LRMIS tables., A connector to a different database on the same server (same creds).          Us, Return the backtick-quoted table name., Reject anything that is not a bare SQL identifier.      Callers must additionall, Bulk insert using executemany for better performance. (+7 more)
 
 ### Community 1 - "Architecture & Deployment Docs"
 Cohesion: 0.33
 Nodes (6): central_db (PostgreSQL 16 Service), real_source_db (PostgreSQL 17 Real-Test Service), psycopg2-binary (PostgreSQL Driver), sql/001_integration_foundation.sql, sql/002_onboarding_metadata.sql, sql/central_db_init.sql
 
 ### Community 2 - "Outbox & Delivery Store"
-Cohesion: 0.13
-Nodes (25): Event, canonical_json(), checksum(), claim_events(), mark_event_delivered(), Exception, quarantine(), Durable PostgreSQL state transitions for delivery, replay, and audit. (+17 more)
+Cohesion: 0.16
+Nodes (20): Event, claim_events(), mark_event_delivered(), Exception, Mark an outbox event delivered without touching the crosswalk.      The Path B m, retry_or_dead_letter(), load_entity_mappings(), The accepted/resolved column mappings for a Path B entity, as     {source_column (+12 more)
 
 ### Community 3 - "AI Mapping Engine"
-Cohesion: 0.17
-Nodes (26): FakeConn, _mysql(), Writer: parent-first order, read-only reference tables, app-assigned ids for `st, Records SQL. `responses` is an ordered list of (marker, row) pairs;     the firs, A stateful counter mimicking allocate_id's atomic increment., The pipeline must never mint new geographic codes., A crosswalk entry left dangling by a target reset must not be trusted:     the g, Regression: station's write path must not consume beis's crosswalk row. (+18 more)
+Cohesion: 0.06
+Nodes (62): allocate_id(), _apply_foreign_keys(), _crosswalk_lookup(), _crosswalk_record(), crosswalk_rows_for_entity(), delete_entity_rows(), group_by_table(), _insert() (+54 more)
 
 ### Community 4 - "Pipeline Commands & Central DB"
 Cohesion: 0.05
 Nodes (36): AdminUser, AuditRow, CreateJobResponse, DataColumn, DataRow, DataRowsParams, DataRowsResponse, DataSide (+28 more)
 
 ### Community 5 - "Terminal UI & Pipeline Entry"
-Cohesion: 0.07
-Nodes (37): best_match(), Dilemma, Guidance, HealProposal, MigrationAgent, MigrationPlan, _norm(), _propose_heal() (+29 more)
+Cohesion: 0.12
+Nodes (20): best_match(), Dilemma, Guidance, HealProposal, MigrationAgent, MigrationPlan, _norm(), _propose_heal() (+12 more)
 
 ### Community 6 - "MySQL Staging Connector"
 Cohesion: 0.10
-Nodes (33): main(), Preview or apply the one-time entity fingerprint scope migration., approve(), Return a stable schema document containing only the named tables.      Entity dr, schema_subset(), PostgresCentralConnector, replay(), cmd_refresh() (+25 more)
+Nodes (32): main(), Preview or apply the one-time entity fingerprint scope migration., approve(), Immutable, reviewed database-backed mapping versions., Refresh every entity into the (freshly reset) target, one open pair of     conne, redeliver_all(), PostgresCentralConnector, replay() (+24 more)
 
 ### Community 7 - "Staging Fast Refresh"
-Cohesion: 0.11
-Nodes (17): _as_bool(), get_job(), _h_cancel_queue(), _h_nightly_refresh(), _h_propose(), _h_refresh(), _h_refresh_all(), _h_reset_path_b() (+9 more)
+Cohesion: 0.08
+Nodes (28): bulk_propose_lrmis(), Generate a fresh LRMIS-target proposal (one Gemini call each) for every     depl, _as_bool(), get_job(), _h_backfill(), _h_bulk_deploy_lrmis(), _h_bulk_propose_lrmis(), _h_cancel_queue() (+20 more)
 
 ### Community 8 - "Deployment & Staging DDL"
 Cohesion: 0.08
-Nodes (9): _h_onboard_bulk(), admin_client(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, The handler must refuse an empty batch rather than 'succeed' on nothing., Spoofed actor/by fields are ignored - identity comes from the session., test_action_bodies_do_not_accept_actor_fields() (+1 more)
+Nodes (10): read_migration_sql(), admin_client(), _client_as(), operator_client(), Admin API tests: auth gating, role checks, job allowlist, guard tiers.  These ru, Spoofed actor/by fields are ignored - identity comes from the session., Assert on named files; keyed off MIGRATION_FILES[-1] this broke whenever     a n, test_action_bodies_do_not_accept_actor_fields() (+2 more)
 
 ### Community 9 - "Pilot Bootstrap Scripts"
-Cohesion: 0.06
-Nodes (16): Pluggable change-data-capture (generic engine, §6).  Different source engines ex, The `CDCStrategy` protocol (§6.1)., DebeziumCDC, get_cdc_strategy(), PollingCDC, CDC strategies (§6.2-6.5).  * `TriggerCDC`  — reuse the existing Postgres trigge, Resolve a strategy from engine config, e.g.     `{"strategy": "polling", "option, TriggerCDC (+8 more)
+Cohesion: 0.07
+Nodes (14): DebeziumCDC, get_cdc_strategy(), PollingCDC, CDC strategies (§6.2-6.5).  * `TriggerCDC`  — reuse the existing Postgres trigge, Resolve a strategy from engine config, e.g.     `{"strategy": "polling", "option, TriggerCDC, _Conn, _Cur (+6 more)
 
 ### Community 10 - "Mapping Proposals"
 Cohesion: 0.11
 Nodes (17): listMigrations(), me(), setUnauthorizedHandler(), User, NAV_GROUPS, NavGroup, NavItem, Shell() (+9 more)
 
 ### Community 11 - "Schema Discovery"
-Cohesion: 0.13
-Nodes (20): _lrmis_schema_document(), A schema_models document for the entity's LRMIS footprint, so drift on     those, test_fingerprint_is_stable(), test_mysql_information_schema_normalization(), _Client, _Models, test_fails_over_to_next_provider(), test_gemini_mapping_uses_structured_json() (+12 more)
+Cohesion: 0.11
+Nodes (24): from_json_export(), _normalize_type(), parse_ddl(), Turns whatever the other system gives you (a CREATE TABLE dump, a JSON export fr, Return the single-table contract used for an entity fingerprint., Lightweight parser for a static DDL dump, e.g.:          CREATE TABLE customers, Use this when the other system hands you a structured export instead     of raw, table_schema() (+16 more)
 
 ### Community 13 - "LRMIS Schema Import"
-Cohesion: 0.06
-Nodes (53): _adapter_kwargs(), main(), Migration agent CLI (generic engine, §8.5).  The `sync-engine agent` entry point, FieldMapping, _apply(), _fake_propose(), _FakeAdapter, Tests for schema-swap diff + affected-entity detection (§0.4).  Pure-function te (+45 more)
+Cohesion: 0.09
+Nodes (36): FieldMapping, _apply(), _fake_propose(), _FakeAdapter, Tests for schema-swap diff + affected-entity detection (§0.4).  Pure-function te, _src_table(), test_affected_entities_only_those_touching_changed_tables(), test_affected_entities_parses_json_string_footprint() (+28 more)
 
 ### Community 15 - "Package Init"
 Cohesion: 0.09
@@ -339,23 +335,23 @@ Nodes (18): main(), Legacy-staging retirement cutover (retire-legacy-staging).  
 
 ### Community 16 - "ValidationError"
 Cohesion: 0.12
-Nodes (31): create_target_ddl(), `CREATE TABLE` for every registry table, parents-first, with each column's     n, _cache_key(), _call_openai_compatible(), _coerce(), _extract_array(), _format_columns(), _format_target_tables() (+23 more)
+Nodes (28): Create a target schema from the generic type system (§3.3 / target setup).  `cre, _cache_key(), _call_openai_compatible(), _coerce(), _extract_array(), _format_columns(), _format_target_tables(), heuristic_mapping() (+20 more)
 
 ### Community 17 - "JobRunner"
-Cohesion: 0.18
-Nodes (21): allocate_id(), _apply_foreign_keys(), _crosswalk_lookup(), _crosswalk_record(), crosswalk_rows_for_entity(), delete_entity_rows(), _insert(), _quote() (+13 more)
+Cohesion: 0.10
+Nodes (11): Dialect, Generic type system + dialect-aware SQL (generic engine, §4).  The writer and re, cast_value(), GenericType, native_to_generic_any(), Generic type system: bridge native DB types across engines (§4).  The AI mapping, Best-effort generic type when the source engine is unknown — tries the     Postg, Coerce a source value toward the target column's generic type.      Conservative (+3 more)
 
 ### Community 18 - "test_admin_api.py"
-Cohesion: 0.29
-Nodes (5): list_audit(), Uniform admin_action_audit writer for every mutating endpoint and job., FastAPI admin backend for the schema_mapper integration.  Run with: python -m sr, audit_log(), UUID
+Cohesion: 0.13
+Nodes (14): get_tool(), list_tools(), Name/description/autonomy/destructive for the NL classifier prompt., _field(), MVP tool registry tests (conversational-ai-assistant §2.9).  Every tool: schema, _review(), test_deploy_guidance_recommends_without_executing(), test_explain_blocker_ready_when_approved_covered() (+6 more)
 
 ### Community 19 - "Overview.tsx"
 Cohesion: 0.17
 Nodes (11): getWorkerStatus(), OnboardingEntity, StatusResponse, HealthCard(), HealthCardProps, Sparkline(), SparklineProps, Overview() (+3 more)
 
 ### Community 20 - "compilerOptions"
-Cohesion: 0.11
-Nodes (9): LrmisRegistry, Read the live database's schema through a connector/adapter.          Also pulls, The column on `table` that points at `ref_table` (first match)., True when the pipeline must not INSERT into this table.          A table whose p, Columns a source mapping MUST supply a value for on insert.          Excludes co, Every table transitively reachable via foreign keys from `tables`         (paren, Lookup tables that must hold data for the pipeline's inserts to         satisfy, The tables a school row fans out into: station plus everything that         refe (+1 more)
+Cohesion: 0.12
+Nodes (8): LrmisRegistry, Read the live database's schema through a connector/adapter.          Also pulls, The column on `table` that points at `ref_table` (first match)., True when the pipeline must not INSERT into this table.          A table whose p, Columns a source mapping MUST supply a value for on insert.          Excludes co, Every table transitively reachable via foreign keys from `tables`         (paren, Lookup tables that must hold data for the pipeline's inserts to         satisfy, The tables a school row fans out into: station plus everything that         refe
 
 ### Community 21 - "Decisions"
 Cohesion: 0.07
@@ -366,8 +362,8 @@ Cohesion: 0.10
 Nodes (41): ApiError, applyView(), approveMapping(), approveSchema(), cancelQueue(), compareSourceTarget(), createJob(), createUser() (+33 more)
 
 ### Community 23 - "ADDED Requirements"
-Cohesion: 0.09
-Nodes (8): parse_ddl(), Parse CREATE TABLE blocks out of a MySQL dump., test_over_length_string_is_coerced_to_target_column_width(), test_under_width_string_is_left_intact(), Registry: DDL parsing, reference-table detection, self-loop-safe topo sort.  The, registry(), test_default_parsing_and_is_required(), test_real_cycle_raises()
+Cohesion: 0.08
+Nodes (9): _iter_create_blocks(), parse_ddl(), Parse CREATE TABLE blocks out of a MySQL dump., Stream the dump; only CREATE TABLE blocks are retained., Registry: DDL parsing, reference-table detection, self-loop-safe topo sort.  The, registry(), test_default_parsing_and_is_required(), test_real_cycle_raises() (+1 more)
 
 ### Community 24 - "ADDED Requirements"
 Cohesion: 0.19
@@ -390,16 +386,16 @@ Cohesion: 0.12
 Nodes (20): getDriftReports(), SchemaSystem, CopyButton(), SchemaTree(), SchemaTreeProps, DESCRIPTIONS, label(), LABELS (+12 more)
 
 ### Community 29 - "Onboarding.tsx"
-Cohesion: 0.11
-Nodes (42): list_target_backups(), Validate an uploaded file BEFORE it is ever offered as a restore     candidate., Write an uploaded file to the quarantined staging area, validate it, and     rec, Restore the target database from a listed backup file or a validated     uploade, The timestamped ``{db}-{stamp}.sql`` backups `nightly_refresh.backup_target`, restore_target(), _safe_filename(), stage_upload() (+34 more)
+Cohesion: 0.05
+Nodes (77): is_pg_custom_dump(), Guarded restore of a PostgreSQL target dump (generic engine, §0.3).  This is how, True when `path` is a PostgreSQL custom-format archive (pg_restore input)., Restore a Postgres target backup. Destructive when `dry_run` is False.      The, restore_pg_backup(), Tests for the guarded Postgres target-restore helper (§0.3)., test_custom_restore_cmd_is_templated(), test_dry_run_builds_pg_restore_command() (+69 more)
 
 ### Community 30 - "SKILL.md"
-Cohesion: 0.17
-Nodes (15): build_values_by_table(), _candidate_entities_for(), _crosswalk_target_id(), _max_varchar_len(), Path B delivery: fan a source row out into the real LRMIS tables (Phases 4-5)., True if a row with this id still lives in the target table. Guards against     a, Fill target FK columns by resolving their source value through the     reference, The declared width of a target CHAR/VARCHAR column, or None if the column     is (+7 more)
+Cohesion: 0.18
+Nodes (12): _apply_transform(), Takes one row from your central DB + the active mapping config + the target Sche, Returns (target_row, errors). If errors is non-empty, do NOT write     target_ro, Convenience wrapper: returns (good_rows, failed_rows_with_errors)., transform_batch(), transform_row(), build_values_by_table(), _max_varchar_len() (+4 more)
 
 ### Community 31 - "ADDED Requirements"
 Cohesion: 0.15
-Nodes (8): Find an existing reference row's PK; never insert (dialect-aware)., Dialect-aware existence check used by cross-entity FK resolution., Delete only pipeline-written rows for an entity, children first.         Referen, A table the pipeline creates rows in via an allocated id., A resolve-only lookup the pipeline never inserts into., Coerce each value toward its target column's generic type, so a         cross-en, Insert and return the generated primary key (RETURNING or lastrowid)., Insert with an explicit (app-assigned) primary key — no id read back.
+Nodes (11): GenericWriter, Find an existing reference row's PK; never insert (dialect-aware)., Upsert the delivery-audit envelope, dialect-aware (Postgres `ON         CONFLICT, Dialect-aware existence check used by cross-entity FK resolution., Delete only pipeline-written rows for an entity, children first.         Referen, TRUNCATE pipeline-written tables children-first (skips seeded         reference, A table the pipeline creates rows in via an allocated id., A resolve-only lookup the pipeline never inserts into. (+3 more)
 
 ### Community 32 - "auth.tsx"
 Cohesion: 0.14
@@ -410,20 +406,20 @@ Cohesion: 0.10
 Nodes (8): _Central, _CM, _Conn, fake_connectors(), Nightly rebuild orchestration (nightly-refresh spec).  The connectors, source re, _Target, test_redeliver_all_continues_past_failure(), test_redeliver_entity_skips_without_mappings()
 
 ### Community 34 - "ADDED Requirements"
-Cohesion: 0.31
-Nodes (19): GenericWriter, _col(), FakeCentral, FakeTarget, Tests for the dialect-aware GenericWriter (§7).  Engine-agnostic: fake target/ce, _target_inserts(), test_app_assign_non_autoincrement_feature(), test_app_assigned_allocates_id_and_inserts_explicit() (+11 more)
+Cohesion: 0.19
+Nodes (22): _col(), FakeCentral, FakeTarget, _FakeWriter, Tests for the dialect-aware GenericWriter (§7).  Engine-agnostic: fake target/ce, _target_inserts(), test_app_assign_non_autoincrement_feature(), test_app_assigned_allocates_id_and_inserts_explicit() (+14 more)
 
 ### Community 35 - "Tasks: Add Admin Database Dashboard"
-Cohesion: 0.19
-Nodes (18): _event(), FakeTargetConn, _fk_registry(), mp(), Path B delivery (Phases 4-5): value grouping, transforms, deliver/refresh.  The, test_deactivate_marks_audit_inactive_but_still_writes(), test_deliver_event_errors_when_no_target_values(), test_deliver_event_returns_error_on_transform_failure() (+10 more)
+Cohesion: 0.18
+Nodes (20): _event(), FakeTargetConn, _fk_registry(), mp(), Path B delivery (Phases 4-5): value grouping, transforms, deliver/refresh.  The, test_deactivate_marks_audit_inactive_but_still_writes(), test_deliver_event_errors_when_no_target_values(), test_deliver_event_returns_error_on_transform_failure() (+12 more)
 
 ### Community 37 - "graphify reference: extra exports and benchmark"
 Cohesion: 0.20
 Nodes (15): _FakeCentral, _proposal(), onboard_bulk: conservative bucketing, non-destructiveness, resilience.  The serv, Stand-in for the service functions, recording what bulk actually calls., _Recorder, _run(), test_already_deployed_table_is_skipped_untouched(), test_confident_table_is_deployed_and_backfilled() (+7 more)
 
 ### Community 38 - "migrations.py"
-Cohesion: 0.12
-Nodes (20): Typed exceptions shared by all services; the API maps them to HTTP codes., Base class for service-level failures., ServiceError, Reusable service layer wrapping pipeline/admin workflow logic.  The admin API (s, is_pg_custom_dump(), Guarded restore of a PostgreSQL target dump (generic engine, §0.3).  This is how, True when `path` is a PostgreSQL custom-format archive (pg_restore input)., Restore a Postgres target backup. Destructive when `dry_run` is False.      The (+12 more)
+Cohesion: 0.13
+Nodes (19): _adapter_kwargs(), main(), Migration agent CLI (generic engine, §8.5).  The `sync-engine agent` entry point, _approved_source_columns(), _default_discover_source(), _default_fetch_entities(), _default_fetch_source_contracts(), _default_persist_source() (+11 more)
 
 ### Community 39 - "Add Admin Database Dashboard"
 Cohesion: 0.11
@@ -442,8 +438,8 @@ Cohesion: 0.33
 Nodes (6): lrmis_staging_db (MySQL 8.4 Service), real_target_db (MySQL 8.0.40 Real-Test Service), mysql-connector-python (MySQL Driver), sql/lrmis.sql, sql/lrmis_staging_init.sql, sql/real_test_target_setup.sql
 
 ### Community 43 - "graphify reference: add a URL and watch a folder"
-Cohesion: 0.15
-Nodes (18): get_dialect(), native_to_generic(), Map a native column type to a `GenericType`. Unknown types fall back to     STRI, Tests for the generic type system + dialects (§4)., test_dialect_rejects_unsafe_identifier(), test_mssql_dialect_brackets_merge_and_ddl(), test_mysql_dialect_quotes_and_upserts(), test_native_to_generic_bridges_engines() (+10 more)
+Cohesion: 0.12
+Nodes (24): create_delivery_audit_sql(), create_target_ddl(), create_target_schema(), `CREATE TABLE` for every registry table, parents-first, with each column's     n, Execute the target DDL against an open connection. Returns table count.     Expl, get_dialect(), native_to_generic(), Map a native column type to a `GenericType`. Unknown types fall back to     STRI (+16 more)
 
 ### Community 44 - "graphify reference: commit hook and native CLAUDE.md integration"
 Cohesion: 0.11
@@ -462,8 +458,8 @@ Cohesion: 0.16
 Nodes (13): get_plugin(), LRMIS target plugin — domain specifics kept out of the generic core (§9).  The g, Resolve a plugin by name (case-insensitive). Unknown/empty -> LRMIS., The plugin selected by config (`LRMIS_TARGET_PLUGIN`), default LRMIS.      A Pos, resolve_plugin(), TargetPlugin, Generic, dialect-aware delivery (generic engine, §7).  `GenericWriter` is the en, Dialect-aware multi-table writer (§7.1-7.4).  Generalises `lrmis_writer.write_so (+5 more)
 
 ### Community 48 - "graphify reference: transcribe video and audio"
-Cohesion: 0.09
-Nodes (36): affected_source_entities(), apply(), _apply_source(), diff_source_table(), dry_run(), Column-level diff for one entity's source table — the same comparison     `diff_, Diff every deployed entity's source table against its approved contract.      ``, Preview a schema swap on either side. Changes nothing. (+28 more)
+Cohesion: 0.08
+Nodes (39): Schema, affected_source_entities(), apply(), _apply_source(), diff_source_table(), dry_run(), Column-level diff for one entity's source table — the same comparison     `diff_, Diff every deployed entity's source table against its approved contract.      `` (+31 more)
 
 ### Community 49 - "CLAUDE.md"
 Cohesion: 0.14
@@ -482,8 +478,8 @@ Cohesion: 0.12
 Nodes (16): ADDED Requirements, Requirement: Context resumption, Requirement: Conversation retention limit, Requirement: Conversation storage in PostgreSQL, Requirement: Message format, Requirement: No PII in storage, Requirement: Title auto-generation, Scenario: Agent message with tool call stored (+8 more)
 
 ### Community 53 - "archive.md"
-Cohesion: 0.13
-Nodes (6): write_audit(), enqueue(), JobRunner, runner(), _scope(), WorkerController
+Cohesion: 0.11
+Nodes (15): ConflictError, A concurrent operation holds the resource (maps to HTTP 409)., enqueue(), JobRunner, runner(), _scope(), WorkerController, apply_migration() (+7 more)
 
 ### Community 54 - "propose.md"
 Cohesion: 0.12
@@ -542,20 +538,20 @@ Cohesion: 0.14
 Nodes (13): ADDED Requirements, Requirement: Guarded destructive source restore, Requirement: One orchestrated nightly rebuild, Requirement: Pre-reset safety and dry-run preview, Requirement: Target reset by truncate with FK-closure reseed, Scenario: Backup taken before reset, Scenario: Dry run changes nothing, Scenario: Failed restore leaves the target untouched (+5 more)
 
 ### Community 86 - "ADDED Requirements"
-Cohesion: 0.14
-Nodes (13): admin-dashboard Specification, Purpose, Requirement: Centralized admin web UI, Requirement: Database-focused presentation, Requirement: Live overview of integration health, Requirement: One-click workflow launch with guarded tiers, Requirements, Scenario: Admin reaches all workflows from one place (+5 more)
+Cohesion: 0.13
+Nodes (14): admin-dashboard Specification, Purpose, Requirement: Centralized admin web UI, Requirement: Database-focused presentation, Requirement: Live overview of integration health, Requirement: One-click workflow launch with guarded tiers, Requirements, Scenario: Admin reaches all workflows from one place (+6 more)
 
 ### Community 87 - "Requirements"
-Cohesion: 0.17
-Nodes (11): Purpose, Requirement: Drift visibility and side-effect transparency, Requirement: On-demand schema scanning, Requirement: Queue and entity health API, Requirements, Scenario: Drift detection across different engines, Scenario: Paused entities called out, Scenario: Quarantine inspection (+3 more)
+Cohesion: 0.14
+Nodes (13): Purpose, Requirement: Drift visibility and side-effect transparency, Requirement: On-demand schema scanning, Requirement: Queue and entity health API, Requirements, Scenario: Drift detection across different engines, Scenario: Paused entities called out, Scenario: Quarantine inspection (+5 more)
 
 ### Community 88 - "ADDED Requirements"
 Cohesion: 0.14
 Nodes (13): audit-and-approval Specification, Purpose, Requirement: Approval remains a human gate, Requirement: Per-admin authentication with roles, Requirement: Reversibility affordances for dangerous actions, Requirement: Uniform audit trail on every mutation, Requirements, Scenario: Audit log is browsable (+5 more)
 
 ### Community 89 - "Tasks: Add Admin Database Dashboard"
-Cohesion: 0.15
-Nodes (13): normalize_pg_columns(), Map Postgres information_schema rows into the common discovery shape.      Marks, Build a registry from live-discovered metadata (engine-agnostic).          `colu, test_deliver_event_routes_through_injected_writer(), Tests for the target-adapter layer + FK-aware registry discovery (§0).  These ar, _StubAdapter, test_columns_only_discovery_has_empty_fk_graph(), test_discovery_mixin_wires_registry() (+5 more)
+Cohesion: 0.18
+Nodes (11): normalize_pg_columns(), Map Postgres information_schema rows into the common discovery shape.      Marks, Build a registry from live-discovered metadata (engine-agnostic).          `colu, Tests for the target-adapter layer + FK-aware registry discovery (§0).  These ar, _StubAdapter, test_columns_only_discovery_has_empty_fk_graph(), test_discovery_mixin_wires_registry(), test_from_discovery_builds_fk_graph_and_ordering() (+3 more)
 
 ### Community 90 - "Requirement: Durable allowlisted jobs"
 Cohesion: 0.14
@@ -586,8 +582,8 @@ Cohesion: 0.15
 Nodes (12): ADDED Requirements, Requirement: Deploy guidance flow, Requirement: Later workflow requests are deferred, Requirement: MVP workflow state machines, Requirement: Onboarding guidance flow, Scenario: Agent checks deploy readiness, Scenario: Agent defers schema swap, Scenario: Agent handles review step (+4 more)
 
 ### Community 97 - "JobRunner"
-Cohesion: 0.09
-Nodes (26): NotFoundError, Requested entity/proposal/event does not exist., Restore the fresh source dump into central. Destructive.      The command is tak, restore_source_dump(), Pattern, main(), _print(), Disaster-recovery CLI (source-schema-swap-and-disaster-recovery §4.5).  Mirrors (+18 more)
+Cohesion: 0.13
+Nodes (14): disaster-recovery-upload Specification, Purpose, Requirement: Recovery actions are always confirmation-gated, Requirement: Target backups are visible and restorable from the UI, Requirement: Validated file upload for recovery, Requirements, Scenario: Existing automatic backups are listed, Scenario: Non-dump file is rejected (+6 more)
 
 ### Community 98 - "lrmis_registry.py"
 Cohesion: 0.15
@@ -599,7 +595,7 @@ Nodes (19): _entity(), _FakeCentral, _FakeConn, _FakePipeline, drift_resolution:
 
 ### Community 100 - "snapshots.py"
 Cohesion: 0.15
-Nodes (7): Base class for multi-table write failures., A read-only reference row (e.g. psgc) could not be resolved., A mapping names a table that is not part of the LRMIS schema., ReferenceRowNotFound, UnknownTargetTable, WriterError, _Cursor
+Nodes (12): ADDED Requirements, Requirement: Recovery actions are always confirmation-gated, Requirement: Target backups are visible and restorable from the UI, Requirement: Validated file upload for recovery, Scenario: Existing automatic backups are listed, Scenario: Non-dump file is rejected, Scenario: Recovery is never auto-executed, Scenario: Restore is audited (+4 more)
 
 ### Community 101 - "JobDrawer.tsx"
 Cohesion: 0.15
@@ -610,16 +606,16 @@ Cohesion: 0.14
 Nodes (13): CreateJobPayload, JobDetail, GuardedActionModalProps, GuardTier, JobRunner, useJobRunner(), queryClient, NightlyRebuild() (+5 more)
 
 ### Community 103 - "integration_admin.py"
-Cohesion: 0.23
-Nodes (8): deliver_event(), _LegacyWriter, Write the envelope row for this event into lrmis_target.delivery_audit., Deliver one outbox event across the LRMIS tables. Returns a result dict.      A, Rebuild an entity's LRMIS rows from the current source rows.      Deletes only t, Adapts the module-level MySQL writer functions to the writer interface     (`wri, _record_delivery_audit(), refresh_entity()
+Cohesion: 0.16
+Nodes (15): _candidate_entities_for(), _crosswalk_target_id(), deliver_event(), _LegacyWriter, Path B delivery: fan a source row out into the real LRMIS tables (Phases 4-5)., True if a row with this id still lives in the target table. Guards against     a, Fill target FK columns by resolving their source value through the     reference, Write the envelope row for this event into lrmis_target.delivery_audit. (+7 more)
 
 ### Community 104 - "onboarding.py"
-Cohesion: 0.12
-Nodes (20): Input or state precondition failed (maps to HTTP 422)., ValidationError, Agent tool definitions for source-swap and disaster recovery (§6).  `conversatio, Mirror of the registry entry `conversational-ai-assistant` specs., Minimal schema check: required keys present, primitive types match.     (The reg, Dry-run by default; apply only with the typed source-schema token.     ``seams``, _recover_from_backup(), _swap_source_schema() (+12 more)
+Cohesion: 0.11
+Nodes (18): Agent tool definitions for source-swap and disaster recovery (§6).  `conversatio, The registry entry shape from `conversational-ai-assistant` design D3     (+ the, Minimal schema check: required keys present, primitive types match.     (The reg, _recover_from_backup(), ToolDef, validate_params(), test_param_type_mismatch_rejected(), test_proposal_tools_require_proposal_id() (+10 more)
 
 ### Community 105 - "_Cursor"
-Cohesion: 0.13
-Nodes (26): Return the single-table contract used for an entity fingerprint., table_schema(), _deployed_entities(), _drifted_entities(), _mark_reports_resolved(), _pipeline(), Automated resolution of schema drift.  When ``ops.monitor`` detects that an enti, Resolve source-side drift for the given entities (or all source-drifted). (+18 more)
+Cohesion: 0.12
+Nodes (28): Return a stable schema document containing only the named tables.      Entity dr, schema_subset(), _deployed_entities(), _drifted_entities(), _mark_reports_resolved(), _pipeline(), Automated resolution of schema drift.  When ``ops.monitor`` detects that an enti, Resolve source-side drift for the given entities (or all source-drifted). (+20 more)
 
 ### Community 106 - "rebaseline_entity_fingerprints"
 Cohesion: 0.21
@@ -639,11 +635,11 @@ Nodes (12): 0. First slice — schema-swap + re-map on the current code, 10. CLI
 
 ### Community 110 - "WriterError"
 Cohesion: 0.15
-Nodes (12): ADDED Requirements, Requirement: Recovery actions are always confirmation-gated, Requirement: Target backups are visible and restorable from the UI, Requirement: Validated file upload for recovery, Scenario: Existing automatic backups are listed, Scenario: Non-dump file is rejected, Scenario: Recovery is never auto-executed, Scenario: Restore is audited (+4 more)
+Nodes (12): Purpose, Requirement: AI re-map limited to affected entities, human-gated, Requirement: Source-side schema discovery and diff, Requirement: Source-swap never writes to the source, Requirements, Scenario: High-confidence remap can auto-apply, Scenario: Low-confidence remap requires approval, Scenario: No changes reported when source is unchanged (+4 more)
 
 ### Community 111 - "test_worker_routing.py"
-Cohesion: 0.15
-Nodes (12): Purpose, Requirement: Affected-entity detection, Requirement: Human-gated re-mapping, Requirement: Ingest the new target schema by discovery, Requirement: One-command schema swap with gated re-map, Requirements, Scenario: Confirmed apply recreates and re-delivers, Scenario: Dry-run previews the swap (+4 more)
+Cohesion: 0.13
+Nodes (14): Purpose, Requirement: Affected-entity detection, Requirement: Human-gated re-mapping, Requirement: Ingest the new schema by discovery, source or target, Requirement: One-command schema swap with gated re-map, either side, Requirements, Scenario: Confirmed apply recreates and re-delivers (target), Scenario: Dry-run previews a source-side swap (+6 more)
 
 ### Community 112 - "db.py"
 Cohesion: 0.17
@@ -671,7 +667,7 @@ Nodes (10): ADDED Requirements, migration-management Specification (Delta), Requ
 
 ### Community 118 - "group_by_table"
 Cohesion: 0.18
-Nodes (10): 0. MVP guardrails and feasibility, 1. Database migration, 2. MVP tool registry (`src/agent/tools.py`), 3. Conversation loop (`src/agent/conversation.py`), 4. FastAPI chat endpoints, 5. React sidebar chat UI, 6. MVP workflow guidance (`src/agent/workflows.py`), 7. Conservative autonomy gating (+2 more)
+Nodes (9): CoverageReport, Multi-table mapping validation for the LRMIS target (Path B, Phase 2).  A source, Record an entity's LRMIS footprint (the distinct target tables it fans     out i, Sorted distinct target tables a mapping fans out into., _reg(), store_target_tables(), TableCoverage, target_tables_for() (+1 more)
 
 ### Community 119 - "db.py"
 Cohesion: 0.18
@@ -682,8 +678,8 @@ Cohesion: 0.18
 Nodes (10): ADDED Requirements, MODIFIED Requirements, Requirement: Nightly rebuild control and status, Requirement: One-click workflow launch with guarded tiers, Scenario: Destructive action demands typed confirmation, Scenario: Last run is summarized, Scenario: Nightly rebuild demands typed confirmation, Scenario: No staging surface (+2 more)
 
 ### Community 121 - "Community 121"
-Cohesion: 0.18
-Nodes (10): Context, D1 — `side` parameter, not a parallel module, D2 — Source-swap is discovery + re-mapping only, never a source write, D3 — Recovery uploads are quarantined and validated before they're offered, D4 — Recovery is always destructive-gated, regardless of autonomy tier, D5 — Recovery UI surfaces existing backups; it does not change what gets backed up, Decisions, Goals / Non-Goals (+2 more)
+Cohesion: 0.20
+Nodes (9): _deploy_guidance(), _explain_blocker(), _field_view(), _onboard_table(), MVP tool registry (conversational-ai-assistant §2, design D3).  Seven read/propo, Readiness + recommended next actions. Never executes a deploy., Propose-only: creates a proposal for human review; deploys nothing., Schema-level allowlist projection of a field review row (redaction by     constr (+1 more)
 
 ### Community 122 - "Community 122"
 Cohesion: 0.18
@@ -694,8 +690,8 @@ Cohesion: 0.18
 Nodes (10): ADDED Requirements, MODIFIED Requirements, Requirement: On-demand schema scanning, Requirement: Second drift pair — staging (Path A) to target (Path B), Requirement: Three schema trees, Scenario: Scan with no changes, Scenario: Staging→target drift detected, Scenario: Staging→target scan with no change (+2 more)
 
 ### Community 124 - "Community 124"
-Cohesion: 0.12
-Nodes (8): A read side the engine pulls schema + rows from., The source schema as a `schema_models.Schema` (metadata only)., Yield row dicts, streamed in batches., SourceAdapter, CDCStrategy, Prepare change capture for `table` (e.g. install a trigger). May be a         no, Rows changed since `after`, as dicts (empty when nothing changed)., Protocol
+Cohesion: 0.22
+Nodes (4): A read side the engine pulls schema + rows from., The source schema as a `schema_models.Schema` (metadata only)., Yield row dicts, streamed in batches., SourceAdapter
 
 ### Community 125 - "Community 125"
 Cohesion: 0.20
@@ -719,27 +715,27 @@ Nodes (10): ADDED Requirements, Requirement: Affected-entity detection, Requirem
 
 ### Community 131 - "Community 131"
 Cohesion: 0.18
-Nodes (10): ADDED Requirements, Requirement: AI re-map limited to affected entities, human-gated, Requirement: Source-side schema discovery and diff, Requirement: Source-swap never writes to the source, Scenario: High-confidence remap can auto-apply, Scenario: Low-confidence remap requires approval, Scenario: No changes reported when source is unchanged, Scenario: Source schema diff detects structural changes (+2 more)
+Nodes (6): Pluggable change-data-capture (generic engine, §6).  Different source engines ex, CDCStrategy, The `CDCStrategy` protocol (§6.1)., Prepare change capture for `table` (e.g. install a trigger). May be a         no, Rows changed since `after`, as dicts (empty when nothing changed)., Protocol
 
 ### Community 132 - "Community 132"
-Cohesion: 0.11
-Nodes (20): main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, main(), Read-only Path B cutover status (Phase 9 planning).  Reports where each entity s, from_information_schema(), Normalize PostgreSQL/MySQL information_schema.columns rows., _auto_resolve(), main() (+12 more)
+Cohesion: 0.15
+Nodes (20): from_information_schema(), Normalize PostgreSQL/MySQL information_schema.columns rows., schema_fingerprint(), schema(), test_optional_column_is_non_breaking(), test_required_column_is_breaking(), test_type_change_and_removal_are_breaking(), _auto_resolve() (+12 more)
 
 ### Community 133 - "Community 133"
-Cohesion: 0.09
-Nodes (40): schema_fingerprint(), connection, cmd_backfill(), cmd_discover(), cmd_monitor(), cmd_propose(), cmd_resolve(), cmd_review() (+32 more)
+Cohesion: 0.10
+Nodes (38): connection, cmd_backfill(), cmd_discover(), cmd_monitor(), cmd_propose(), cmd_resolve(), cmd_review(), cmd_status() (+30 more)
 
 ### Community 134 - "Community 134"
-Cohesion: 0.07
-Nodes (18): _BaseDialect, Dialect, MSSQLDialect, MySQLDialect, PostgresDialect, Dialect-aware SQL generation (§4).  Isolates the per-engine SQL surface (identif, Native column type for a `GenericType` in this engine (§3.3)., CREATE TABLE from generic column specs `{name, type: GenericType,         nullab (+10 more)
+Cohesion: 0.13
+Nodes (7): _BaseDialect, MSSQLDialect, MySQLDialect, PostgresDialect, Dialect-aware SQL generation (§4).  Isolates the per-engine SQL surface (identif, Native column type for a `GenericType` in this engine (§3.3)., CREATE TABLE from generic column specs `{name, type: GenericType,         nullab
 
 ### Community 135 - "Community 135"
 Cohesion: 0.20
 Nodes (9): Check for context, Ending Discovery, Guardrails, OpenSpec Awareness, The Stance, What You Don't Have To Do, What You Might Do, When a change exists (+1 more)
 
 ### Community 136 - "Community 136"
-Cohesion: 0.19
-Nodes (16): audited(), Audit success or failure of the wrapped block (failure re-raises)., list_backups(), AdminUser, Recovery API (source-schema-swap-and-disaster-recovery §4).  Upload a replacemen, Everything restorable: the timestamped target backups `nightly_refresh`     alre, Multipart upload of a source dump or target backup. Size-capped and     streamed, Restore the target from a listed backup or validated upload. The typed     confi (+8 more)
+Cohesion: 0.14
+Nodes (19): audited(), Uniform admin_action_audit writer for every mutating endpoint and job., Audit success or failure of the wrapped block (failure re-raises)., write_audit(), FastAPI admin backend for the schema_mapper integration.  Run with: python -m sr, list_backups(), AdminUser, Recovery API (source-schema-swap-and-disaster-recovery §4).  Upload a replacemen (+11 more)
 
 ### Community 137 - "Community 137"
 Cohesion: 0.20
@@ -766,8 +762,8 @@ Cohesion: 0.20
 Nodes (9): 1. New module vs. extending `ops.py`, 2. Resolve flows: source-side vs. target-side, 3. Dry-run as read-only mode, 4. Auto-resolve integration with monitor, 5. Scoped concurrent execution, Context, Decisions, Goals / Non-Goals (+1 more)
 
 ### Community 143 - "Community 143"
-Cohesion: 0.25
-Nodes (13): mapping_to_dicts(), _h_backfill(), _h_discover(), proposal(), backfill(), discover(), get_review(), onboard_bulk() (+5 more)
+Cohesion: 0.17
+Nodes (18): mapping_to_dicts(), NotFoundError, Typed exceptions shared by all services; the API maps them to HTTP codes., Requested entity/proposal/event does not exist., Base class for service-level failures., ServiceError, Reusable service layer wrapping pipeline/admin workflow logic.  The admin API (s, Exception (+10 more)
 
 ### Community 144 - "Community 144"
 Cohesion: 0.22
@@ -802,24 +798,28 @@ Cohesion: 0.22
 Nodes (8): Admin web UI, Continuous operation, Local pilot, Production configuration, Region V IRIMSV-to-LRMIS integration, Safety model, Schema drift policy, Verification
 
 ### Community 152 - "Community 152"
-Cohesion: 0.09
-Nodes (40): BaseModel, all_jobs(), apply_view(), ApplyViewBody, approve_mapping(), approve_schema(), ApproveMappingBody, ApproveSchemaBody (+32 more)
+Cohesion: 0.07
+Nodes (51): BaseModel, list_audit(), hash_password(), all_jobs(), apply_view(), ApplyViewBody, approve_mapping(), approve_schema() (+43 more)
 
 ### Community 153 - "Community 153"
 Cohesion: 0.20
 Nodes (4): MySQLTargetAdapter, _DiscoveryMixin, Shared `discover_registry`/`close` for concrete adapters.      Concrete adapters, test_adapters_expose_matching_dialect()
 
 ### Community 154 - "Community 154"
-Cohesion: 0.20
-Nodes (13): iter_seed_statements(), main(), Path B, Phase 1: create and seed the `lrmis_target` database.  Builds a parallel, The lookup tables to seed, derived from the schema's FK graph., Drop + recreate the Path B target database from canonical DDL.      This is the, Drop degenerate self-referential FKs (a column referencing itself).      e.g. `C, Yield complete `INSERT INTO <wanted>` statements from a mysqldump.      Streams, recreate_target_database() (+5 more)
+Cohesion: 0.17
+Nodes (15): iter_seed_statements(), main(), Path B, Phase 1: create and seed the `lrmis_target` database.  Builds a parallel, The lookup tables to seed, derived from the schema's FK graph., Drop + recreate the Path B target database from canonical DDL.      This is the, Drop degenerate self-referential FKs (a column referencing itself).      e.g. `C, Yield complete `INSERT INTO <wanted>` statements from a mysqldump.      Streams, recreate_target_database() (+7 more)
 
 ### Community 156 - "Community 156"
 Cohesion: 0.43
 Nodes (7): backup_database(), _database_exists(), main(), datetime, retire-legacy-staging §4: back up and DROP the legacy staging databases.  DESTRU, mysqldump one database to a timestamped file. Returns {path, ok, warning?}., _server()
 
+### Community 157 - "Community 157"
+Cohesion: 0.13
+Nodes (7): `plugin` supplies the target's domain config (app-assigned tables, id         ra, get_registry(), Process-wide registry, parsed once from the DDL file., Phase 1 setup helpers: degenerate-FK stripping and seed extraction.  Pure-logic, test_seed_tables_are_derived_from_the_schema(), lrmis_schema(), The canonical LRMIS tables and their columns, for the manual mapping     picker
+
 ### Community 158 - "Community 158"
-Cohesion: 0.22
-Nodes (8): MODIFIED Requirements, Requirement: Ingest the new schema by discovery, source or target, Requirement: One-command schema swap with gated re-map, either side, Scenario: Confirmed apply recreates and re-delivers (target), Scenario: Dry-run previews a source-side swap, Scenario: Dry-run previews the swap (target, unchanged default), Scenario: New Postgres target from a .backup, Scenario: Restructured source discovered via the source adapter
+Cohesion: 0.18
+Nodes (10): Context, D1 — `side` parameter, not a parallel module, D2 — Source-swap is discovery + re-mapping only, never a source write, D3 — Recovery uploads are quarantined and validated before they're offered, D4 — Recovery is always destructive-gated, regardless of autonomy tier, D5 — Recovery UI surfaces existing backups; it does not change what gets backed up, Decisions, Goals / Non-Goals (+2 more)
 
 ### Community 159 - "Community 159"
 Cohesion: 0.22
@@ -846,32 +846,32 @@ Cohesion: 0.25
 Nodes (7): ADDED Requirements, admin-dashboard Specification (Delta), Requirement: Step-aware scan control, Requirement: Three-step schema stepper, Scenario: Drift reports filtered by step, Scenario: Navigating to the target (Path B) view, Scenario: Scanning the staging contract
 
 ### Community 165 - "Community 165"
-Cohesion: 0.16
-Nodes (13): get_source_adapter(), get_target_adapter(), Target adapters (generic-ai-db-migration-engine, §0).  The engine treats the tar, Resolve a `TargetAdapter` from an engine-type string.      `engine_type` comes f, Resolve a `SourceAdapter` from an engine-type string., MySQL target adapter — discovers the live MySQL target (default lrmis_target)., Postgres target adapter — discovers a live Postgres target.  This is how a `pg_d, The `TargetAdapter` protocol + shared discovery wiring.  A target adapter's job (+5 more)
+Cohesion: 0.21
+Nodes (12): get_source_adapter(), get_target_adapter(), Resolve a `TargetAdapter` from an engine-type string.      `engine_type` comes f, Resolve a `SourceAdapter` from an engine-type string., test_factory_resolves_engines(), _adapter_kwargs(), _expected_confirm(), main() (+4 more)
 
 ### Community 166 - "Community 166"
-Cohesion: 0.17
-Nodes (19): _apply_transform(), _columns_for(), compare_source_target(), fetch_rows(), list_browsable_tables(), _pipeline(), Read-only row access to the source and target databases (data-browser spec).  Se, Both sides' tables with column and row counts, plus the entity link.      ``sour (+11 more)
+Cohesion: 0.14
+Nodes (23): Input or state precondition failed (maps to HTTP 422)., ValidationError, main(), _print(), Disaster-recovery CLI (source-schema-swap-and-disaster-recovery §4.5).  Mirrors, _columns_for(), compare_source_target(), fetch_rows() (+15 more)
 
 ### Community 167 - "Community 167"
 Cohesion: 0.33
 Nodes (5): Key decisions (verified against real data), Path B — direct delivery into the real LRMIS schema, Phases 8–9 — done via `retire-legacy-staging`, Setup, What exists (Phases 0–7, done)
 
 ### Community 168 - "Community 168"
-Cohesion: 0.10
-Nodes (15): _iter_create_blocks(), LrmisColumn, LrmisForeignKey, LrmisTable, _parse_block(), _parse_column(), _parse_default(), Typed registry of the canonical LRMIS schema (Path B, Phase 0).  Parses the LRMI (+7 more)
+Cohesion: 0.14
+Nodes (9): LrmisColumn, LrmisForeignKey, LrmisTable, _parse_block(), _parse_column(), _parse_default(), Typed registry of the canonical LRMIS schema (Path B, Phase 0).  Parses the LRMI, A value must be supplied on insert: NOT NULL, no default, not         auto-incre (+1 more)
 
 ### Community 169 - "Community 169"
-Cohesion: 0.21
-Nodes (14): ConflictError, A concurrent operation holds the resource (maps to HTTP 409)., apply_migration(), _checksum(), _ensure_tracker(), list_migrations(), mark_applied(), Path (+6 more)
+Cohesion: 0.18
+Nodes (10): ADDED Requirements, Requirement: AI re-map limited to affected entities, human-gated, Requirement: Source-side schema discovery and diff, Requirement: Source-swap never writes to the source, Scenario: High-confidence remap can auto-apply, Scenario: Low-confidence remap requires approval, Scenario: No changes reported when source is unchanged, Scenario: Source schema diff detects structural changes (+2 more)
 
 ### Community 170 - "Community 170"
-Cohesion: 0.33
-Nodes (4): central(), Process-wide pooled connectors shared by all request handlers and jobs., Path B connector to lrmis_target (its own pool, same credentials)., target()
+Cohesion: 0.12
+Nodes (13): main(), Bootstrap or update an admin UI user.  Usage: python scripts/create_admin_user.p, main(), Minimal administrator/auditor CLI; suitable for wrapping in a future web UI., set_enabled(), status(), main(), Read-only Path B cutover status (Phase 9 planning).  Reports where each entity s (+5 more)
 
 ### Community 171 - "Community 171"
-Cohesion: 0.33
-Nodes (6): Takes one row from your central DB + the active mapping config + the target Sche, Returns (target_row, errors). If errors is non-empty, do NOT write     target_ro, Convenience wrapper: returns (good_rows, failed_rows_with_errors)., transform_batch(), transform_row(), test_envelope_fields_are_supplied_after_business_validation()
+Cohesion: 0.18
+Nodes (10): 0. MVP guardrails and feasibility, 1. Database migration, 2. MVP tool registry (`src/agent/tools.py`), 3. Conversation loop (`src/agent/conversation.py`), 4. FastAPI chat endpoints, 5. React sidebar chat UI, 6. MVP workflow guidance (`src/agent/workflows.py`), 7. Conservative autonomy gating (+2 more)
 
 ### Community 172 - "Community 172"
 Cohesion: 0.17
@@ -926,8 +926,8 @@ Cohesion: 0.29
 Nodes (6): Agent Context Systems, Domain Glossary, Project Context, Project Conventions, Purpose, Tech Stack
 
 ### Community 186 - "Community 186"
-Cohesion: 0.53
-Nodes (6): _event_stream(), firehose(), job_events(), Request, Honor the SSE reconnect header so no event is missed across a drop., _resume_from()
+Cohesion: 0.31
+Nodes (6): _col(), Tests for wiring the agent into deploy + the worker (§8.6)., _Rollbackable, test_deploy_guidance_resolves_unmapped_required_column(), test_worker_heal_annotates_quarantine_on_delivery_error(), test_worker_without_agent_is_unchanged()
 
 ### Community 187 - "Community 187"
 Cohesion: 0.31
@@ -935,23 +935,23 @@ Nodes (8): clear_session(), _Response, data_compare_source_target(), data_rows()
 
 ### Community 188 - "Community 188"
 Cohesion: 0.22
-Nodes (8): 0. Groundwork, 1. Generalize `schema-swap` to be side-agnostic, 2. Source-side schema-swap, 3. Disaster recovery — core service, 4. Disaster recovery — API and CLI, 5. Disaster recovery — web UI, 6. Conversational agent tools (deferred on `conversational-ai-assistant`), 7. Verify and document
+Nodes (8): MODIFIED Requirements, Requirement: Ingest the new schema by discovery, source or target, Requirement: One-command schema swap with gated re-map, either side, Scenario: Confirmed apply recreates and re-delivers (target), Scenario: Dry-run previews a source-side swap, Scenario: Dry-run previews the swap (target, unchanged default), Scenario: New Postgres target from a .backup, Scenario: Restructured source discovered via the source adapter
 
 ### Community 189 - "Community 189"
-Cohesion: 0.40
-Nodes (5): Find an existing row's primary key; never insert.      If the mapping already su, resolve_reference_id(), test_reference_row_with_missing_pk_raises(), test_reference_row_without_any_lookup_value_raises(), test_reference_table_resolved_by_natural_key()
+Cohesion: 0.22
+Nodes (8): 0. Groundwork, 1. Generalize `schema-swap` to be side-agnostic, 2. Source-side schema-swap, 3. Disaster recovery — core service, 4. Disaster recovery — API and CLI, 5. Disaster recovery — web UI, 6. Conversational agent tools (deferred on `conversational-ai-assistant`), 7. Verify and document
 
 ### Community 190 - "Community 190"
-Cohesion: 0.09
-Nodes (35): columns_a_mapping_must_supply(), coverage_report(), CoverageReport, Multi-table mapping validation for the LRMIS target (Path B, Phase 2).  A source, Raise ValidationError if the mapping is not deployable; else return the     cove, Record an entity's LRMIS footprint (the distinct target tables it fans     out i, Sorted distinct target tables a mapping fans out into., Columns the writer/allocator fills, so a mapping need not: FK columns     (fille (+27 more)
+Cohesion: 0.27
+Nodes (17): coverage_report(), Raise ValidationError if the mapping is not deployable; else return the     cove, Assess whether `mappings` can be deployed against the LRMIS schema., validate_deployment(), m(), Multi-table mapping validation (Path B, Phase 2).  Inline DDL fixture shaped lik, test_blocking_messages_are_human_readable(), test_explicitly_mapped_fk_column_is_not_flagged() (+9 more)
 
 ### Community 192 - "Community 192"
 Cohesion: 0.29
 Nodes (6): ADDED Requirements, Requirement: Dialect-aware SQL generation, Requirement: Generic type system, Scenario: Dialect generates correct upsert, Scenario: Engine-specific refresh SQL, Scenario: Type mapped across engines
 
 ### Community 193 - "Community 193"
-Cohesion: 0.29
-Nodes (6): MODIFIED Requirements, Requirement: On-demand schema scanning, Scenario: Scan detects target drift, Scenario: Scan with no changes, Scenario: Source-schema change links to schema-swap, Scenario: Target-schema change links to schema-swap
+Cohesion: 0.32
+Nodes (4): Target adapters (generic-ai-db-migration-engine, §0).  The engine treats the tar, MySQL target adapter — discovers the live MySQL target (default lrmis_target)., Postgres target adapter — discovers a live Postgres target.  This is how a `pg_d, The `TargetAdapter` protocol + shared discovery wiring.  A target adapter's job
 
 ### Community 194 - "Community 194"
 Cohesion: 0.33
@@ -962,8 +962,8 @@ Cohesion: 0.21
 Nodes (15): AdminUser, authenticate(), current_user(), _get_signer(), load_user(), Per-admin session authentication and role checks.  The acting identity always co, require_admin(), require_operator() (+7 more)
 
 ### Community 196 - "Community 196"
-Cohesion: 0.29
-Nodes (6): `plugin` supplies the target's domain config (app-assigned tables, id         ra, get_registry(), Process-wide registry, parsed once from the DDL file., test_seed_tables_are_derived_from_the_schema(), lrmis_schema(), The canonical LRMIS tables and their columns, for the manual mapping     picker
+Cohesion: 0.57
+Nodes (7): _agent(), Tests for the MigrationAgent (§8) — schema-only, gated, provider-agnostic.  No l, _source(), _target(), test_plan_auto_ok_when_all_confident(), test_plan_flags_low_confidence_and_unmapped_and_is_gated(), test_plan_records_audit_as_agent()
 
 ### Community 197 - "Community 197"
 Cohesion: 0.33
@@ -973,17 +973,13 @@ Nodes (5): MODIFIED Requirements, Requirement: Schema Changes cleanup controls, 
 Cohesion: 0.33
 Nodes (5): MODIFIED Requirements, Requirement: On-demand schema scanning, Scenario: No staging side scanned, Scenario: Scan detects target drift, Scenario: Scan with no changes
 
-### Community 199 - "Community 199"
-Cohesion: 0.67
-Nodes (3): group_by_table(), Group column mappings by their `target_table`., test_group_by_table_splits_columns()
-
 ### Community 200 - "Community 200"
 Cohesion: 0.33
 Nodes (4): insert_customer(), Simulates your real application writing a new customer. The trigger on `customer, central_conn(), Backward-compatible central connection helper.  New integration code uses pooled
 
 ### Community 201 - "Community 201"
-Cohesion: 0.38
-Nodes (6): from_json_export(), _normalize_type(), parse_ddl(), Turns whatever the other system gives you (a CREATE TABLE dump, a JSON export fr, Lightweight parser for a static DDL dump, e.g.:          CREATE TABLE customers, Use this when the other system hands you a structured export instead     of raw
+Cohesion: 0.29
+Nodes (5): make_central_audit(), Audit sink for agent actions (§8.7).  Records every agent action in `integration, Return an audit sink `(action, details, performed_by) -> None` bound to     `cen, Embedded migration agent (generic engine, §8).  `MigrationAgent` is the interact, test_central_audit_inserts_agent_row()
 
 ### Community 202 - "Community 202"
 Cohesion: 0.33
@@ -1021,21 +1017,25 @@ Nodes (4): MODIFIED Requirements, Requirement: Durable allowlisted jobs, Scenari
 Cohesion: 0.40
 Nodes (4): MODIFIED Requirements, Requirement: Drift visibility and side-effect transparency, Scenario: Paused entities called out, Scenario: Resolve from drift report
 
+### Community 211 - "Community 211"
+Cohesion: 0.29
+Nodes (7): columns_a_mapping_must_supply(), Columns the writer/allocator fills, so a mapping need not: FK columns     (fille, Required columns (NOT NULL, no default, not auto-increment) that the     system, system_handled_columns(), test_must_supply_excludes_fk_and_pk(), test_real_schema_station_has_no_required_non_system_columns(), test_system_handled_includes_fk_and_app_assigned_pk()
+
 ### Community 212 - "Community 212"
 Cohesion: 0.50
 Nodes (4): _norm(), Reconcile a source reference entity to an existing LRMIS reference table.  Some, Match source reference rows to existing target rows and record the     crosswalk, reconcile_reference_crosswalk()
 
 ### Community 213 - "Community 213"
-Cohesion: 0.33
-Nodes (3): _FakeWriter, test_refresh_entity_uses_injected_writer(), test_row_exists_is_dialect_aware()
+Cohesion: 0.29
+Nodes (6): Capabilities, Impact, Modified Capabilities, New Capabilities, What Changes, Why
 
 ### Community 214 - "Community 214"
 Cohesion: 0.40
 Nodes (4): MODIFIED Requirements, Requirement: Tracked migration state, Scenario: Migrations page shows multi-engine state, Scenario: Scoped migration apply
 
 ### Community 215 - "Community 215"
-Cohesion: 0.40
-Nodes (4): MODIFIED Requirements, Requirement: Centralized admin web UI, Scenario: Admin reaches all workflows from one place, Scenario: Recovery page lists backups and restores behind confirmation
+Cohesion: 0.29
+Nodes (6): MODIFIED Requirements, Requirement: On-demand schema scanning, Scenario: Scan detects target drift, Scenario: Scan with no changes, Scenario: Source-schema change links to schema-swap, Scenario: Target-schema change links to schema-swap
 
 ### Community 216 - "Community 216"
 Cohesion: 0.50
@@ -1050,39 +1050,31 @@ Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
 ### Community 220 - "Community 220"
-Cohesion: 0.29
-Nodes (6): Capabilities, Impact, Modified Capabilities, New Capabilities, What Changes, Why
+Cohesion: 0.43
+Nodes (5): canonical_json(), checksum(), quarantine(), Durable PostgreSQL state transitions for delivery, replay, and audit., save_projection()
+
+### Community 223 - "Community 223"
+Cohesion: 0.40
+Nodes (4): Parent-first ordering. Self-loops are ignored; real cycles raise.          `subs, The FK graph has a cycle that is not a simple self-reference., SchemaCycleError, RuntimeError
 
 ### Community 242 - "Community 242"
 Cohesion: 0.40
-Nodes (5): create_delivery_audit_sql(), create_target_schema(), Create a target schema from the generic type system (§3.3 / target setup).  `cre, Execute the target DDL against an open connection. Returns table count.     Expl, test_create_delivery_audit_sql_is_postgres_flavored()
-
-### Community 244 - "Community 244"
-Cohesion: 0.33
-Nodes (6): bulk_propose_lrmis(), Deployed entities that are still on staging (not yet on the LRMIS target)     —, Generate a fresh LRMIS-target proposal (one Gemini call each) for every     depl, _tables_to_repropose(), _h_bulk_propose_lrmis(), Generate a fresh LRMIS-target proposal (one Gemini call each) for every     depl
-
-### Community 247 - "Community 247"
-Cohesion: 0.60
-Nodes (4): main(), Minimal administrator/auditor CLI; suitable for wrapping in a future web UI., set_enabled(), status()
-
-### Community 248 - "Community 248"
-Cohesion: 0.67
-Nodes (3): hash_password(), create_user(), CreateUserBody
+Nodes (4): MODIFIED Requirements, Requirement: Centralized admin web UI, Scenario: Admin reaches all workflows from one place, Scenario: Recovery page lists backups and restores behind confirmation
 
 ## Knowledge Gaps
-- **765 isolated node(s):** `import_irimsv_data.sh script`, `import_lrmis_schema.sh script`, `name`, `private`, `version` (+760 more)
+- **786 isolated node(s):** `import_irimsv_data.sh script`, `import_lrmis_schema.sh script`, `name`, `private`, `version` (+781 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **39 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **36 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ValidationError` connect `onboarding.py` to `Community 128`, `MySQL Staging Connector`, `Staging Fast Refresh`, `Deployment & Staging DDL`, `Community 136`, `LRMIS Schema Import`, `Community 143`, `Community 150`, `Community 152`, `ADDED Requirements`, `Onboarding.tsx`, `auth.tsx`, `explore.md`, `migrations.py`, `Community 166`, `Community 169`, `graphify reference: transcribe video and audio`, `archive.md`, `Community 190`, `JobRunner`, `Community 248`, `Community 126`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
-- **Why does `LrmisRegistry` connect `compilerOptions` to `Community 128`, `ADDED Requirements`, `Tasks: Add Admin Database Dashboard`, `Community 196`, `Terminal UI & Pipeline Entry`, `snapshots.py`, `AI Mapping Engine`, `Community 168`, `Add Admin Database Dashboard`, `Community 173`, `LRMIS Schema Import`, `graphify reference: transcribe video and audio`, `Community 213`, `ADDED Requirements`, `Tasks: Add Admin Database Dashboard`, `Community 190`, `Community 191`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
-- **Why does `get_registry()` connect `Community 196` to `Community 166`, `integration_admin.py`, `Community 168`, `LRMIS Schema Import`, `graphify reference: transcribe video and audio`, `JobRunner`, `test_init_lrmis_target.py`, `compilerOptions`, `Community 150`, `SKILL.md`, `Community 152`, `Community 154`, `Community 190`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `ValidationError` connect `Community 166` to `Community 128`, `MySQL Staging Connector`, `Staging Fast Refresh`, `Community 136`, `Deployment & Staging DDL`, `Community 143`, `test_admin_api.py`, `Community 150`, `Community 152`, `ADDED Requirements`, `Community 154`, `Onboarding.tsx`, `auth.tsx`, `explore.md`, `Community 165`, `migrations.py`, `graphify reference: transcribe video and audio`, `archive.md`, `Community 190`, `Community 199`, `onboarding.py`, `Community 107`, `group_by_table`, `Community 126`?**
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+- **Why does `LrmisRegistry` connect `compilerOptions` to `Community 128`, `Community 191`, `ADDED Requirements`, `AI Mapping Engine`, `Tasks: Add Admin Database Dashboard`, `Community 199`, `Community 168`, `Add Admin Database Dashboard`, `Community 173`, `LRMIS Schema Import`, `graphify reference: transcribe video and audio`, `ADDED Requirements`, `Tasks: Add Admin Database Dashboard`, `Community 186`, `Community 157`, `Community 223`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `get_registry()` connect `Community 157` to `AI Mapping Engine`, `Community 166`, `integration_admin.py`, `Community 168`, `migrations.py`, `graphify reference: transcribe video and audio`, `test_init_lrmis_target.py`, `Community 211`, `compilerOptions`, `group_by_table`, `ADDED Requirements`, `Community 150`, `Community 154`, `Community 152`, `Community 190`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
 - **Are the 13 inferred relationships involving `ValidationError` (e.g. with `CoverageReport` and `TableCoverage`) actually correct?**
   _`ValidationError` has 13 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 19 inferred relationships involving `LrmisRegistry` (e.g. with `ReferenceRowNotFound` and `UnknownTargetTable`) actually correct?**

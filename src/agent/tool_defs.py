@@ -29,17 +29,23 @@ AUTONOMY_LEVELS = ("propose_only", "auto_safe", "destructive")
 
 @dataclass
 class ToolDef:
-    """Mirror of the registry entry `conversational-ai-assistant` specs."""
+    """The registry entry shape from `conversational-ai-assistant` design D3
+    (+ the explicit `destructive` flag its task 2.1 adds). A tool whose
+    autonomy is "destructive" is always destructive; the separate flag lets a
+    propose_only tool that CAN mutate on confirmation also declare itself."""
     name: str
     description: str
     params_schema: dict
     handler: Callable
     autonomy: str = "propose_only"
+    destructive: bool = False
 
     def __post_init__(self):
         if self.autonomy not in AUTONOMY_LEVELS:
             raise ValidationError(
                 f"tool {self.name!r}: autonomy must be one of {AUTONOMY_LEVELS}")
+        if self.autonomy == "destructive":
+            self.destructive = True
 
 
 def validate_params(tool: ToolDef, params: dict) -> dict:

@@ -1,27 +1,27 @@
 ## 0. MVP guardrails and feasibility
 
-- [ ] 0.1 Confirm MVP intent list: `check_status`, `summarize_proposal`, `explain_blocker`, `show_schema`, `deploy_guidance`, `explain_dilemma`, `onboard_table`
+- [x] 0.1 (2026-07-14) Confirmed — the seven MVP intents are implemented exactly as listed in `src/agent/tools.py`.
 - [ ] 0.2 Define free-tier budget limits: max prompt tokens, max response tokens, provider timeout, retry/fallback order
 - [ ] 0.3 Add prompt/privacy test fixture proving row values are excluded from prompts and persisted messages
-- [ ] 0.4 Confirm `auto_all` is deferred; MVP supports only `propose_only` and optional `auto_safe`
+- [x] 0.4 Confirmed in the registry: dispatch tiers are `propose_only`/`auto_safe` only; `destructive` tools (e.g. `recover_from_backup`) always require confirmation regardless of tier, and the wrapped services enforce typed confirmation themselves. No `auto_all` anywhere.
 
 ## 1. Database migration
 
-- [ ] 1.1 Create `sql/005_agent_conversation.sql` with `CREATE TABLE integration.agent_conversation` (id UUID PK, user_id FK, title TEXT, autonomy_tier TEXT DEFAULT 'propose_only', messages JSONB, created_at, updated_at)
+- [ ] 1.1 Create the agent_conversation migration — NOTE (2026-07-14): the planned filename `sql/005_agent_conversation.sql` is stale, 005–012 are taken now; use `sql/013_agent_conversation.sql`. (id UUID PK, user_id FK, title TEXT, autonomy_tier TEXT DEFAULT 'propose_only', messages JSONB, created_at, updated_at)
 - [ ] 1.2 Add index on `user_id` + `updated_at` for conversation listing queries
 - [ ] 1.3 Add a CHECK constraint limiting `autonomy_tier` to `propose_only` or `auto_safe`
 
 ## 2. MVP tool registry (`src/agent/tools.py`)
 
-- [ ] 2.1 Define `ToolDef` dataclass (name, description, params_schema, handler, autonomy, destructive)
-- [ ] 2.2 Implement `check_status` tool; wraps `ops_service.get_status()`
-- [ ] 2.3 Implement `summarize_proposal` tool; wraps `get_review()` and summarizes confidence/risk
-- [ ] 2.4 Implement `explain_blocker` tool; wraps proposal status, coverage, and deploy readiness checks
-- [ ] 2.5 Implement `show_schema` tool; wraps `ops_service.get_schema_trees()`
-- [ ] 2.6 Implement `deploy_guidance` tool; wraps existing deploy guidance/readiness services without executing deploy
-- [ ] 2.7 Implement `explain_dilemma` tool; wraps `MigrationAgent.guide()`
-- [ ] 2.8 Implement `onboard_table` tool; wraps discover/propose flow but defaults to propose-only for mutations
-- [ ] 2.9 Write unit tests for every MVP tool: schema validation, handler dispatch, error handling, redaction
+- [x] 2.1 (2026-07-14) `ToolDef` lives in `src/agent/tool_defs.py` (created ahead of time by source-schema-swap-and-disaster-recovery §6, per its design) and now carries all six fields — `destructive: bool` added, auto-True when `autonomy == "destructive"`. `tools.py` imports it rather than defining a second dataclass.
+- [x] 2.2 `check_status` → `ops_service.get_status()`; auto_safe.
+- [x] 2.3 `summarize_proposal` → `get_review()`; counts by field status, low-confidence/unmapped list, unmet required columns, risk high/low. Field rows pass through an explicit allowlist projection (`_FIELD_KEYS`) — reasoning/sample values never reach the output (redaction by construction).
+- [x] 2.4 `explain_blocker` → proposal status + accepted-mapping presence + the proposal's persisted `unmet_required_columns` (the stored coverage verdict) → blockers list + `deploy_ready`. Deliberately does NOT re-run `coverage_report` (that's deploy-time's job; the persisted verdict avoids guessing mapping-dict key shapes).
+- [x] 2.5 `show_schema` → `ops_service.get_schema_trees()` (optional `source_schema` param passed through).
+- [x] 2.6 `deploy_guidance` → composes `explain_blocker` + recommended next actions per blocker; result carries `executed: False` always — never deploys.
+- [x] 2.7 `explain_dilemma` → constructs `Dilemma`, calls `MigrationAgent.guide()` (pure), returns options + recommendation.
+- [x] 2.8 `onboard_table` → `onboarding.propose()` (creates a needs_review proposal — the propose-only mutation); autonomy `propose_only`; result note states nothing was approved/deployed.
+- [x] 2.9 `tests/test_agent_tools.py` — 18 tests: registry membership (9 tools: 7 MVP + the 2 recovery tools registered per the archived change's 6.3), autonomy/destructive flags, param schema validation (required + types), dispatch through monkeypatched service seams for every wrapper, redaction allowlist (a planted "SECRET ROW VALUE" sample never appears in output), real-`guide()` dilemma path, propose-only note, error propagation. Full suite 350 passed.
 
 ## 3. Conversation loop (`src/agent/conversation.py`)
 

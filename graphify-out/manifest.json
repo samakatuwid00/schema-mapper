@@ -175,8 +175,8 @@
     "semantic_hash": ""
   },
   "requirements.txt": {
-    "mtime": 1784002206.6996305,
-    "ast_hash": "b008c2496254d1b0125693b1f8c70cdb",
+    "mtime": 1784007313.1565256,
+    "ast_hash": "0c899993e3ca750ae286c732929ff4ca",
     "semantic_hash": ""
   },
   ".claude/settings.json": {
@@ -685,8 +685,8 @@
     "semantic_hash": ""
   },
   "openspec/specs/admin-dashboard/spec.md": {
-    "mtime": 1783674308.0794802,
-    "ast_hash": "81bed75e334bb23f517d430e2de08b92",
+    "mtime": 1784008085.4881723,
+    "ast_hash": "3f669fe76eab1ff5777a2c6e0f621244",
     "semantic_hash": ""
   },
   "openspec/specs/audit-and-approval/spec.md": {
@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "openspec/specs/schema-observability/spec.md": {
-    "mtime": 1783990150.0465448,
-    "ast_hash": "90315e539fe41dfb0f267abac81c2d51",
+    "mtime": 1784008075.1036148,
+    "ast_hash": "72e51f3fb22b77a8f3f4a9f122881a05",
     "semantic_hash": ""
   },
   "scripts/rebaseline_entity_fingerprints.py": {
@@ -1260,8 +1260,8 @@
     "semantic_hash": ""
   },
   "openspec/changes/conversational-ai-assistant/tasks.md": {
-    "mtime": 1783945565.2568564,
-    "ast_hash": "080832254f6fabcac2a91b5fa772baa4",
+    "mtime": 1784008656.2723627,
+    "ast_hash": "3982d1e03931947e3c9fa2909d6bd548",
     "semantic_hash": ""
   },
   "src/adapters/passthrough.py": {
@@ -1384,21 +1384,6 @@
     "ast_hash": "ea67e4fee4bcdcba064fe187ec840850",
     "semantic_hash": ""
   },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/design.md": {
-    "mtime": 1783989891.8206956,
-    "ast_hash": "e4b67c5838eadff78d2418dd0bdf5291",
-    "semantic_hash": ""
-  },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/proposal.md": {
-    "mtime": 1783989891.2438428,
-    "ast_hash": "5620c1a29f02558673cd6243754299fa",
-    "semantic_hash": ""
-  },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/tasks.md": {
-    "mtime": 1784002867.7415824,
-    "ast_hash": "f58ecb2b539f6596d73ebb691acc829f",
-    "semantic_hash": ""
-  },
   ".claude/settings.local.json": {
     "mtime": 1783997310.671497,
     "ast_hash": "16d0169a471fb9f95c477a280144fff8",
@@ -1459,31 +1444,6 @@
     "ast_hash": "521a87b94c17ced4ad88612d7a99299b",
     "semantic_hash": ""
   },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/specs/admin-dashboard/spec.md": {
-    "mtime": 1783989894.3723176,
-    "ast_hash": "448d9529eac72643403a77163f800b46",
-    "semantic_hash": ""
-  },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/specs/disaster-recovery-upload/spec.md": {
-    "mtime": 1783990277.1755967,
-    "ast_hash": "ef7e3652cc8774028135150dd436fcad",
-    "semantic_hash": ""
-  },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/specs/schema-observability/spec.md": {
-    "mtime": 1783989893.9934876,
-    "ast_hash": "01ddc530c98711796427424eeb619ae1",
-    "semantic_hash": ""
-  },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/specs/schema-swap-remap/spec.md": {
-    "mtime": 1783989893.5270934,
-    "ast_hash": "a5687b18034dc70f4028a074588afafe",
-    "semantic_hash": ""
-  },
-  "openspec/changes/source-schema-swap-and-disaster-recovery/specs/source-schema-swap/spec.md": {
-    "mtime": 1783989892.659738,
-    "ast_hash": "c2b300c9b59abbad7f9a4391189d92f5",
-    "semantic_hash": ""
-  },
   "openspec/specs/ai-agent/spec.md": {
     "mtime": 1783990150.0371492,
     "ast_hash": "f9c2130857dbaa64ad53b99ff0ecafd2",
@@ -1505,8 +1465,8 @@
     "semantic_hash": ""
   },
   "openspec/specs/schema-swap-remap/spec.md": {
-    "mtime": 1783990150.0475955,
-    "ast_hash": "e3448f431317155553d48da0015cb923",
+    "mtime": 1784008059.5247476,
+    "ast_hash": "1047ddd12be5b0190b2c2de6288c6dcb",
     "semantic_hash": ""
   },
   "scripts/drop_legacy_staging.py": {
@@ -1540,18 +1500,18 @@
     "semantic_hash": ""
   },
   "src/agent/tool_defs.py": {
-    "mtime": 1784003007.0678117,
-    "ast_hash": "4c6c71a423cdd0d9ca0e46de0510ed16",
+    "mtime": 1784008451.3662477,
+    "ast_hash": "3ad776f937cd33ea068e299d88c03552",
     "semantic_hash": ""
   },
   "src/services/backup_recovery.py": {
-    "mtime": 1784002498.0626411,
-    "ast_hash": "addf89a3e5a483661a08bdfffeb7e5a8",
+    "mtime": 1784006296.3109875,
+    "ast_hash": "799ae729670d5d4af34956416cead9d4",
     "semantic_hash": ""
   },
   "tests/test_backup_recovery.py": {
-    "mtime": 1784002505.1368012,
-    "ast_hash": "c9e5fb33f33d50fe0f90e5e9bc412302",
+    "mtime": 1784006305.502239,
+    "ast_hash": "1aa4ecdad83b1f05fe4f28f2329f7453",
     "semantic_hash": ""
   },
   "tests/test_recovery_api.py": {
@@ -1587,6 +1547,71 @@
   "web/src/pages/__tests__/Recovery.test.tsx": {
     "mtime": 1784002773.2652109,
     "ast_hash": "76b8c017f9a7069264908a56ea657040",
+    "semantic_hash": ""
+  },
+  "check_staging_db.py": {
+    "mtime": 1784005052.0338705,
+    "ast_hash": "26c3ac471ae0fed241a5dbb9dc507115",
+    "semantic_hash": ""
+  },
+  "src/agent/tools.py": {
+    "mtime": 1784008490.4571877,
+    "ast_hash": "4b6b6dd3294449e9f02faf111b75b6b1",
+    "semantic_hash": ""
+  },
+  "tests/test_agent_tools.py": {
+    "mtime": 1784008595.1473417,
+    "ast_hash": "632a67185d3c83eac419542468b741e5",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/design.md": {
+    "mtime": 1783989891.8206956,
+    "ast_hash": "e4b67c5838eadff78d2418dd0bdf5291",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/proposal.md": {
+    "mtime": 1783989891.2438428,
+    "ast_hash": "5620c1a29f02558673cd6243754299fa",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/specs/admin-dashboard/spec.md": {
+    "mtime": 1783989894.3723176,
+    "ast_hash": "448d9529eac72643403a77163f800b46",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/specs/disaster-recovery-upload/spec.md": {
+    "mtime": 1783990277.1755967,
+    "ast_hash": "ef7e3652cc8774028135150dd436fcad",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/specs/schema-observability/spec.md": {
+    "mtime": 1783989893.9934876,
+    "ast_hash": "01ddc530c98711796427424eeb619ae1",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/specs/schema-swap-remap/spec.md": {
+    "mtime": 1783989893.5270934,
+    "ast_hash": "a5687b18034dc70f4028a074588afafe",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/specs/source-schema-swap/spec.md": {
+    "mtime": 1783989892.659738,
+    "ast_hash": "c2b300c9b59abbad7f9a4391189d92f5",
+    "semantic_hash": ""
+  },
+  "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/tasks.md": {
+    "mtime": 1784007909.0613875,
+    "ast_hash": "e63459c74c247d70264252baeac5f9e9",
+    "semantic_hash": ""
+  },
+  "openspec/specs/disaster-recovery-upload/spec.md": {
+    "mtime": 1784008041.071486,
+    "ast_hash": "5e23d3d1502cce223c4b7ae4249257c7",
+    "semantic_hash": ""
+  },
+  "openspec/specs/source-schema-swap/spec.md": {
+    "mtime": 1784008030.2062652,
+    "ast_hash": "87d08b7b86919ff81036e205a262ad31",
     "semantic_hash": ""
   }
 }
