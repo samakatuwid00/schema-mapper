@@ -16,6 +16,9 @@ EXPECTED_TOOLS = {
     "deploy_guidance", "explain_dilemma", "onboard_table",
     # registered from tool_defs (archived change's 6.3)
     "swap_source_schema", "recover_from_backup",
+    # §8 later-phase tools
+    "heal_error", "list_drift_reports", "resolve_drift",
+    "swap_target_dry_run", "swap_target_apply",
 }
 
 
@@ -196,3 +199,93 @@ def test_handler_errors_propagate(monkeypatch):
     monkeypatch.setattr(tools.onboarding_service, "get_review", boom)
     with pytest.raises(NotFoundError):
         REGISTRY["summarize_proposal"].handler({"proposal_id": 404})
+
+
+# --- §8 later-phase tools -------------------------------------------------------
+
+def test_later_phase_autonomy_flags():
+    assert REGISTRY["heal_error"].autonomy == "propose_only"
+    assert REGISTRY["list_drift_reports"].autonomy == "auto_safe"
+    assert REGISTRY["swap_target_dry_run"].autonomy == "auto_safe"
+    assert REGISTRY["resolve_drift"].destructive is True
+    assert REGISTRY["swap_target_apply"].destructive is True
+
+
+def test_heal_error_proposes_only_by_default(monkeypatch):
+    monkeypatch.delenv("AGENT_AUTONOMOUS_HEAL", raising=False)
+    result = REGISTRY["heal_error"].handler(
+        {"error": "could not convert string to int: 'x' in column station_id"})
+    assert result["action"] in ("cast", "quarantine")
+    assert result["apply"] is False
+    assert "nothing was changed" in result["note"]
+
+
+def test_list_drift_reports_wraps_ops(monkeypatch):
+    monkeypatch.setattr(tools.ops_service, "list_drift_reports",
+                        lambda limit: [{"target_system": "LRMIS",
+                                        "impacted_entities": ["schools"]}])
+    result = REGISTRY["list_drift_reports"].handler({"limit": 5})
+    assert result["count"] == 1
+    assert result["reports"][0]["impacted_entities"] == ["schools"]
+
+
+def test_resolve_drift_wraps_service_with_params(monkeypatch):
+    calls = []
+    monkeypatch.setattr(tools.drift_service, "resolve_drift",
+                        lambda **kw: calls.append(kw) or {"dry_run": kw["dry_run"]})
+    REGISTRY["resolve_drift"].handler({"entities": ["schools"],
+                                       "dry_run": True})
+    assert calls[0]["entities"] == ["schools"]
+    assert calls[0]["dry_run"] is True and calls[0]["resolve_target"] is True
+
+
+def _pin_mysql_target(monkeypatch):
+    """The dev .env points the swap machinery at a Postgres oldlrmis target;
+    pin a deterministic environment so these tests don't depend on it."""
+    monkeypatch.setenv("LRMIS_TARGET_ENGINE", "mysql")
+    monkeypatch.setenv("LRMIS_TARGET_DATABASE", "lrmis_target")
+    monkeypatch.delenv("LRMIS_TARGET_PG_DSN", raising=False)
+
+
+def test_swap_target_dry_run_uses_seam_adapter(monkeypatch):
+    _pin_mysql_target(monkeypatch)
+    seen = {}
+
+    def fake_dry_run(target_adapter):
+        seen["adapter"] = target_adapter
+        return {"would_remap": []}
+
+    monkeypatch.setattr(tools.schema_swap_service, "dry_run", fake_dry_run)
+    adapter = object()
+    result = REGISTRY["swap_target_dry_run"].handler({}, target_adapter=adapter)
+    assert seen["adapter"] is adapter and result == {"would_remap": []}
+
+
+def test_swap_target_apply_requires_typed_token(monkeypatch):
+    _pin_mysql_target(monkeypatch)
+    monkeypatch.setattr(tools.schema_swap_service, "apply",
+                        lambda **kw: pytest.fail("must not run"))
+    with pytest.raises(ValidationError, match="requires confirm='lrmis_target'"):
+        REGISTRY["swap_target_apply"].handler({}, target_adapter=object())
+
+
+def test_swap_target_apply_with_token_runs_gated_apply(monkeypatch):
+    _pin_mysql_target(monkeypatch)
+    calls = []
+    monkeypatch.setattr(tools.schema_swap_service, "apply",
+                        lambda **kw: calls.append(kw) or {"status": "applied"})
+    result = REGISTRY["swap_target_apply"].handler(
+        {"confirm": "lrmis_target", "threshold": 0.8},
+        target_adapter=object())
+    assert result["status"] == "applied"
+    assert calls[0]["threshold"] == 0.8 and calls[0]["force"] is False
+
+
+def test_swap_target_confirm_token_follows_pg_dsn(monkeypatch):
+    monkeypatch.setenv("LRMIS_TARGET_ENGINE", "postgres")
+    monkeypatch.setenv("LRMIS_TARGET_PG_DSN",
+                       "postgresql://u:p@localhost:5434/oldlrmis")
+    monkeypatch.setattr(tools.schema_swap_service, "apply",
+                        lambda **kw: pytest.fail("must not run"))
+    with pytest.raises(ValidationError, match="requires confirm='oldlrmis'"):
+        REGISTRY["swap_target_apply"].handler({}, target_adapter=object())

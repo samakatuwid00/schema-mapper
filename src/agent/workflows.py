@@ -1,9 +1,9 @@
-"""MVP workflow guidance state machines (conversational-ai-assistant §6, D7).
+"""Workflow guidance state machines (conversational-ai-assistant §6 + §8, D7).
 
 The LLM explains and classifies; these machines decide the allowed transition
-graph. MVP ships onboarding and deploy guidance; drift resolution and
-schema-swap flows are later phases — the conversation layer answers those
-requests with a safe deferral pointing at the existing dashboard/CLI.
+graph. MVP shipped onboarding and deploy guidance; §8.2/8.3 added drift
+resolution and target schema-swap. Backup recovery remains dashboard/CLI-only
+(the conversation layer answers those requests with a safe deferral).
 """
 from __future__ import annotations
 
@@ -31,6 +31,29 @@ WORKFLOWS: dict[str, dict] = {
             "resolve_dilemmas": "resolve any low-confidence or unmapped columns",
             "confirm": "confirm the deploy action",
             "deploy": "run the deploy job",
+        },
+    },
+    "drift": {
+        "steps": ["list_reports", "review_diff", "remap", "apply"],
+        "entry_tool": "list_drift_reports",
+        "descriptions": {
+            "list_reports": "list the recorded drift reports",
+            "review_diff": "review the differences and impacted entities",
+            "remap": "re-map the drifted entities (resolve_drift dry_run "
+                     "previews it)",
+            "apply": "apply drift resolution (destructive — confirmation "
+                     "required)",
+        },
+    },
+    "swap": {
+        "steps": ["dry_run", "remap", "confirm", "apply"],
+        "entry_tool": "swap_target_dry_run",
+        "descriptions": {
+            "dry_run": "preview the swap: discover the new target and diff it",
+            "remap": "review the proposed re-maps for affected entities",
+            "confirm": "confirm with the typed target-db token",
+            "apply": "recreate the target and re-deliver (swap_target_apply, "
+                     "destructive)",
         },
     },
 }

@@ -105,17 +105,27 @@ class StreamEvent:
 # ---------------------------------------------------------------------------
 
 # Ordered: more specific phrasings first. Every pattern maps to a registered
-# MVP tool; swap/recovery phrasings map to the safe deferral (workflow spec:
-# chat-guided swap/restore is a later phase); "where are we" reads the
-# persisted workflow state without any tool call.
+# tool; only backup-recovery phrasings still map to the safe deferral
+# (recovery keeps its typed-confirmation home on the Recovery page/CLI);
+# "where are we" reads the persisted workflow state without any tool call.
 _DEFERRED = "deferred"
 _WORKFLOW_STATUS = "workflow_status"
 _INTENT_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
-    (_DEFERRED, ("schema swap", "swap the target", "swap the source",
-                 "restore a backup", "restore the target", "restore the source",
-                 "recover from backup", "drift resolution", "resolve drift")),
+    (_DEFERRED, ("restore a backup", "restore the target", "restore the source",
+                 "recover from backup", "restore from backup")),
     (_WORKFLOW_STATUS, ("where are we", "workflow status", "current step",
                         "what step", "how far along")),
+    ("swap_source_schema", ("swap the source", "source schema changed",
+                            "restructured source", "new source schema",
+                            "source swap")),
+    ("swap_target_dry_run", ("schema swap", "swap the target", "swap target",
+                             "target schema changed", "new target schema",
+                             "swap the schema")),
+    ("resolve_drift", ("resolve drift", "resolve the drift", "fix the drift",
+                       "apply drift")),
+    ("list_drift_reports", ("drift",)),
+    ("heal_error", ("heal", "fix this error", "fix the error",
+                    "delivery error", "quarantined event")),
     ("onboard_table", ("onboard", "add a table", "add table", "new table",
                        "map a table", "start mapping")),
     ("summarize_proposal", ("summarize", "summary of", "proposal look",
@@ -156,6 +166,11 @@ def _extract_params(intent_name: str, message: str, page_context: dict) -> dict:
             if kind.replace("_", " ") in lowered or kind in lowered:
                 params["kind"] = kind
         params.setdefault("kind", "unknown")
+    if intent_name == "heal_error":
+        # the message IS the error description unless the page provided one
+        params["error"] = str(page_context.get("error") or message)
+    if intent_name == "resolve_drift" and page_context.get("entity"):
+        params["entities"] = [str(page_context["entity"])]
     return params
 
 
@@ -327,6 +342,50 @@ def _fmt_onboard(result: dict) -> str:
     return lead + note
 
 
+def _fmt_heal(result: dict) -> str:
+    return (f"Proposed heal: {result.get('action', '?')} "
+            f"({json.dumps(result.get('detail') or {})}). "
+            + str(result.get("note") or ""))
+
+
+def _fmt_drift_list(result: dict) -> str:
+    count = result.get("count", 0)
+    if not count:
+        return "No drift reports recorded — schemas match their contracts."
+    latest = (result.get("reports") or [{}])[0]
+    impacted = latest.get("impacted_entities") or []
+    return (f"{count} drift report(s). Latest: {latest.get('target_system', '?')}"
+            f", impacted entities: {', '.join(map(str, impacted)) or 'none'}. "
+            "Say \"resolve drift\" to re-map and re-deliver them "
+            "(confirmation required).")
+
+
+def _fmt_resolve_drift(result: dict) -> str:
+    if result.get("dry_run"):
+        return "Drift resolution dry-run complete — nothing was changed."
+    return "Drift resolution ran. Full result attached."
+
+
+def _fmt_swap_dry_run(result: dict) -> str:
+    affected = result.get("would_remap") or []
+    if not affected:
+        return ("Swap preview: no deployed entities are affected by the "
+                "target diff — an apply would only recreate and re-deliver.")
+    return (f"Swap preview: {len(affected)} affected entities "
+            f"({', '.join(map(str, affected))}). Applying re-maps them "
+            "(human-gated), recreates the target, and re-delivers — "
+            "destructive, typed confirmation required.")
+
+
+def _fmt_swap_apply(result: dict) -> str:
+    status = result.get("status", "?")
+    if status == "blocked_on_review":
+        return ("Swap blocked on low-confidence re-mappings: "
+                f"{', '.join(map(str, result.get('blocked') or []))}. "
+                "Resolve them or re-run with force.")
+    return f"Target swap {status}."
+
+
 TEMPLATES = {
     "check_status": _fmt_check_status,
     "summarize_proposal": _fmt_summarize,
@@ -335,18 +394,25 @@ TEMPLATES = {
     "deploy_guidance": _fmt_guidance,
     "explain_dilemma": _fmt_dilemma,
     "onboard_table": _fmt_onboard,
+    "heal_error": _fmt_heal,
+    "list_drift_reports": _fmt_drift_list,
+    "resolve_drift": _fmt_resolve_drift,
+    "swap_target_dry_run": _fmt_swap_dry_run,
+    "swap_target_apply": _fmt_swap_apply,
+    "swap_source_schema": _fmt_swap_dry_run,
 }
 
 CLARIFICATION_TEXT = (
     "I did not catch a supported request. I can: check integration status, "
     "summarize a proposal, explain what blocks a deploy, show the schemas, "
-    "give deploy guidance, explain a mapping dilemma, or onboard a table "
-    "(propose-only). Try e.g. \"what's blocking proposal 42?\".")
+    "give deploy guidance, explain a mapping dilemma, onboard a table "
+    "(propose-only), list or resolve schema drift, preview or apply a "
+    "schema swap, or propose an error heal. Try e.g. \"what's blocking "
+    "proposal 42?\".")
 
 DEFERRED_TEXT = (
-    "Chat-guided schema swap, drift resolution, and backup recovery are not "
-    "available yet. Use the dashboard (Schema Changes / Recovery pages) or "
-    "the CLI (`scripts/schema_swap.py`, `scripts/recover.py`) — both keep "
+    "Chat-guided backup recovery is not available — restores stay on the "
+    "Recovery page (Maintain group) or `scripts/recover.py`, both behind "
     "the same typed-confirmation gates.")
 
 
@@ -739,6 +805,12 @@ def _attach_workflow(assistant: dict, outcome: DispatchOutcome) -> None:
         state = workflows.advance(workflows.start("deploy"), "check_coverage")
         if (outcome.result or {}).get("deploy_ready"):
             state = workflows.advance(state, "resolve_dilemmas")
+    elif outcome.tool_name == "list_drift_reports":
+        state = workflows.advance(workflows.start("drift"), "list_reports")
+    elif outcome.tool_name == "swap_target_dry_run":
+        state = workflows.advance(workflows.start("swap"), "dry_run")
+        if not (outcome.result or {}).get("would_remap"):
+            state = workflows.advance(state, "remap")   # nothing to re-map
     else:
         return
     assistant["workflow_state"] = state.to_dict()

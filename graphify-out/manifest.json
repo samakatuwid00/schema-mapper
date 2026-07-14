@@ -175,8 +175,8 @@
     "semantic_hash": ""
   },
   "requirements.txt": {
-    "mtime": 1784007313.1565256,
-    "ast_hash": "0c899993e3ca750ae286c732929ff4ca",
+    "mtime": 1784013880.904702,
+    "ast_hash": "f8b5df53a516e6a282f40b3dbe4f66ec",
     "semantic_hash": ""
   },
   ".claude/settings.json": {
@@ -255,8 +255,8 @@
     "semantic_hash": ""
   },
   "src/services/ops.py": {
-    "mtime": 1783996389.9136279,
-    "ast_hash": "5dcb617d942a286597019350b4b77f9b",
+    "mtime": 1784017415.718041,
+    "ast_hash": "0ca08920f891b5b3f04438eb32564d31",
     "semantic_hash": ""
   },
   "src/services/scan.py": {
@@ -1240,8 +1240,8 @@
     "semantic_hash": ""
   },
   "openspec/changes/conversational-ai-assistant/specs/conversational-agent-core/spec.md": {
-    "mtime": 1783945644.4101913,
-    "ast_hash": "ace0578f7cb390917f5bf6bf0b29a321",
+    "mtime": 1784016906.236944,
+    "ast_hash": "13a6149246f7cc9043253885775c9ae2",
     "semantic_hash": ""
   },
   "openspec/changes/conversational-ai-assistant/specs/migration-management/spec.md": {
@@ -1250,13 +1250,13 @@
     "semantic_hash": ""
   },
   "openspec/changes/conversational-ai-assistant/specs/workflow-guidance/spec.md": {
-    "mtime": 1783945659.0017903,
-    "ast_hash": "bcd62635c9d3ea3858e6a132b6124744",
+    "mtime": 1784016892.204329,
+    "ast_hash": "aaea1bfc2b832654e14a09c73a72036c",
     "semantic_hash": ""
   },
   "openspec/changes/conversational-ai-assistant/tasks.md": {
-    "mtime": 1784010251.2813542,
-    "ast_hash": "571dc37bc4532f17cdabcded5cbebfca",
+    "mtime": 1784017505.5144768,
+    "ast_hash": "7726c245f168fe245686d29eb4e48f53",
     "semantic_hash": ""
   },
   "src/adapters/passthrough.py": {
@@ -1550,13 +1550,13 @@
     "semantic_hash": ""
   },
   "src/agent/tools.py": {
-    "mtime": 1784008490.4571877,
-    "ast_hash": "4b6b6dd3294449e9f02faf111b75b6b1",
+    "mtime": 1784016356.394872,
+    "ast_hash": "995e064d886cd2f8c2f8fc1f16ba3bdf",
     "semantic_hash": ""
   },
   "tests/test_agent_tools.py": {
-    "mtime": 1784008595.1473417,
-    "ast_hash": "632a67185d3c83eac419542468b741e5",
+    "mtime": 1784016786.2882986,
+    "ast_hash": "c916c5c16c47bad8e517871d67a70a59",
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/design.md": {
@@ -1595,8 +1595,8 @@
     "semantic_hash": ""
   },
   "openspec/changes/archive/2026-07-14-source-schema-swap-and-disaster-recovery/tasks.md": {
-    "mtime": 1784008698.1111045,
-    "ast_hash": "1492361bd4a722673a0100743ec0c802",
+    "mtime": 1784017518.68167,
+    "ast_hash": "a6b0542640495d48492162998ee5b462",
     "semantic_hash": ""
   },
   "openspec/specs/disaster-recovery-upload/spec.md": {
@@ -1620,23 +1620,23 @@
     "semantic_hash": ""
   },
   "src/agent/conversation.py": {
-    "mtime": 1784009632.5562115,
-    "ast_hash": "83fc18296ec43a62310a3ed86fa5a8e4",
+    "mtime": 1784016444.1527078,
+    "ast_hash": "78e01002f44cc7b0839e9a7872eee225",
     "semantic_hash": ""
   },
   "src/agent/workflows.py": {
-    "mtime": 1784009155.8472078,
-    "ast_hash": "ffac0d3423ec16d29773123b143a41a4",
+    "mtime": 1784016379.6333013,
+    "ast_hash": "dd56299084e333962bfb5482e0402b8a",
     "semantic_hash": ""
   },
   "tests/test_agent_chat_api.py": {
-    "mtime": 1784009715.182681,
-    "ast_hash": "65c99255bcd81a1ed74a93868a29f8a8",
+    "mtime": 1784016797.4424825,
+    "ast_hash": "9c611c77df5edac7978f632123eb7f5f",
     "semantic_hash": ""
   },
   "tests/test_agent_conversation.py": {
-    "mtime": 1784009640.3982115,
-    "ast_hash": "b3e8a96712535cdcddbe1cffde825339",
+    "mtime": 1784016518.9339626,
+    "ast_hash": "1b2dcd61b3f265237e639f0b5bd7dfe4",
     "semantic_hash": ""
   },
   "tests/test_agent_workflows.py": {
@@ -1667,6 +1667,11 @@
   "web/src/hooks/useAgentChat.ts": {
     "mtime": 1784009825.3380365,
     "ast_hash": "eecf3aec4d5e2ad6b21b942be68a5a32",
+    "semantic_hash": ""
+  },
+  "tests/test_rebaseline_fingerprints.py": {
+    "mtime": 1784017365.2230916,
+    "ast_hash": "a06104c08c85850c7c753901afd0220e",
     "semantic_hash": ""
   }
 }

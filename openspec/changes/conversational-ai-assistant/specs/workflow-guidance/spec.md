@@ -2,7 +2,7 @@
 
 ### Requirement: MVP workflow state machines
 
-The MVP SHALL define state machines for onboarding and deploy guidance. Drift resolution and schema swap guidance are later phases, not required for the MVP.
+The MVP SHALL define state machines for onboarding and deploy guidance. Drift resolution and schema swap guidance land as later phases (§8) with their own state machines once the MVP is in place.
 
 #### Scenario: Workflow loads next step
 
@@ -47,12 +47,41 @@ The agent SHALL guide the user through deploying a proposal to the target, inclu
 - **THEN** the agent presents the deploy action as a confirmation prompt
 - **AND** does not enqueue the deploy until the user confirms
 
-### Requirement: Later workflow requests are deferred
+### Requirement: Drift resolution guidance flow
 
-The agent SHALL respond safely when the user asks for drift resolution or schema swap guidance before those workflows are implemented in chat.
+The agent SHALL guide the user through drift resolution: list drift reports, review the diff, re-map, and apply — with the apply step destructive-gated.
 
-#### Scenario: Agent defers schema swap
+#### Scenario: Drift question lists reports and suggests the flow
+
+- **WHEN** a user asks "any drift lately?"
+- **THEN** the agent lists the recorded drift reports with impacted entities
+- **AND** suggests the next step of the drift workflow
+
+#### Scenario: Applying drift resolution requires confirmation
+
+- **WHEN** a user asks to resolve drift
+- **THEN** the agent presents `resolve_drift` as a confirmation prompt (destructive) and does not execute until confirmed
+
+### Requirement: Schema-swap guidance flow
+
+The agent SHALL guide the user through a target schema swap: read-only dry-run diff, re-map review, then a confirmed destructive apply that additionally requires the same typed target-database token as the CLI.
+
+#### Scenario: Swap request runs the read-only preview
 
 - **WHEN** a user asks "I need to swap the target schema"
-- **THEN** the agent explains that chat-guided schema swap is not available yet
-- **AND** points the user to the existing schema-swap dashboard or CLI flow
+- **THEN** the agent runs the read-only swap dry-run, reports affected entities, and suggests the next workflow step
+
+#### Scenario: Swap apply is double-gated
+
+- **WHEN** a user confirms a `swap_target_apply` tool call without the typed target-database token in its parameters
+- **THEN** the handler refuses with the expected token named, and nothing is changed
+
+### Requirement: Recovery requests are deferred
+
+The agent SHALL respond safely when the user asks for backup recovery, which remains dashboard/CLI-only.
+
+#### Scenario: Agent defers backup recovery
+
+- **WHEN** a user asks "restore a backup"
+- **THEN** the agent explains that chat-guided recovery is not available
+- **AND** points the user to the Recovery page or `scripts/recover.py`

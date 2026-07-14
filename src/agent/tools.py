@@ -8,7 +8,9 @@ explicit allowlist of schema-level keys.
 
 Also registers the two tools `source-schema-swap-and-disaster-recovery`
 defined ahead of time in `tool_defs.py` (`swap_source_schema`,
-`recover_from_backup`) — closing that change's deferred task 6.3.
+`recover_from_backup`) — closing that change's deferred task 6.3 — and the
+§8 later-phase tools (`heal_error`, drift resolution, target schema-swap)
+defined below in `LATER_PHASE_TOOLS`.
 
 Autonomy tiers (task 0.4): only `propose_only` and `auto_safe` are dispatch
 tiers in the MVP; `destructive` tools always require confirmation regardless
@@ -19,12 +21,15 @@ from __future__ import annotations
 
 import os
 
+from ..services import drift_resolution as drift_service
 from ..services import onboarding as onboarding_service
 from ..services import ops as ops_service
-from .tool_defs import (RECOVERY_TOOLS, ToolDef, validate_params)
+from ..services import schema_swap as schema_swap_service
+from .tool_defs import (RECOVERY_TOOLS, ToolDef, ValidationError,
+                        validate_params)
 
-__all__ = ["REGISTRY", "MVP_TOOLS", "ToolDef", "get_tool", "list_tools",
-           "validate_params"]
+__all__ = ["REGISTRY", "MVP_TOOLS", "LATER_PHASE_TOOLS", "ToolDef",
+           "get_tool", "list_tools", "validate_params"]
 
 
 # ---------------------------------------------------------------------------
@@ -221,10 +226,153 @@ MVP_TOOLS: list[ToolDef] = [
         handler=_onboard_table, autonomy="propose_only"),
 ]
 
+# ---------------------------------------------------------------------------
+# §8 later-phase tools: heal, drift resolution, target schema-swap
+# ---------------------------------------------------------------------------
+
+def _heal_error(params: dict, **seams) -> dict:
+    """§8.1 — propose-only unless safe auto-heal is explicitly allowlisted
+    via AGENT_AUTONOMOUS_HEAL (and even then MigrationAgent only auto-applies
+    the safe `cast` action)."""
+    from dataclasses import asdict
+
+    from .agent import MigrationAgent
+    allowlisted = os.environ.get("AGENT_AUTONOMOUS_HEAL", "").strip().lower() \
+        in ("1", "true", "yes")
+    agent = seams.get("agent") or MigrationAgent(autonomous_heal=allowlisted)
+    proposal = agent.heal(str(params["error"]),
+                          dict(params.get("context") or {}))
+    return {**asdict(proposal),
+            "note": ("safe cast auto-applied (AGENT_AUTONOMOUS_HEAL "
+                     "allowlist)." if proposal.apply else
+                     "heal proposal only — nothing was changed; apply it "
+                     "through the existing resolution flow.")}
+
+
+def _list_drift_reports(params: dict, **seams) -> dict:
+    reports = ops_service.list_drift_reports(
+        limit=int(params.get("limit", 20)))
+    return {"count": len(reports), "reports": reports}
+
+
+def _resolve_drift(params: dict, **seams) -> dict:
+    """§8.2 apply step — destructive (live drop+recreate on the target side),
+    so the registry marks it destructive and chat always confirms it."""
+    entities = params.get("entities")
+    return drift_service.resolve_drift(
+        resolve_source=bool(params.get("resolve_source", True)),
+        resolve_target=bool(params.get("resolve_target", True)),
+        entities=list(entities) if entities else None,
+        actor=str(params.get("actor", "agent:resolve_drift")),
+        dry_run=bool(params.get("dry_run", False)))
+
+
+def _target_engine(params: dict) -> str:
+    return str(params.get("target_engine")
+               or os.environ.get("LRMIS_TARGET_ENGINE", "mysql")).lower()
+
+
+def _expected_target_confirm(engine: str) -> str:
+    """The typed token for a destructive target swap — the target database
+    name, exactly the CLI's guard."""
+    if engine in ("postgres", "postgresql", "pg"):
+        dsn = os.environ.get("LRMIS_TARGET_PG_DSN", "")
+        if dsn:
+            db = dsn.rstrip("/").rsplit("/", 1)[-1].split("?")[0]
+            if db:
+                return db
+    return os.environ.get("LRMIS_TARGET_DATABASE", "lrmis_target")
+
+
+def _swap_target_dry_run(params: dict, **seams) -> dict:
+    from ..adapters import get_target_adapter
+    adapter = seams.get("target_adapter") or get_target_adapter(
+        _target_engine(params))
+    return schema_swap_service.dry_run(target_adapter=adapter)
+
+
+def _swap_target_apply(params: dict, **seams) -> dict:
+    from ..adapters import get_target_adapter
+    engine = _target_engine(params)
+    expected = _expected_target_confirm(engine)
+    if params.get("confirm") != expected:
+        raise ValidationError(
+            f"swap_target_apply requires confirm={expected!r} — the typed "
+            "confirmation token the CLI uses; chat approval alone cannot "
+            "run a destructive target recreate")
+    adapter = seams.get("target_adapter") or get_target_adapter(engine)
+    return schema_swap_service.apply(
+        target_adapter=adapter,
+        actor=str(params.get("actor", "agent:swap_target")),
+        threshold=float(params.get("threshold", 0.7)),
+        force=bool(params.get("force", False)),
+        backup_path=params.get("backup_path"), dsn=params.get("dsn"))
+
+
+LATER_PHASE_TOOLS: list[ToolDef] = [
+    ToolDef(
+        name="heal_error",
+        description="Propose a fix for a delivery error (safe cast or "
+                    "quarantine). Propose-only unless safe auto-heal is "
+                    "explicitly allowlisted via AGENT_AUTONOMOUS_HEAL.",
+        params_schema={"type": "object",
+                       "properties": {"error": {"type": "string"},
+                                      "context": {"type": "object"}},
+                       "required": ["error"]},
+        handler=_heal_error, autonomy="propose_only"),
+    ToolDef(
+        name="list_drift_reports",
+        description="List recorded schema-drift reports (fingerprints, "
+                    "differences, impacted entities) — the first step of "
+                    "drift resolution.",
+        params_schema={"type": "object",
+                       "properties": {"limit": {"type": "integer"}},
+                       "required": []},
+        handler=_list_drift_reports, autonomy="auto_safe"),
+    ToolDef(
+        name="resolve_drift",
+        description="Re-map and re-deliver drifted entities (live "
+                    "drop+recreate on the target side). Destructive: always "
+                    "requires confirmation. Supports dry_run and an entities "
+                    "filter.",
+        params_schema={"type": "object",
+                       "properties": {"entities": {"type": "object"},
+                                      "resolve_source": {"type": "boolean"},
+                                      "resolve_target": {"type": "boolean"},
+                                      "dry_run": {"type": "boolean"}},
+                       "required": []},
+        handler=_resolve_drift, autonomy="destructive"),
+    ToolDef(
+        name="swap_target_dry_run",
+        description="Preview a target schema swap: discover the (new) target, "
+                    "diff against the approved registry, report affected "
+                    "entities and proposed re-maps. Read-only.",
+        params_schema={"type": "object",
+                       "properties": {"target_engine": {"type": "string"}},
+                       "required": []},
+        handler=_swap_target_dry_run, autonomy="auto_safe"),
+    ToolDef(
+        name="swap_target_apply",
+        description="Confirmed target schema swap: re-map affected entities "
+                    "(human-gated on low confidence), recreate the target, "
+                    "re-deliver. Destructive; requires the typed target-db "
+                    "confirmation token in addition to chat approval.",
+        params_schema={"type": "object",
+                       "properties": {"target_engine": {"type": "string"},
+                                      "confirm": {"type": "string"},
+                                      "threshold": {"type": "number"},
+                                      "force": {"type": "boolean"},
+                                      "backup_path": {"type": "string"},
+                                      "dsn": {"type": "string"}},
+                       "required": []},
+        handler=_swap_target_apply, autonomy="destructive"),
+]
+
 # MVP tools + the source-swap/recovery tools defined by
 # source-schema-swap-and-disaster-recovery (its deferred task 6.3: register
-# here once this registry exists).
-REGISTRY: dict[str, ToolDef] = {t.name: t for t in [*MVP_TOOLS, *RECOVERY_TOOLS]}
+# here once this registry exists) + the §8 later-phase tools.
+REGISTRY: dict[str, ToolDef] = {
+    t.name: t for t in [*MVP_TOOLS, *RECOVERY_TOOLS, *LATER_PHASE_TOOLS]}
 
 
 def get_tool(name: str) -> ToolDef:

@@ -26,7 +26,7 @@ The MVP SHALL support a narrow set of operator-focused intents before broader wo
 
 #### Scenario: Non-MVP intent is deferred
 
-- **WHEN** a user asks for an unsupported task such as broad schema-swap apply
+- **WHEN** a user asks for an unsupported task such as a backup restore
 - **THEN** the agent explains that the action is not supported in chat yet
 - **AND** points the user to the existing dashboard or CLI workflow
 

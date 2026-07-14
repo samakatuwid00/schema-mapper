@@ -188,10 +188,40 @@ def test_unknown_message_gets_clarification(harness):
     assert all(k != "tool_call" for k, _ in events)
 
 
-def test_deferred_swap_request_points_to_dashboard(harness):
+def test_swap_preview_flow_through_chat(harness, monkeypatch):
+    """§8.3: a swap request now runs the read-only dry-run tool and the
+    workflow suggests the next step; the destructive apply stays gated."""
+    import src.adapters as adapters
+    monkeypatch.setattr(adapters, "get_target_adapter",
+                        lambda engine, **kw: object())
+    monkeypatch.setattr(tools.schema_swap_service, "dry_run",
+                        lambda target_adapter: {"would_remap": ["schools"],
+                                                "affected_entities": []})
     events = _chat(harness["client"], {"message": "let's do a schema swap"})
+    call = [d for k, d in events if k == "tool_call"][0]
+    assert call["tool"] == "swap_target_dry_run" and call["executed"] is True
     done = [d for k, d in events if k == "done"][0]
-    assert "not available yet" in done["content"]
+    assert "1 affected entities" in done["content"]
+    assert "Next step: remap" in done["content"]
+
+
+def test_swap_apply_via_chat_is_double_gated(harness, monkeypatch):
+    """Destructive tier: chat approval is required, AND the handler still
+    demands the typed token — confirming without it fails safely."""
+    monkeypatch.setenv("LRMIS_TARGET_ENGINE", "mysql")
+    monkeypatch.setenv("LRMIS_TARGET_DATABASE", "lrmis_target")
+    monkeypatch.delenv("LRMIS_TARGET_PG_DSN", raising=False)
+    events = _chat(harness["client"], {
+        "message": "apply it",
+        "confirm": {"tool": "swap_target_apply", "params": {}}})
+    error = [d for k, d in events if k == "error"][0]
+    assert "requires confirm='lrmis_target'" in error["detail"]
+
+
+def test_deferred_recovery_request_points_to_recovery_page(harness):
+    events = _chat(harness["client"], {"message": "restore a backup"})
+    done = [d for k, d in events if k == "done"][0]
+    assert "Recovery page" in done["content"]
 
 
 # --- audit (§4.7) ----------------------------------------------------------------

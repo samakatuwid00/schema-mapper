@@ -36,9 +36,29 @@ def test_heuristic_classifies_mvp_intents(message, expected):
     assert intent.confidence >= conv.CONFIDENCE_FLOOR
 
 
-def test_heuristic_defers_swap_and_recovery_requests():
-    assert heuristic_classify("I need a schema swap", {}).name == "deferred"
+def test_heuristic_defers_only_recovery_requests():
+    """§8.2/8.3: swap and drift now route to tools; recovery stays deferred."""
     assert heuristic_classify("restore a backup please", {}).name == "deferred"
+    assert heuristic_classify("recover from backup", {}).name == "deferred"
+    assert heuristic_classify("I need a schema swap", {}).name == \
+        "swap_target_dry_run"
+
+
+@pytest.mark.parametrize("message,expected", [
+    ("swap the source please", "swap_source_schema"),
+    ("the target schema changed", "swap_target_dry_run"),
+    ("any drift lately?", "list_drift_reports"),
+    ("resolve the drift now", "resolve_drift"),
+    ("heal this delivery error", "heal_error"),
+])
+def test_heuristic_classifies_later_phase_intents(message, expected):
+    assert heuristic_classify(message, {}).name == expected
+
+
+def test_heal_error_param_is_the_message():
+    intent = heuristic_classify("fix this error: invalid int cast", {})
+    assert intent.name == "heal_error"
+    assert intent.params["error"] == "fix this error: invalid int cast"
 
 
 def test_heuristic_unknown_message_below_floor():
@@ -437,6 +457,40 @@ def test_workflow_status_without_active_workflow():
 def test_heuristic_classifies_workflow_status():
     assert heuristic_classify("where are we in the onboarding?", {}).name == \
         "workflow_status"
+
+
+def test_swap_dry_run_execution_suggests_next_swap_step():
+    registry, _ = _spy_registry()
+    registry["swap_target_dry_run"] = ToolDef(
+        "swap_target_dry_run", "preview", {"type": "object", "properties": {},
+                                           "required": []},
+        lambda params, **s: {"would_remap": ["schools"]}, autonomy="auto_safe")
+    manager = _MemManager()
+    session = AgentSession(1, manager=manager,
+                           dispatcher=ToolDispatcher(registry),
+                           classifier=lambda m, c: Intent("swap_target_dry_run",
+                                                          {}, 0.9, "h"))
+    events = session.process_message("schema swap preview")
+    done = [e for e in events if e.event == "done"][0]
+    assert "Next step: remap" in done.data["content"]
+
+
+def test_later_phase_templates_render():
+    assert "No drift reports" in render_result("list_drift_reports", {"count": 0})
+    assert "resolve drift" in render_result(
+        "list_drift_reports",
+        {"count": 2, "reports": [{"target_system": "LRMIS",
+                                  "impacted_entities": ["schools"]}]})
+    assert "Proposed heal: cast" in render_result(
+        "heal_error", {"action": "cast", "detail": {"transform": "str->int"},
+                       "note": "heal proposal only"})
+    assert "no deployed entities are affected" in render_result(
+        "swap_target_dry_run", {"would_remap": []})
+    assert "blocked on low-confidence" in render_result(
+        "swap_target_apply", {"status": "blocked_on_review",
+                              "blocked": ["schools"]})
+    assert "dry-run complete" in render_result("resolve_drift",
+                                               {"dry_run": True})
 
 
 # --- §0.3 privacy fixture: row values never reach prompts or storage ------------

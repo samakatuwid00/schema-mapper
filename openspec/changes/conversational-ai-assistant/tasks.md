@@ -76,11 +76,11 @@
 
 ## 8. Later phases
 
-- [ ] 8.1 Add `heal_error` as propose-only unless safe auto-heal is explicitly allowlisted
-- [ ] 8.2 Add drift resolution workflow: list drift reports -> diff -> re-map -> apply
-- [ ] 8.3 Add schema-swap workflow: dry-run diff -> re-map -> confirm -> recreate -> re-deliver
-- [ ] 8.4 Consider exact SSE token replay with `last-event-id` after MVP usefulness is proven
-- [ ] 8.5 Revisit `auto_all` only after audit data proves `auto_safe` is reliable
+- [x] 8.1 (2026-07-14) `heal_error` tool (propose_only) wraps `MigrationAgent.heal`; auto-apply only when `AGENT_AUTONOMOUS_HEAL` is explicitly set AND the agent's own safe-cast rule holds. "heal / fix this error" phrasings classify to it with the message as the error param.
+- [x] 8.2 Drift workflow: `list_drift_reports` (auto_safe, wraps `ops.list_drift_reports`) → `drift` state machine (list→review→remap→apply) with next-step suggestions; `resolve_drift` (destructive, wraps `drift_resolution.resolve_drift` incl. dry_run + entities filter) always confirmation-gated. Drift phrasings no longer defer.
+- [x] 8.3 Swap workflow: `swap_target_dry_run` (auto_safe, read-only preview) → `swap` machine (dry_run→remap→confirm→apply); `swap_target_apply` (destructive) is DOUBLE-gated — chat approval plus the CLI's typed target-db token inside params (env/DSN-derived, pinned in tests since the dev .env points at the oldlrmis pg target). `swap_source_schema` phrasings route to the registered source tool. Swap phrasings no longer defer; only backup recovery stays deferred (DEFERRED_TEXT + workflow-guidance/core spec deltas updated accordingly). Tests: +18 (registry flags, handlers with pinned env, classification, workflow wiring, API swap-preview flow, double-gate, recovery deferral).
+- [x] 8.4 CONSIDERED, decision recorded: exact `last-event-id` token replay stays out — responses are short template/token bursts, reconnect-via-persisted-reload is tested and sufficient, and replay would add ordered-event storage for no decision-changing benefit. Revisit trigger: real users reporting lost in-flight responses on flaky links.
+- [x] 8.5 GUARD HONORED, decision recorded: `auto_all` remains rejected at all three layers (dispatcher tier check, API 422, DB CHECK constraint). The precondition (audit data proving `auto_safe` reliability) cannot exist yet — `admin_action_audit` rows with `auto_executed:true` are now accumulating; revisit once there is a meaningful corpus with no unwanted-mutation incidents.
 
 ## 9. Integration and regression
 
