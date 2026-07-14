@@ -281,6 +281,24 @@ def test_restore_target_refuses_wrong_kind_upload(tmp_path):
                        runner=lambda cmd: pytest.fail("must not execute"))
 
 
+def test_restore_target_refuses_empty_backup_file(tmp_path):
+    """Found by the live E2E smoke: a 0-byte nightly backup (mysqldump was
+    missing when backup_target ran) restored as a silent no-op. Now refused."""
+    _write(tmp_path, "empty-backup.sql", b"")
+    with pytest.raises(ValidationError, match="file is empty"):
+        restore_target("empty-backup.sql", confirm="lrmis_target", by="admin",
+                       central=_FakeCentral(), backup_dir=str(tmp_path),
+                       runner=lambda cmd: pytest.fail("must not execute"))
+
+
+def test_restore_target_refuses_non_sql_backup_file(tmp_path):
+    _write(tmp_path, "junk.sql", b"\x89PNG\r\n\x1a\n" + os.urandom(64))
+    with pytest.raises(ValidationError, match="failed validation"):
+        restore_target("junk.sql", confirm="lrmis_target", by="admin",
+                       central=_FakeCentral(), backup_dir=str(tmp_path),
+                       runner=lambda cmd: pytest.fail("must not execute"))
+
+
 def test_restore_target_missing_file_not_found(tmp_path):
     with pytest.raises(NotFoundError):
         restore_target("nope.sql", confirm="lrmis_target", by="admin",

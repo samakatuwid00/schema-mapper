@@ -376,6 +376,19 @@ def restore_target(backup_id: str, *, confirm: str, by: str,
                 plan = restore_pg_backup(backup_path=backup_path, dry_run=True)
                 cmd = plan["command"]
             else:
+                if upload_row is None:
+                    # Listed backup files were never validated at stage time
+                    # (uploads were). A 0-byte or non-SQL file would make the
+                    # mysql replay a SILENT no-op (mysql exits 0 on empty
+                    # stdin) — refuse loudly instead. Found live: backup_target
+                    # leaves an empty file behind when mysqldump is missing.
+                    verdict = validate_upload(backup_path, "target_backup")
+                    if not verdict["ok"]:
+                        raise ValidationError(
+                            f"backup file failed validation ({verdict['reason']}); "
+                            "refusing to restore from it. A 0-byte nightly backup "
+                            "usually means mysqldump was missing or failed when "
+                            "backup_target ran — check that run's warning.")
                 cmd = _mysql_restore_cmd(backup_path)
 
             result = {"backup": str(backup_id), "path": backup_path,
