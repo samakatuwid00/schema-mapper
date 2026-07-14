@@ -130,30 +130,7 @@ CREATE TABLE IF NOT EXISTS integration.schema_drift_report (
     resolved_by TEXT
 );
 
-CREATE OR REPLACE FUNCTION integration.enqueue_customer_change() RETURNS trigger AS $$
-DECLARE
-    record_json JSONB;
-    record_ref UUID;
-    op integration.event_operation;
-BEGIN
-    record_json := to_jsonb(COALESCE(NEW, OLD));
-    record_ref := COALESCE(NEW.external_reference, OLD.external_reference);
-    op := CASE WHEN TG_OP = 'DELETE' THEN 'deactivate'::integration.event_operation
-               WHEN TG_OP = 'INSERT' THEN 'insert'::integration.event_operation
-               ELSE 'update'::integration.event_operation END;
-    IF TG_OP = 'DELETE' THEN
-        record_json := record_json || jsonb_build_object('active', false, 'deactivated_at', now());
-    END IF;
-    INSERT INTO integration.outbox
-        (source_entity, external_reference, operation, payload, payload_checksum, source_updated_at)
-    VALUES
-        ('customer', record_ref, op, record_json,
-         encode(digest(record_json::text, 'sha256'), 'hex'), now());
-    RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_customer_integration_outbox ON irimsv.customer;
-CREATE TRIGGER trg_customer_integration_outbox
-AFTER INSERT OR UPDATE OR DELETE ON irimsv.customer
-FOR EACH ROW EXECUTE FUNCTION integration.enqueue_customer_change();
+-- The demo CDC trigger on the sample `irimsv.customer` table lives in
+-- sql/demo_customer_cdc.sql: it hard-codes a table that only exists in the
+-- sample central database, so it cannot be part of a migration that must run
+-- against a central whose `irimsv` holds a restored real source.

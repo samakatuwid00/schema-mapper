@@ -21,6 +21,15 @@ services:
       - ./sql/006_station_id_sequence.sql:/docker-entrypoint-initdb.d/07_id_sequence.sql
       - ./sql/007_onboarding_target_tables.sql:/docker-entrypoint-initdb.d/08_target_tables.sql
       - ./sql/008_target_ddl_scope.sql:/docker-entrypoint-initdb.d/09_target_ddl_scope.sql
+      - ./sql/009_drift_resolution.sql:/docker-entrypoint-initdb.d/10_drift_resolution.sql
+      - ./sql/010_three_way_drift.sql:/docker-entrypoint-initdb.d/11_three_way_drift.sql
+      - ./sql/011_recovery.sql:/docker-entrypoint-initdb.d/12_recovery.sql
+      - ./sql/012_entity_source_contract.sql:/docker-entrypoint-initdb.d/13_entity_source_contract.sql
+      - ./sql/013_agent_conversation.sql:/docker-entrypoint-initdb.d/14_agent_conversation.sql
+      - ./sql/014_refresh_schedule.sql:/docker-entrypoint-initdb.d/15_refresh_schedule.sql
+      # Sample-data CDC trigger, split out of 001 (see sql/demo_customer_cdc.sql).
+      # Runs last: it depends on integration.outbox and the enum types above.
+      - ./sql/demo_customer_cdc.sql:/docker-entrypoint-initdb.d/16_demo_customer_cdc.sql
 
   lrmis_staging_db:
     image: mysql:8.4

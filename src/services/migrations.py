@@ -24,6 +24,10 @@ MIGRATION_FILES = [
     "sql/008_target_ddl_scope.sql",
     "sql/009_drift_resolution.sql",
     "sql/010_three_way_drift.sql",
+    "sql/011_recovery.sql",
+    "sql/012_entity_source_contract.sql",
+    "sql/013_agent_conversation.sql",
+    "sql/014_refresh_schedule.sql",
 ]
 
 _MIGRATION_LOCK_KEY = "schema_mapper:migrations"
