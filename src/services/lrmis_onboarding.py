@@ -13,10 +13,9 @@ import json
 
 import psycopg2.extras
 
-from ..connectors import PostgresCentralConnector
+from ..connectors import MySQLStagingConnector, PostgresCentralConnector
 from ..lrmis_registry import get_registry
-from ..schema_ingest import schema_fingerprint
-from ..schema_models import Column, Schema, Table
+from ..schema_ingest import entity_target_contract
 from .common import NotFoundError, ValidationError
 from .lrmis_mapping import (
     coverage_report, store_target_tables, target_tables_for, validate_deployment)
@@ -97,29 +96,25 @@ def _load_proposal_mappings(conn, proposal_id: int) -> tuple[dict, list[dict]]:
     return dict(proposal), mappings
 
 
-def _lrmis_schema_document(tables: list[str], registry) -> dict:
-    """A schema_models document for the entity's LRMIS footprint, so drift on
-    those specific tables can be fingerprinted like any other target schema."""
-    model = Schema(system_name="LRMIS", tables=[
-        Table(name=t, columns=[
-            Column(name=c.name, data_type=c.base_type, nullable=c.nullable,
-                   is_primary_key=c.is_primary_key)
-            for c in registry.get_table(t).columns
-        ])
-        for t in tables
-    ])
-    return model.to_dict(), schema_fingerprint(model)
-
-
 def deploy_to_lrmis(proposal_id: int, by: str,
                     central: PostgresCentralConnector | None = None,
-                    registry=None, agent=None) -> dict:
+                    registry=None, agent=None, target=None) -> dict:
     """Validate and deploy a proposal against the LRMIS target schema.
 
     When an `agent` is supplied and validation fails, the deploy does not raise —
     it returns `{"status": "needs_guidance", ...}` with the agent's interactive
     resolution options (§8.6). Without an agent, behaviour is unchanged (raises
-    ValidationError)."""
+    ValidationError).
+
+    The stored ``target_fingerprint`` is computed from the LIVE target's
+    information_schema via the shared ``entity_target_contract`` construction —
+    the exact hash ``ops.monitor`` recomputes — so the first scan after a
+    deploy no longer flags spurious target drift (live incident, 2026-07-14).
+    ``target`` defaults to the real target connector and is resolved lazily,
+    only after the validation gates pass. Mid-target-swap caveat: the swap's
+    persist step fingerprints the pre-recreate target; identical for the
+    standard MySQL recreate, and a true engine/schema swap still ends with the
+    documented ``rebaseline_entity_fingerprints --apply``."""
     registry = registry or get_registry()
     p = _pipeline()
     owns = central is None
@@ -147,16 +142,21 @@ def deploy_to_lrmis(proposal_id: int, by: str,
             tables = target_tables_for(mappings)
             store_target_tables(conn, entity_id, mappings)
 
-            doc, fingerprint = _lrmis_schema_document(tables, registry)
-            p._execute(conn, """
-                INSERT INTO integration.schema_version
-                    (target_system, scope_kind, scope_name, fingerprint,
-                     schema_document, approved_at, approved_by)
-                VALUES (%s, 'entity_staging', %s, %s, %s, now(), %s)
-                ON CONFLICT (target_system, scope_kind, scope_name, fingerprint)
-                DO UPDATE SET schema_document = EXCLUDED.schema_document, approved_at = now()
-            """, (proposal["target_system"], proposal["source_table"], fingerprint,
-                  json.dumps(doc), by))
+            # Monitor-consistent fingerprint from the LIVE target (resolved
+            # lazily — the gates above must not require a target connection).
+            target = target or MySQLStagingConnector.for_target()
+            contract, fingerprint = entity_target_contract(
+                target.information_schema(), tables)
+            if fingerprint is not None:
+                p._execute(conn, """
+                    INSERT INTO integration.schema_version
+                        (target_system, scope_kind, scope_name, fingerprint,
+                         schema_document, approved_at, approved_by)
+                    VALUES (%s, 'entity_staging', %s, %s, %s, now(), %s)
+                    ON CONFLICT (target_system, scope_kind, scope_name, fingerprint)
+                    DO UPDATE SET schema_document = EXCLUDED.schema_document, approved_at = now()
+                """, (proposal["target_system"], proposal["source_table"],
+                      fingerprint, json.dumps(contract.to_dict()), by))
 
             p._execute(conn, """
                 UPDATE integration.onboarding_entity
@@ -183,7 +183,7 @@ def deploy_to_lrmis(proposal_id: int, by: str,
                   json.dumps({"target_tables": tables, "fingerprint": fingerprint}), by))
             conn.commit()
 
-        return {
+        result = {
             "proposal_id": proposal_id,
             "entity_id": entity_id,
             "source_table": proposal["source_table"],
@@ -192,6 +192,12 @@ def deploy_to_lrmis(proposal_id: int, by: str,
             "mappings": len(mappings),
             "coverage_ok": report.ok,
         }
+        if fingerprint is None:
+            # None of the target tables exist in the live target: the entity
+            # deploys (the registry gate passed) but carries no drift contract
+            # until the target actually has its tables.
+            result["target_contract_empty"] = True
+        return result
     finally:
         if owns:
             central.close()
@@ -222,7 +228,7 @@ def _deployable_proposals(conn, target_system: str) -> list[dict]:
 
 def bulk_deploy_to_lrmis(by: str, target_system: str = "LRMIS",
                          central: PostgresCentralConnector | None = None,
-                         registry=None, progress=None) -> dict:
+                         registry=None, progress=None, target=None) -> dict:
     """Deploy every approved, not-yet-migrated entity to the LRMIS target.
 
     Conservative and non-destructive: composes `deploy_to_lrmis` per entity and
@@ -236,11 +242,15 @@ def bulk_deploy_to_lrmis(by: str, target_system: str = "LRMIS",
         with central.connection() as conn:
             candidates = _deployable_proposals(conn, target_system)
         results = []
+        target = None
         for i, c in enumerate(candidates):
             if progress:
                 progress(i, len(candidates), c["source_table"])
             try:
-                out = deploy_to_lrmis(c["proposal_id"], by, central=central, registry=registry)
+                # one shared target connector for the whole batch
+                target = target or MySQLStagingConnector.for_target()
+                out = deploy_to_lrmis(c["proposal_id"], by, central=central,
+                                      registry=registry, target=target)
                 results.append({"source_table": c["source_table"], "status": "deployed",
                                 "target_tables": out["target_tables"]})
             except Exception as exc:

@@ -153,3 +153,23 @@ def table_schema(schema: Schema, table_name: str) -> Schema | None:
     if table is None:
         return None
     return Schema(system_name=schema.system_name, tables=[table], version=schema.version)
+
+
+def entity_target_contract(information_schema_rows: list[dict],
+                           target_tables: list[str] | set[str] | tuple[str, ...],
+                           system_name: str = "LRMIS",
+                           ) -> tuple[Schema, str | None]:
+    """The per-entity target contract (document + fingerprint) built from live
+    ``information_schema`` rows subset to the entity's target footprint.
+
+    This is THE single construction for target fingerprints: both
+    ``deploy_to_lrmis`` (which stores the fingerprint) and ``ops.monitor``'s
+    ``_entity_fingerprints`` (which recomputes it) MUST call this — two
+    hand-rolled constructions can never hash identically (normalized vs raw
+    types), and the mismatch pauses every entity on the first scan after a
+    deploy (live incident, 2026-07-14). Returns ``(contract, fingerprint)``;
+    the fingerprint is ``None`` when none of the tables exist live.
+    """
+    observed = from_information_schema(information_schema_rows, system_name)
+    contract = schema_subset(observed, target_tables)
+    return contract, (schema_fingerprint(contract) if contract.tables else None)

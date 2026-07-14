@@ -339,8 +339,8 @@ def _entity_fingerprints(conn, target: MySQLStagingConnector, entity: dict) -> t
     The target side covers exactly the entity's ``lrmis_target_tables`` (read from
     the real ``lrmis_target`` database via ``target``), never the whole schema —
     unrelated tables would otherwise pause every entity."""
-    from ..schema_ingest import (from_information_schema, schema_fingerprint,
-                                  schema_subset, table_schema)
+    from ..schema_ingest import (entity_target_contract, schema_fingerprint,
+                                  table_schema)
 
     p = _pipeline()
     current_source = p._discover_source_schema(conn, entity["source_schema"])
@@ -352,9 +352,9 @@ def _entity_fingerprints(conn, target: MySQLStagingConnector, entity: dict) -> t
         target_tables = json.loads(target_tables)
     target_fp = None
     if target_tables:
-        observed = from_information_schema(target.information_schema(), "LRMIS")
-        contract = schema_subset(observed, target_tables)
-        target_fp = schema_fingerprint(contract) if contract.tables else None
+        # Shared construction with deploy_to_lrmis — see entity_target_contract.
+        _, target_fp = entity_target_contract(target.information_schema(),
+                                              target_tables)
     return source_fp, target_fp
 
 
