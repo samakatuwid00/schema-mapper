@@ -159,11 +159,30 @@ def backup_target(*, dry_run: bool = False, now: datetime | None = None) -> dict
                                        stderr=subprocess.PIPE, text=True)
         if completed.returncode != 0:
             plan["warning"] = (completed.stderr or "")[-1000:]
+            _discard_partial_backup(out_path)
         else:
             plan["executed"] = True
     except Exception as exc:                       # mysqldump missing, etc.
         plan["warning"] = str(exc)
+        _discard_partial_backup(out_path)
     return plan
+
+
+def _discard_partial_backup(out_path: str) -> None:
+    """Remove an empty/partial backup file left behind by a failed dump.
+
+    A failed mysqldump still leaves the file created by `open(out_path, "w")`
+    on disk (empty, or truncated mid-write). Left in place, it later shows up
+    in backup_recovery.list_target_backups() as an apparently restorable
+    backup that restore_target then rejects -- confusing UX for a failure
+    that was already recorded as a warning. Best-effort: a failure to remove
+    it must not mask the original warning.
+    """
+    try:
+        if os.path.exists(out_path):
+            os.remove(out_path)
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -286,4 +305,16 @@ def run_nightly_refresh(*, actor: str, restore: bool = False,
     finished = _now()
     result["finished_at"] = finished.isoformat()
     result["duration_seconds"] = (finished - started).total_seconds()
+
+    # Surface step-level warnings (e.g. a failed-but-non-fatal target backup)
+    # at the top level so callers/UI don't have to know which step to dig
+    # into to notice something needs attention.
+    warnings = [
+        {"step": name, "warning": step["warning"]}
+        for name, step in result["steps"].items()
+        if isinstance(step, dict) and step.get("warning")
+    ]
+    if warnings:
+        result["warnings"] = warnings
+
     return result

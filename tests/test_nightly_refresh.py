@@ -7,6 +7,8 @@ and continue-past-a-failing-entity.
 """
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from src.services import nightly_refresh as NR
@@ -171,3 +173,105 @@ def test_redeliver_entity_skips_without_mappings(monkeypatch):
                                {"source_schema": "irimsv", "source_table": "schools",
                                 "primary_key_columns": ["id"]}, "LRMIS")
     assert out["status"] == "skipped"
+
+
+# ---------------------------------------------------------------------------
+# backup_target: discard a partial/empty file on failure
+# ---------------------------------------------------------------------------
+
+class _FakeCompleted:
+    def __init__(self, returncode, stderr=""):
+        self.returncode = returncode
+        self.stderr = stderr
+
+
+class _FakeSubprocess:
+    """Stand-in for the `subprocess` module backup_target calls into.
+
+    backup_target() opens `out_path` for writing before it ever calls
+    subprocess.run(), so faking only `.run()` (success / nonzero returncode /
+    raises) reproduces the real 0-byte-file bug scenario exactly: the file
+    exists on disk from the `open()` call, and nothing was ever written to it.
+    """
+    PIPE = object()
+
+    def __init__(self, returncode=0, stderr="", raises=None):
+        self._returncode = returncode
+        self._stderr = stderr
+        self._raises = raises
+
+    def run(self, *args, **kwargs):
+        if self._raises is not None:
+            raise self._raises
+        return _FakeCompleted(self._returncode, self._stderr)
+
+
+def test_backup_target_dry_run_reports_plan_without_touching_disk(tmp_path, monkeypatch):
+    monkeypatch.setattr(NR, "BACKUP_DIR", str(tmp_path))
+
+    plan = NR.backup_target(dry_run=True)
+
+    assert plan["executed"] is False
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_backup_target_success_keeps_the_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(NR, "BACKUP_DIR", str(tmp_path))
+    monkeypatch.setattr(NR, "subprocess", _FakeSubprocess(returncode=0))
+
+    plan = NR.backup_target(dry_run=False)
+
+    assert plan["executed"] is True
+    assert "warning" not in plan
+    assert os.path.exists(plan["path"])
+
+
+def test_backup_target_deletes_empty_file_on_nonzero_returncode(tmp_path, monkeypatch):
+    monkeypatch.setattr(NR, "BACKUP_DIR", str(tmp_path))
+    monkeypatch.setattr(NR, "subprocess",
+                        _FakeSubprocess(returncode=1, stderr="mysqldump: connection refused"))
+
+    plan = NR.backup_target(dry_run=False)
+
+    assert plan["executed"] is False
+    assert "connection refused" in plan["warning"]
+    assert not os.path.exists(plan["path"]), \
+        "a failed dump must not leave a 0-byte file behind"
+
+
+def test_backup_target_deletes_partial_file_on_exception(tmp_path, monkeypatch):
+    monkeypatch.setattr(NR, "BACKUP_DIR", str(tmp_path))
+    monkeypatch.setattr(NR, "subprocess",
+                        _FakeSubprocess(raises=FileNotFoundError("mysqldump: not found")))
+
+    plan = NR.backup_target(dry_run=False)
+
+    assert plan["executed"] is False
+    assert "not found" in plan["warning"]
+    assert not os.path.exists(plan["path"]), \
+        "a raised exception must not leave a partial file behind either"
+
+
+# ---------------------------------------------------------------------------
+# run_nightly_refresh: surface step-level warnings at the top level
+# ---------------------------------------------------------------------------
+
+def test_run_nightly_refresh_surfaces_backup_warning(fake_connectors, monkeypatch):
+    monkeypatch.setattr(NR, "backup_target",
+                        lambda **k: {"executed": False, "warning": "mysqldump not found"})
+    monkeypatch.setattr(NR, "recreate_target_database", lambda dry_run=False: {"created": 51})
+    monkeypatch.setattr(NR, "redeliver_all", lambda *a, **k: [{"status": "refreshed"}])
+
+    out = NR.run_nightly_refresh(actor="tester", restore=False, dry_run=False)
+
+    assert out["warnings"] == [{"step": "backup", "warning": "mysqldump not found"}]
+
+
+def test_run_nightly_refresh_omits_warnings_key_when_clean(fake_connectors, monkeypatch):
+    monkeypatch.setattr(NR, "backup_target", lambda **k: {"executed": True})
+    monkeypatch.setattr(NR, "recreate_target_database", lambda dry_run=False: {"created": 51})
+    monkeypatch.setattr(NR, "redeliver_all", lambda *a, **k: [{"status": "refreshed"}])
+
+    out = NR.run_nightly_refresh(actor="tester", restore=False, dry_run=False)
+
+    assert "warnings" not in out
