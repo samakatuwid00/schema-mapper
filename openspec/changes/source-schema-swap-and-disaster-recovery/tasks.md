@@ -1,68 +1,68 @@
 ## 0. Groundwork
 
-- [ ] 0.1 Confirm `PostgresSourceAdapter` discovery surface covers everything a source-swap diff needs (columns, types, nullability); note any gaps before wiring
-- [ ] 0.2 Confirm the approved-contract field for source columns (equivalent of `lrmis_target_tables` for the target side); document it in `schema_swap.py`'s docstring
-- [ ] 0.3 Read `src/services/pg_restore.py`'s magic-byte check end to end; confirm it's reusable as-is for uploaded-file validation (not just restore-time validation)
+- [x] 0.1 (2026-07-14) `PostgresSourceAdapter.discover_schema()` reads `information_schema.columns` (name/type/nullability/position) via `from_information_schema` — covers everything the diff compares (data_type + nullable). GAPS noted: (a) its query selects no `column_key`, so `is_primary_key` is always False (irrelevant to the diff, relevant if remap prompts ever want PK hints); (b) construction mismatch — the adapter normalizes types ('character varying'→'string') while `pipeline._discover_source_schema` (what `onboarding_entity.source_fingerprint` hashes) keeps raw types + descriptions. The two are NOT fingerprint-comparable; the swap uses the adapter construction for all diff artifacts and the pipeline construction only for the entity-fingerprint refresh.
+- [x] 0.2 Confirmed + documented in `schema_swap.py`'s docstring: the source-side approved contract per entity = accepted `onboarding_field_review.source_column` set of the latest approved proposal (names, always available) + `onboarding_entity.source_fingerprint` (ops.monitor's drift hash, pipeline construction) + NEW captured `schema_version` docs with `scope_kind='entity_source'` (sql/012) for exact retype detection. The footprint equivalent of `lrmis_target_tables` is simply `source_schema`+`source_table` (one table per entity).
+- [x] 0.3 `pg_restore.is_pg_custom_dump()` read end to end — a pure `path -> bool` PGDMP magic-byte check with no restore-time coupling (OSError → False). Reusable as-is for uploaded-file validation; `backup_recovery.validate_upload` imports it directly.
 
 ## 1. Generalize `schema-swap` to be side-agnostic
 
-- [ ] 1.1 Add `side: Literal["source", "target"] = "target"` to the public functions in `src/services/schema_swap.py`
-- [ ] 1.2 Branch adapter selection: `get_source_adapter(...)` when `side="source"`, `get_target_adapter(...)` when `side="target"`
-- [ ] 1.3 Branch the approved-contract lookup per `side` (source column footprint vs `lrmis_target_tables`)
-- [ ] 1.4 Confirm diff/AI-remap/human-gate/apply logic needs no other branching — keep one code path
-- [ ] 1.5 Run the full existing target-swap test suite unmodified; must stay green (proves the default preserves current behavior)
-- [ ] 1.6 Add `--side source|target` to `scripts/schema_swap.py` (default `target`)
-- [ ] 1.7 Add `--side source|target` to `scripts/sync_engine.py schema-swap` (default `target`)
+- [x] 1.1 `dry_run`/`apply` gained `side: Literal["source", "target"] = "target"` (+ `source_adapter`, `fetch_source_contracts` seams); `target_adapter` now optional-with-validation so neither side requires the other's adapter. Also added a `table_names` property to `schema_models.Schema` so `diff_registries` works on either a registry or a Schema (asdict ignores properties → fingerprints unchanged).
+- [x] 1.2 Adapter selection branched: the service takes the adapter for the requested side; the CLI resolves `get_source_adapter(--source-engine, schema=--source-schema)` vs `get_target_adapter(--target-engine, ...)`.
+- [x] 1.3 Contract lookup branched: target → `get_registry()` + `lrmis_target_tables` intersection (unchanged); source → `_default_fetch_source_contracts` (entity_source docs + approved field-review source columns, see 0.2).
+- [x] 1.4 Confirmed: diff/AI-remap/human-gate/persist are one shared code path (`diff_source_table` applies the same column comparison as `diff_registries`; `remap_affected`/`remap_entity`/gate/`persist_remap`/`deploy_to_lrmis` are shared verbatim). The ONLY side branch beyond adapter+contract is that `side="source"` has no recreate/redeliver step — that's design D2 (a source swap has no destructive step), not duplication.
+- [x] 1.5 Existing `tests/test_schema_swap.py` ran UNMODIFIED and green; full suite 285 passed (was 270 + 15 new source-swap tests).
+- [x] 1.6 `scripts/schema_swap.py --side source|target` (default `target`); source apply's typed confirmation token = the source schema name (e.g. `--confirm irimsv`), mirroring the target-db-name guard.
+- [x] 1.7 `sync-engine schema-swap` delegates all args to `scripts/schema_swap.py`, so `--side` flows through with zero code; usage doc line updated to say so.
 
 ## 2. Source-side schema-swap
 
-- [ ] 2.1 Wire `side="source"` discovery through `PostgresSourceAdapter`
-- [ ] 2.2 Diff live source schema against the approved source contract; detect added/removed/retyped columns per entity
-- [ ] 2.3 AI re-map only entities whose source columns are affected (schema-only prompts — no row values, matching the existing rule)
-- [ ] 2.4 Human-gate low-confidence remaps exactly like target-swap; confirmed remaps resume delivery, others sit for review
-- [ ] 2.5 Confirm a source-swap never issues DDL/DML against IRIMSV — discovery + re-mapping only (design D2)
-- [ ] 2.6 Unit tests: diff detection, remap trigger thresholds, human-gate behavior, no-DDL-against-source guard
-- [ ] 2.7 Live smoke: point at a restructured/alternate Postgres source (mirrors the `old-lrmis.backup` target smoke already done for target-swap)
+- [x] 2.1 `side="source"` discovers via `source_adapter.discover_schema()` (`PostgresSourceAdapter` — read-only information_schema query).
+- [x] 2.2 Per-entity diff (`diff_source_table`/`affected_source_entities`): added/removed/retyped(+nullability) columns + missing-table, per entity, vs the entity_source doc when captured or the approved column names otherwise. DESIGN NOTE: added-only columns are reported but do NOT mark an entity affected — a new source column can't invalidate the approved mapping, and the spec requires unaffected entities to keep delivering uninterrupted. Names-only fallback can't see pure retypes (documented in the dry-run note; fixed for any entity after its first source-swap apply captures a doc, sql/012).
+- [x] 2.3 Re-map reuses `remap_affected`→`propose_mapping` (schema-only prompts, no row values) with the APPROVED target registry (`old_registry or get_registry()`) — only entities in the affected list are remapped.
+- [x] 2.4 Same gate verbatim: any remap below threshold (or a vanished source table) → `blocked_on_review`, nothing persisted; confirmed remaps persist via `persist_remap`+`deploy_to_lrmis` which re-enables `entity_control` and sets status deployed → delivery resumes. Post-persist, `_default_persist_source` refreshes the entity's `source_fingerprint` (pipeline construction, in-place-correct; replacement-DB case documented: re-point + `rebaseline_entity_fingerprints --apply`) and captures the new entity_source doc.
+- [x] 2.5 D2 holds: discovery is a read; the apply writes central metadata only (proposal/review/entity rows + schema_version docs); no recreate/redeliver step exists on the source path. Guarded by test: the spy source adapter exposes ONLY `discover_schema` and the whole apply runs against it.
+- [x] 2.6 `tests/test_source_schema_swap.py` — 15 tests: diff detection (add/remove/retype/nullability/missing-table), added-only-not-affected, fallback-vs-document contract behavior, remap trigger, gate block/force/high-confidence, dropped-table-cannot-auto-remap, no-DDL spy guard, target-side shape unchanged.
+- [ ] 2.7 Live smoke vs a restructured/alternate Postgres source — DEFERRED: needs a live second Postgres DB (same deferral class as the MySQL/Postgres delivery smokes in retire-legacy-staging §5.1).
 
 ## 3. Disaster recovery — core service
 
-- [ ] 3.1 Create `sql/011_recovery.sql`: `integration.recovery_upload` table (id, kind [`source_dump`|`target_backup`], original_filename, checksum, uploaded_by, uploaded_at, used_at, used_by)
-- [ ] 3.2 Create `src/services/backup_recovery.py`: `list_target_backups()` — reads `nightly_refresh`'s existing timestamped backup files
-- [ ] 3.3 `validate_upload(path, kind)` — magic-byte check (reuse `pg_restore.py` pattern), encoding sanity check (reject non-UTF-8/UTF-16-as-if-UTF-8), and for `source_dump` a check the dump contains the `irimsv` schema; returns pass/fail + reason
-- [ ] 3.4 `stage_upload(file, kind)` — writes to a quarantined temp path (never a path a restore command executes directly), runs `validate_upload`, records a `recovery_upload` row
-- [ ] 3.5 `restore_target(backup_id)` — wraps existing target-restore primitives, requires typed confirmation, records `used_at`/`used_by`
-- [ ] 3.6 `restore_source(upload_id)` — wraps existing source-restore primitives, requires typed confirmation, records `used_at`/`used_by`
-- [ ] 3.7 Unit tests: valid dump accepted, UTF-16 dump rejected with the actual historical failure reproduced as a fixture, non-dump file rejected, missing-schema source dump rejected, confirmation required for both restore paths
+- [x] 3.1 `sql/011_recovery.sql` created — spec'd columns PLUS three additive ones the flow genuinely needs: `stored_path` (without it a validated upload can't be restored later), `valid`/`invalid_reason` (4.2 lists "validated uploads", so validity must be queryable — invalid rows are kept as audited rejections the UI can explain), `size_bytes`. ALSO: `sql/012_entity_source_contract.sql` (created in §1) extends `schema_version.scope_kind` with `'entity_source'` for the source-contract docs.
+- [x] 3.2 `backup_recovery.list_target_backups()` lists `nightly_refresh.BACKUP_DIR` `*.sql` files (id=filename, size, mtime, newest first) + `list_uploads()` for the recorded uploads.
+- [x] 3.3 `validate_upload(path, kind)` — order matters: PGDMP magic first (reused from `pg_restore`; custom archives contain NULs so encoding checks don't apply — for `source_dump` the TOC is binary-grepped for `irimsv`, for `target_backup` PGDMP is rejected outright since the target restore replays plain SQL); otherwise plain-SQL checks: UTF-16 BOM *and* BOM-less NUL-density heuristic → the runbook's exact "file is UTF-16, expected UTF-8" reason; then UTF-8 decode, SQL-ish marker sanity, and (source_dump) an `\birimsv\b` streaming scan. Pure `path -> {ok, reason, format}`.
+- [x] 3.4 `stage_upload(stream, filename, kind, by)` — streams (size-capped, `LRMIS_RECOVERY_MAX_UPLOAD_BYTES`, sha256-while-writing) into quarantined `LRMIS_RECOVERY_UPLOAD_DIR` (default `backups/uploads/`, sanitized name, never `LRMIS_SOURCE_DUMP_PATH` or any auto-executed path), validates, records the row valid-or-not (the upload is the audited event).
+- [x] 3.5 `restore_target(backup_id)` — accepts a listed backup filename (basename-sanitized, can't escape BACKUP_DIR) or a validated upload id; typed confirm = target db name (mirrors nightly); PGDMP file → delegates to `pg_restore.restore_pg_backup` plan, else the mysql mirror of `backup_target`'s own env config (`LRMIS_TARGET_MYSQL_RESTORE_CMD` override with `{backup}`/`{db}`); refuses invalid/wrong-kind uploads; `used_at`/`used_by` stamped; `dry_run` returns the plan.
+- [x] 3.6 `restore_source(upload_id)` — wraps `nightly_refresh.restore_source_dump` (dry-run plan → single `_run_shell` execution path; FIXED during API tests: the original non-runner path executed the subprocess directly, bypassing the seam); typed confirm = source schema name; validity + kind gates; `used_at`/`used_by` stamped.
+- [x] 3.7 `tests/test_backup_recovery.py` — 29 tests incl. the historical UTF-16 fixture (BOM'd and BOM-less), PGDMP accept/reject-by-kind, non-dump magic reject, missing-`irimsv` reject, empty file, quarantine + sanitization, invalid-upload-refused-even-with-confirm, typed-confirmation required on BOTH restore paths, dry-run executes nothing, path-traversal guard.
 
 ## 4. Disaster recovery — API and CLI
 
-- [ ] 4.1 `POST /api/recovery/upload` — multipart, size-capped, calls `stage_upload`, returns validation result
-- [ ] 4.2 `GET /api/recovery/backups` — lists target backups (from `nightly_refresh`) and validated uploads (source + target)
-- [ ] 4.3 `POST /api/recovery/restore-target` — typed-confirmation body required, calls `restore_target`, audited
-- [ ] 4.4 `POST /api/recovery/restore-source` — typed-confirmation body required, calls `restore_source`, audited
-- [ ] 4.5 `scripts/recover.py --list-backups` / `--restore-target <id>` / `--restore-source <file>` — calls the same service functions as the API (no bypass, matches project convention)
-- [ ] 4.6 Integration tests: upload → validate → list → restore (confirmation required) → audit row recorded, for both source and target
+- [x] 4.1 `POST /api/recovery/upload` (new `src/admin_api/recovery.py` router, registered in `app.py`) — multipart via `UploadFile`+`Form` (added `python-multipart` to requirements — it was NOT installed and FastAPI needs it for multipart), streams through `stage_upload` (size cap enforced there), returns the row incl. validation verdict + reason. `require_operator` + `audited("recovery_upload")`.
+- [x] 4.2 `GET /api/recovery/backups` — `{target_backups: [...], uploads: [...]}` (uploads include invalid rows with their rejection reason so the UI can explain them). Auth via `current_user`.
+- [x] 4.3 `POST /api/recovery/restore-target` — reason required (router) + typed confirmation enforced IN THE SERVICE (no caller can skip it, D4), `audited("recovery_restore_target")`, `dry_run` supported.
+- [x] 4.4 `POST /api/recovery/restore-source` — same tier: reason + service-enforced typed confirm + `audited("recovery_restore_source")` + `dry_run`.
+- [x] 4.5 `scripts/recover.py` — `--list-backups` / `--stage <file> --kind` / `--restore-target <id>` / `--restore-source <file-or-id>` (a file is staged+validated first, exactly the UI's two steps; invalid → exit 4, refuses restore), `--confirm`/`--reason`/`--dry-run`. Calls the identical `backup_recovery` functions — no bypass.
+- [x] 4.6 `tests/test_recovery_api.py` — 6 integration tests driving the REAL routes + REAL service (fakes only: in-memory central connector, spy shell runner, captured audit writer): full source flow (upload→validate→list→confirm-gated restore→used_by stamped→audit success row with reason), UTF-16 upload recorded invalid + restore refused even with confirm, full target flow (reason gate, confirm gate, dry-run executes nothing, confirmed restore replays the listed nightly backup), upload-id target restore marks used, all 4 routes 401 anonymous, unknown kind 422. Full suite: 320 passed.
 
 ## 5. Disaster recovery — web UI
 
-- [ ] 5.1 `web/src/components/BackupUpload.tsx` — drag-and-drop, progress, validation feedback (surfaces the actual rejection reason, e.g. "file is UTF-16, expected UTF-8")
-- [ ] 5.2 `web/src/pages/Recovery.tsx` — lists existing target backups + uploaded source/target files, restore action per row
-- [ ] 5.3 Typed-confirmation modal on restore actions (reuse the existing confirmation component/pattern from `nightly_refresh`'s UI)
-- [ ] 5.4 Add Recovery to the Maintain nav group (alongside Nightly Rebuild and Schema Changes)
-- [ ] 5.5 Component tests: upload flow, validation error display, confirmation gate, restore trigger
+- [x] 5.1 `BackupUpload.tsx` — drag-and-drop + browse, REAL upload progress (XHR `upload.onprogress` via new `client.uploadRecoveryFile`; fetch has no upload progress), validation feedback distinguishing "passed validation" from "rejected: <exact server reason>" (invalid uploads note they can never be restored from) from transport errors.
+- [x] 5.2 `Recovery.tsx` — three panels: automatic nightly target backups (file/size/taken + Restore…), upload (kind selector source_dump/target_backup), uploaded files (validity chip with rejection reason, used_by/used_at, restore action ONLY on valid rows — source_dump→restore source, target_backup→restore target) + last-restore result panel.
+- [x] 5.3 Reused `GuardedActionModal` tier="typed" (the exact NightlyRebuild pattern): reason + typed token (`lrmis_target` / `irimsv`) gate the buttons; the server re-validates both independently, so the modal is UX, not the security boundary.
+- [x] 5.4 Recovery added to the Maintain nav group (LifeBuoy icon, `/recovery` route) between Nightly Rebuild and Audit Log.
+- [x] 5.5 11 new component tests (`BackupUpload.test.tsx` 5: upload flow incl. drag-drop, UTF-16 reason display, parent callback, transport-vs-validation error; `Recovery.test.tsx` 6: nav entry, listings, invalid-row-has-no-restore, reason+typed confirmation gate steps, source restore trigger + payload, in-modal error). GATES: `tsc --noEmit` clean, vitest 74 passed (was 63), `npm run build` ok.
 
 ## 6. Conversational agent tools (deferred on `conversational-ai-assistant`)
 
-- [ ] 6.1 Define `swap_source_schema` tool (propose-only unless `auto_safe` + confidence-gated, mirrors target-swap tool shape)
-- [ ] 6.2 Define `recover_from_backup` tool (`destructive: true` always, confirmation required regardless of autonomy tier — design D4)
-- [ ] 6.3 Register both in the tool registry once `src/agent/tools.py` exists; do not block this change's other sections on this task
-- [ ] 6.4 Unit tests for both tool defs: schema validation, destructive-gate enforcement for `recover_from_backup`
+- [x] 6.1 `swap_source_schema` defined in NEW `src/agent/tool_defs.py` (not `tools.py` — that file belongs to `conversational-ai-assistant` and doesn't exist yet; this module is what it will import). `autonomy="propose_only"`; handler is the read-only dry-run unless `apply=true`, and the apply path independently demands the typed source-schema token + rides the service's confidence gate, so NO autonomy tier can skip either. Uses the ToolDef shape from that change's design D3 (name/description/params_schema/handler/autonomy) so registration is a one-line import.
+- [x] 6.2 `recover_from_backup` defined with `autonomy="destructive"` HARD-CODED (D4); the typed-confirmation check lives in `backup_recovery` itself as the first statement (before any DB/shell access), so it binds every caller — UI, CLI, and future agent — not just this def.
+- [ ] 6.3 Registration deferred as designed: `src/agent/tools.py` still doesn't exist (`conversational-ai-assistant` unstarted). When it lands: `from .tool_defs import RECOVERY_TOOLS` and extend the registry. Not blocking anything here.
+- [x] 6.4 `tests/test_recovery_tool_defs.py` — 10 tests: export list, unknown-autonomy rejected, required-param + type validation, dry-run default is read-only, apply-requires-token, apply-with-token runs the gated apply, destructive hard-coding, confirm-required-before-anything-runs (proven with no DB available at all), unknown action rejected.
 
 ## 7. Verify and document
 
-- [ ] 7.1 Full `pytest -q` green
-- [ ] 7.2 MySQL-target and Postgres-target schema-swap smoke, both `side=source` and `side=target`
-- [ ] 7.3 Recovery smoke: stage an intentionally-bad (UTF-16) upload, confirm rejection; stage a valid one, confirm restore path works end to end against a disposable target
-- [ ] 7.4 Update `docs/RUNBOOK_source_to_target.md` — mark the UTF-16 incident as now recoverable via Recovery UI instead of manual fix
-- [ ] 7.5 `graphify update .`
-- [ ] 7.6 `openspec validate source-schema-swap-and-disaster-recovery --strict`
+- [x] 7.1 Full `pytest -q` green — **330 passed** (was 270 pre-change: +15 source-swap, +29 recovery core, +6 recovery API integration, +10 tool defs). Frontend: vitest 74 passed, `tsc --noEmit` clean, `npm run build` ok. sql/011+012 applied to the live dev central DB.
+- [~] 7.2 LIVE (2026-07-14, read-only halves): `schema_swap.py --side source --dry-run` against the real dev source → 15 deployed entities diffed against approved contracts, 0 affected (live columns beyond the approved mappings correctly reported as informational adds, no remap triggered); `--target-engine mysql --dry-run` against the real lrmis_target → clean diff, default target behavior intact. DEFERRED: confirmed applies + Postgres-target side + a genuinely restructured alternate source (destructive/live-DB-mutating — operator runs).
+- [~] 7.3 LIVE (2026-07-14, everything except the final destructive execution): staged a real UTF-16 dump via `scripts/recover.py --stage` → recorded invalid with the exact runbook reason; staged a valid UTF-8 irimsv dump → valid, quarantined under `backups/uploads/`; `--list-backups` shows the 2 real nightly backups + both uploads; `--restore-target ... --dry-run` printed the correct mysql replay plan for the real 2026-07-12 nightly backup; wrong `--confirm` refused (exit 3); `--restore-source --dry-run` correctly refused to guess a command (LRMIS_SOURCE_RESTORE_CMD unset in this env — configured-never-guessed holds). DEFERRED: the actual destructive restore execution against a disposable target (operator).
+- [x] 7.4 `docs/RUNBOOK_source_to_target.md` §0.2 rewritten: UTF-16 incident marked ✅ recoverable via Maintain → Recovery (upload validates + rejects UTF-16 with the exact reason) + the CLI equivalent; the pg_dump -f regeneration advice kept.
+- [x] 7.5 `graphify update .` run.
+- [x] 7.6 `openspec validate source-schema-swap-and-disaster-recovery --strict` → VALID.

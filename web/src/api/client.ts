@@ -262,3 +262,111 @@ export const cancelQueue = (entity: string) =>
     job_type: "cancel_queue",
     params: { entity },
   });
+
+// ---- Recovery (backups + validated uploads + confirmed restores) ----
+
+export interface TargetBackup {
+  id: string;
+  path: string;
+  size_bytes: number;
+  modified_at: string;
+}
+
+export interface RecoveryValidation {
+  ok: boolean;
+  reason: string | null;
+  format: string | null;
+}
+
+export interface RecoveryUpload {
+  id: number;
+  kind: "source_dump" | "target_backup";
+  original_filename: string;
+  stored_path: string;
+  checksum: string;
+  size_bytes: number;
+  valid: boolean;
+  invalid_reason: string | null;
+  uploaded_by: string;
+  uploaded_at: string;
+  used_at: string | null;
+  used_by: string | null;
+  /** Present on the row returned directly from an upload. */
+  validation?: RecoveryValidation;
+}
+
+export interface RecoveryBackupsResponse {
+  target_backups: TargetBackup[];
+  uploads: RecoveryUpload[];
+}
+
+export interface RestoreResult {
+  executed: boolean;
+  dry_run?: boolean;
+  command?: string;
+  [key: string]: unknown;
+}
+
+export const getRecoveryBackups = () =>
+  get<RecoveryBackupsResponse>("/api/recovery/backups");
+
+/**
+ * Multipart upload with real progress (XHR — fetch has no upload progress).
+ * The server streams it to a quarantined path and returns the validation
+ * verdict on the row; a rejected file still resolves (valid=false + reason).
+ */
+export function uploadRecoveryFile(
+  file: File,
+  kind: RecoveryUpload["kind"],
+  onProgress?: (fraction: number) => void,
+): Promise<RecoveryUpload> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/recovery/upload");
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        unauthorizedHandler?.();
+        reject(new ApiError(401, "Not authenticated"));
+        return;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        let detail = xhr.statusText || `HTTP ${xhr.status}`;
+        try {
+          const parsed: unknown = JSON.parse(xhr.responseText);
+          if (parsed && typeof parsed === "object" && "detail" in parsed) {
+            const d = (parsed as { detail: unknown }).detail;
+            detail = typeof d === "string" ? d : JSON.stringify(d);
+          }
+        } catch {
+          /* body was not JSON */
+        }
+        reject(new ApiError(xhr.status, detail));
+        return;
+      }
+      resolve(JSON.parse(xhr.responseText) as RecoveryUpload);
+    };
+    xhr.onerror = () => reject(new ApiError(0, "network error during upload"));
+    const form = new FormData();
+    form.set("kind", kind);
+    form.set("file", file);
+    xhr.send(form);
+  });
+}
+
+export const restoreTarget = (payload: {
+  backup_id: string;
+  confirm: string;
+  reason: string;
+  dry_run?: boolean;
+}) => post<RestoreResult>("/api/recovery/restore-target", payload);
+
+export const restoreSource = (payload: {
+  upload_id: number;
+  confirm: string;
+  reason: string;
+  dry_run?: boolean;
+}) => post<RestoreResult>("/api/recovery/restore-source", payload);

@@ -4,7 +4,7 @@ Supersedes the per-task `pipeline.py` commands (§10.6). Subcommands:
 
     sync-engine init [path]          create an engine config template (§10.1)
     sync-engine plan   <args>        AI planner over a source table (§10.2)  -> agent.py --plan
-    sync-engine schema-swap <args>   dry-run / apply a target schema swap (§10.4)
+    sync-engine schema-swap <args>   dry-run / apply a schema swap, --side source|target (§10.4)
     sync-engine agent  <args>        agent session (§10.5)
     sync-engine run    <args>        full migration (backfill + CDC) (§10.3, not yet implemented)
 

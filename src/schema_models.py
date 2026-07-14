@@ -42,6 +42,10 @@ class Schema:
     tables: list[Table] = field(default_factory=list)
     version: str = "1"
 
+    @property
+    def table_names(self) -> list[str]:
+        return [t.name for t in self.tables]
+
     def get_table(self, name: str) -> Optional[Table]:
         return next((t for t in self.tables if t.name == name), None)
 

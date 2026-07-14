@@ -27,9 +27,22 @@ python -m src.pipeline discover --source-schema irimsv --target-system LRMIS
 (If it ever shows only `irimsv_*_staging` names, the contract regressed — scan
 `lrmis_target` and re-approve it as the contract before proposing.)
 
-### 0.2 ⚠️ Fix the source dump encoding
-`lrmis_dump.sql` is currently **UTF-16** (made with PowerShell `>`), which `psql`
-cannot read. Regenerate it as UTF-8 by letting `pg_dump` write the file directly:
+### 0.2 ✅ Fix the source dump encoding — now recoverable in-UI
+`lrmis_dump.sql` was **UTF-16** (made with PowerShell `>`), which `psql`
+cannot read. This failure mode is now handled by the system instead of a
+manual fix: upload a replacement dump on the admin UI's **Recovery** page
+(Maintain → Recovery), which validates it before it can ever be used — a
+UTF-16 file is rejected on upload with the exact reason ("file is UTF-16,
+expected UTF-8"), a valid UTF-8 dump becomes a confirmed, audited
+source-restore candidate. CLI equivalent:
+
+```bash
+python scripts/recover.py --stage lrmis_dump.sql --kind source_dump   # validate only
+python scripts/recover.py --restore-source lrmis_dump.sql --confirm irimsv --reason "..."
+```
+
+To regenerate a clean dump in the first place, let `pg_dump` write the file
+directly (never PowerShell `>` redirection):
 
 ```bash
 # from the machine/container that holds the source; example against real_source (5440):

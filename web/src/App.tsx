@@ -6,6 +6,7 @@ import {
   FileCode2,
   GitCompareArrows,
   LayoutDashboard,
+  LifeBuoy,
   ListChecks,
   Radar,
   RefreshCw,
@@ -23,6 +24,7 @@ import Migrations from "./pages/Migrations";
 import NightlyRebuild from "./pages/NightlyRebuild";
 import Onboarding from "./pages/Onboarding";
 import Overview from "./pages/Overview";
+import Recovery from "./pages/Recovery";
 import SchemaChanges from "./pages/SchemaChanges";
 import Tables from "./pages/Tables";
 import WorkerQueues from "./pages/WorkerQueues";
@@ -66,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: "/schema", label: "Schema Changes", icon: Radar },
       { to: "/migrations", label: "Database Updates (SQL)", icon: FileCode2 },
       { to: "/rebuild", label: "Nightly Rebuild", icon: RefreshCw },
+      { to: "/recovery", label: "Recovery", icon: LifeBuoy },
       { to: "/audit", label: "Audit Log", icon: ScrollText },
     ],
   },
@@ -170,6 +173,7 @@ export default function App() {
         <Route path="/schema" element={<SchemaChanges />} />
         <Route path="/migrations" element={<Migrations />} />
         <Route path="/rebuild" element={<NightlyRebuild />} />
+        <Route path="/recovery" element={<Recovery />} />
         <Route path="/audit" element={<AuditLog />} />
         {/* Preserve existing entry points */}
         <Route path="/onboarding" element={<Onboarding />} />
