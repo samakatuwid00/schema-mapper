@@ -417,11 +417,22 @@ def monitor(central: PostgresCentralConnector | None = None,
 def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
                                    central: PostgresCentralConnector | None = None,
                                    target: MySQLStagingConnector | None = None) -> dict:
-    """Convert legacy whole-database fingerprints to isolated entity contracts.
+    """Re-baseline entity fingerprints to the live monitor construction.
 
-    Only entities paused by the old schema-drift monitor are eligible for
-    automatic re-enable. Missing source or target objects are reported and
-    left untouched. Call with ``apply=False`` for a read-only preview.
+    Covers two populations:
+    * legacy whole-database fingerprints (``fingerprint_scope_version < 2``);
+    * entities the drift monitor paused whose STORED fingerprints came from a
+      different construction than the monitor recomputes — e.g.
+      ``deploy_to_lrmis`` stores a registry-document target fingerprint while
+      ``monitor`` fingerprints the live information_schema discovery, so the
+      first scan after a deploy flags spurious target drift (found live
+      2026-07-14: one scan paused all 44 delivering entities).
+
+    Only entities paused by the schema-drift monitor are eligible for
+    automatic re-enable; run this when the flagged drift is known-spurious or
+    accepted — it baselines whatever the live schemas are NOW. Missing source
+    or target objects are reported and left untouched. Call with
+    ``apply=False`` for a read-only preview.
     """
     p = _pipeline()
     owns = central is None
@@ -432,7 +443,9 @@ def rebaseline_entity_fingerprints(actor: str, apply: bool = False,
         with central.connection() as conn:
             entities = p._query(conn, """
                 SELECT * FROM integration.onboarding_entity
-                WHERE fingerprint_scope_version < 2
+                WHERE (fingerprint_scope_version < 2
+                       OR (status = 'paused'
+                           AND strpos(paused_reason, 'Schema drift detected:') = 1))
                   AND status IN ('deployed', 'paused')
                 ORDER BY source_schema, source_table
             """)
