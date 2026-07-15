@@ -39,6 +39,11 @@ The chat panel SHALL render SSE stream events progressively: text tokens as they
 - **WHEN** the agent sends `token` events
 - **THEN** each token is appended to the current message in real time
 
+#### Scenario: Final stream frame is rendered before reload
+
+- **WHEN** the backend sends the final `done` frame with assistant content
+- **THEN** the chat panel renders that content in the current conversation immediately, even if the frame uses CRLF newlines or arrives in the final network buffer
+
 #### Scenario: Tool call shows progress indicator
 
 - **WHEN** the agent sends a `tool_call` event

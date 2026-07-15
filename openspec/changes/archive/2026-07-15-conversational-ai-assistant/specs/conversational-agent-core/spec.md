@@ -92,3 +92,49 @@ The agent SHALL return structured responses that include the natural-language re
 
 - **WHEN** an intent routes to a tool whose autonomy level requires approval
 - **THEN** the response includes `tool_call` data with the tool name, extracted parameters, and a confirmation prompt
+
+### Requirement: Operator diagnostic tools
+
+The agent SHALL provide read-only diagnostic tools for common operator incidents: job status, deploy failure explanation, and deployed-entity delivery state.
+
+#### Scenario: Job status explains partial progress
+
+- **WHEN** a user asks about a job id or the latest worker job
+- **THEN** the agent returns the job type, status, progress, error message if present, and any per-entity failures available in the job result or event log
+
+#### Scenario: Deployed entity has no target data
+
+- **WHEN** a user asks why a deployed entity has no rows in the target database
+- **THEN** the agent reports the entity deployment status, target tables, target row counts when readable, latest related refresh job, and next recommended diagnostic step
+
+#### Scenario: Deploy error is explained as mapping repair
+
+- **WHEN** a user provides a deploy error such as `required but no source column maps to it`
+- **THEN** the agent extracts missing target columns and suggests concrete mapping actions without applying them
+
+#### Scenario: Mapping repairs remain gated
+
+- **WHEN** a user asks the agent to add or reject a mapping
+- **THEN** the agent prepares a typed tool call and requires confirmation before changing review data
+
+#### Scenario: Duplicate-key repair is diagnosed before mutation
+
+- **WHEN** a refresh fails with a duplicate target primary key
+- **THEN** the agent can inspect whether the target row exists, whether another crosswalk already claims it, and whether the target id comes from the entity's source primary key
+- **AND** the agent only offers the repair tool when ownership is safe to record
+
+#### Scenario: Duplicate-key repair requires confirmation
+
+- **WHEN** the user asks the agent to repair a safe duplicate-key ownership gap
+- **THEN** the agent requires confirmation before writing the missing central crosswalk row
+
+#### Scenario: Refresh failure repair plan is read-only
+
+- **WHEN** a refresh job succeeds partially or reports failed entities
+- **THEN** the agent can produce a per-entity repair plan that classifies each failure and lists safe next actions
+- **AND** the plan SHALL NOT mutate target data, mapping reviews, or crosswalk state
+
+#### Scenario: Unsafe failures still name exact review actions
+
+- **WHEN** a refresh failure cannot be auto-repaired but maps to a specific field-review row
+- **THEN** the agent includes that proposal/review id and may suggest a separate confirmation-gated exact-row reject action

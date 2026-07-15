@@ -91,3 +91,61 @@
 - [x] 9.5 Full `pytest -q` → **419 passed** (was 350: +53 conversation, +8 workflows, +13 chat API, -? none removed). sql/013 applied to the live dev central DB.
 - [x] 9.6 `tsc --noEmit` clean, vitest 86 passed, `npm run build` ok; no Python linter is configured in this repo (pytest is the gate).
 - [x] 9.7 `openspec validate conversational-ai-assistant --strict` → VALID.
+
+## 10. Operator diagnostics and guided repair
+
+- [x] 10.1 Amend specs for job inspection, deploy-error explanation, deployed-but-empty diagnosis, gated mapping repairs, and robust final stream rendering.
+- [x] 10.2 Add read-only operator diagnostics service over `admin_job`, onboarding entities, mapping reviews, target row counts, and refresh results.
+- [x] 10.3 Register agent tools for `inspect_job`, `diagnose_entity_delivery`, `explain_deploy_error`, plus confirm-gated `add_mapping` and `reject_mapping`.
+- [x] 10.4 Extend heuristic classification and parameter extraction for the live operator phrasings observed during LRMIS onboarding.
+- [x] 10.5 Harden frontend SSE parsing so `done` content renders without requiring a history reload.
+- [x] 10.6 Add focused tests for diagnostic tools, conversation routing/templates, mapping repair gates, and SSE parser behavior.
+- [x] 10.7 Run focused Python/frontend tests and `openspec validate conversational-ai-assistant --strict`.
+
+## 11. Gated duplicate-key repair
+
+- [x] 11.1 Amend specs for duplicate-key diagnosis and confirmation-gated crosswalk repair.
+- [x] 11.2 Add read-only duplicate-key planning that parses target table/id, verifies source-PK ownership, checks target existence, and refuses conflicting crosswalk claims.
+- [x] 11.3 Add confirmation-gated `repair_duplicate_key` chat tool that records the missing central crosswalk and audits the action.
+- [x] 11.4 Extend heuristic routing/templates so operators can ask to diagnose or fix duplicate-key refresh failures.
+- [x] 11.5 Add focused tests and rerun Python/OpenSpec validation.
+
+## 12. Refresh failure repair planner
+
+- [x] 12.1 Amend specs for read-only job-level repair planning.
+- [x] 12.2 Add `plan_refresh_failure_repair` service logic that classifies duplicate-key, read-only reference, missing-required-mapping, data-quality, and generic refresh failures.
+- [x] 12.3 Register the read-only chat tool and route operator phrases such as "how do I fix this refresh job".
+- [x] 12.4 Render a concise per-entity checklist with gated tool suggestions only when safe.
+- [x] 12.5 Add focused tests and rerun Python/OpenSpec validation.
+
+## 13. Actionable manual repair steps
+
+- [x] 13.1 Add targeted `reject_field_review` service behavior so a bad fan-out mapping can be rejected without rejecting every mapping from the same source column.
+- [x] 13.2 Register confirmation-gated `reject_mapping_review` in the chat tool registry.
+- [x] 13.3 Enrich refresh repair plans with proposal/review ids and gated exact-row reject suggestions when auto-repair is unsafe.
+- [x] 13.4 Update templates/routing/tests and rerun validation.
+
+## 14. Reference-table match repair lookup
+
+- [x] 14.1 Parse `no row in reference table <table> matches {...}` refresh failures into target table/column/value diagnostics.
+- [x] 14.2 Enrich those failures with the accepted proposal/review id for the target reference column when available.
+- [x] 14.3 Add focused tests and rerun Python/OpenSpec validation.
+
+## 15. Repair-command usability
+
+- [x] 15.1 Route command-style `diagnose_entity_delivery <entity>` messages to the deployed-target diagnostic tool.
+- [x] 15.2 Include accepted field review ids in proposal summaries so operators can reject/remap exact rows during repair.
+- [x] 15.3 Add focused tests and rerun Python/OpenSpec validation.
+
+## 16. Review-queue fallback for delivery failures
+
+- [x] 16.1 Add a confirmation-gated `reopen_mapping_review` chat tool that returns an exact field review row to `pending` and moves the proposal to `needs_review`.
+- [x] 16.2 Make reference-match repair planning surface suspect same-table id mappings as review-queue reopen candidates.
+- [x] 16.3 Add focused tests and rerun Python/OpenSpec validation.
+
+## 17. Inspect-job repair handles and chat help
+
+- [x] 17.1 Enrich `inspect_job` chat results with read-only repair-plan handles when a job reports failed entities.
+- [x] 17.2 Render inferred proposal ids, review ids, and confirmation-gated repair commands directly in the job inspection answer.
+- [x] 17.3 Add `--help`/chat help output with supported diagnostic and repair commands.
+- [x] 17.4 Add focused tests and rerun Python/OpenSpec validation.
