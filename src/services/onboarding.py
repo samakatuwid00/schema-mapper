@@ -249,6 +249,358 @@ def resolve(proposal_id: int, source_column: str, target_column: str,
             central.close()
 
 
+def reject(proposal_id: int, source_column: str, rejected_by: str = "admin",
+           central: PostgresCentralConnector | None = None) -> dict:
+    """Reject one source-column mapping so it is ignored by deploy.
+
+    Deploy reads only accepted/resolved rows. Clearing the target fields also
+    keeps bulk "resolve suggested" from accidentally re-accepting the same bad
+    suggestion later.
+    """
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    try:
+        with central.connection() as conn:
+            if not p._query(conn, "SELECT 1 FROM integration.onboarding_proposal WHERE id = %s",
+                            (proposal_id,)):
+                raise NotFoundError(f"proposal {proposal_id} not found")
+            if not p._query(conn, """
+                SELECT 1 FROM integration.onboarding_field_review
+                WHERE proposal_id = %s AND source_column = %s
+            """, (proposal_id, source_column)):
+                raise NotFoundError(f"field review for '{source_column}' not found")
+
+            p._execute(conn, """
+                UPDATE integration.onboarding_field_review
+                SET status = 'rejected',
+                    suggested_target_table = NULL,
+                    suggested_target_column = NULL,
+                    resolved_target_column = NULL,
+                    resolved_transform = NULL,
+                    resolved_by = %s,
+                    resolved_at = now()
+                WHERE proposal_id = %s AND source_column = %s
+            """, (rejected_by, proposal_id, source_column))
+
+            pending = p._fetchval(conn, """
+                SELECT COUNT(*) FROM integration.onboarding_field_review
+                WHERE proposal_id = %s AND status = 'pending'
+            """, (proposal_id,))
+            new_status = "approved" if pending == 0 else "needs_review"
+            p._execute(conn, """
+                UPDATE integration.onboarding_proposal
+                SET status = %s, reviewed_by = %s, reviewed_at = now(), updated_at = now()
+                WHERE id = %s
+            """, (new_status, rejected_by, proposal_id))
+            conn.commit()
+        return {
+            "proposal_id": proposal_id,
+            "source_column": source_column,
+            "status": "rejected",
+            "pending_remaining": pending,
+            "proposal_status": new_status,
+        }
+    finally:
+        if owns:
+            central.close()
+
+
+def reject_field_review(review_id: int, rejected_by: str = "admin",
+                        central: PostgresCentralConnector | None = None) -> dict:
+    """Reject exactly one field-review row by id.
+
+    This is safer than source-column rejection for multi-target/fan-out mappings:
+    a source column may legitimately feed several target columns, while only one
+    target mapping is wrong.
+    """
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    try:
+        with central.connection() as conn:
+            rows = p._query(conn, """
+                SELECT id, proposal_id, source_column, suggested_target_table,
+                       suggested_target_column, resolved_target_column
+                FROM integration.onboarding_field_review
+                WHERE id = %s
+            """, (review_id,))
+            if not rows:
+                raise NotFoundError(f"field review {review_id} not found")
+            row = rows[0]
+            proposal_id = row["proposal_id"]
+
+            p._execute(conn, """
+                UPDATE integration.onboarding_field_review
+                SET status = 'rejected',
+                    suggested_target_table = NULL,
+                    suggested_target_column = NULL,
+                    resolved_target_column = NULL,
+                    resolved_transform = NULL,
+                    resolved_by = %s,
+                    resolved_at = now()
+                WHERE id = %s
+            """, (rejected_by, review_id))
+
+            pending = p._fetchval(conn, """
+                SELECT COUNT(*) FROM integration.onboarding_field_review
+                WHERE proposal_id = %s AND status = 'pending'
+            """, (proposal_id,))
+            new_status = "approved" if pending == 0 else "needs_review"
+            p._execute(conn, """
+                UPDATE integration.onboarding_proposal
+                SET status = %s, reviewed_by = %s, reviewed_at = now(), updated_at = now()
+                WHERE id = %s
+            """, (new_status, rejected_by, proposal_id))
+            conn.commit()
+        return {
+            "review_id": review_id,
+            "proposal_id": proposal_id,
+            "source_column": row["source_column"],
+            "target_table": row["suggested_target_table"],
+            "target_column": row["resolved_target_column"] or row["suggested_target_column"],
+            "status": "rejected",
+            "pending_remaining": pending,
+            "proposal_status": new_status,
+        }
+    finally:
+        if owns:
+            central.close()
+
+
+def reopen_field_review(review_id: int, reopened_by: str = "admin",
+                        central: PostgresCentralConnector | None = None) -> dict:
+    """Return one accepted/resolved field-review row to the review queue.
+
+    Unlike rejection, this preserves the suggested target table/column so the
+    review UI can show the suspect mapping and let the operator correct it in
+    the normal flow.
+    """
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    try:
+        with central.connection() as conn:
+            rows = p._query(conn, """
+                SELECT id, proposal_id, source_column, suggested_target_table,
+                       suggested_target_column, resolved_target_column
+                FROM integration.onboarding_field_review
+                WHERE id = %s
+            """, (review_id,))
+            if not rows:
+                raise NotFoundError(f"field review {review_id} not found")
+            row = rows[0]
+            proposal_id = row["proposal_id"]
+
+            p._execute(conn, """
+                UPDATE integration.onboarding_field_review
+                SET status = 'pending',
+                    resolved_target_column = NULL,
+                    resolved_transform = NULL,
+                    resolved_by = %s,
+                    resolved_at = now()
+                WHERE id = %s
+            """, (reopened_by, review_id))
+
+            pending = p._fetchval(conn, """
+                SELECT COUNT(*) FROM integration.onboarding_field_review
+                WHERE proposal_id = %s AND status = 'pending'
+            """, (proposal_id,))
+            p._execute(conn, """
+                UPDATE integration.onboarding_proposal
+                SET status = 'needs_review',
+                    needs_review_count = %s,
+                    reviewed_by = %s,
+                    reviewed_at = now(),
+                    updated_at = now()
+                WHERE id = %s
+            """, (pending, reopened_by, proposal_id))
+            conn.commit()
+        return {
+            "review_id": review_id,
+            "proposal_id": proposal_id,
+            "source_column": row["source_column"],
+            "target_table": row["suggested_target_table"],
+            "target_column": row["resolved_target_column"] or row["suggested_target_column"],
+            "status": "pending",
+            "pending_remaining": pending,
+            "proposal_status": "needs_review",
+        }
+    finally:
+        if owns:
+            central.close()
+
+
+def add_mapping(proposal_id: int, source_column: str, target_table: str,
+                target_column: str, transform: str = "none",
+                resolved_by: str = "admin",
+                central: PostgresCentralConnector | None = None) -> dict:
+    """Add an extra manual mapping row.
+
+    This supports fan-out cases where the same source column legitimately feeds
+    multiple target tables, e.g. districts.id -> station_name.id and
+    districts.id -> station_address.id. ``resolve`` updates one existing review
+    row; this creates an additional resolved row.
+    """
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    try:
+        with central.connection() as conn:
+            if not p._query(conn, "SELECT 1 FROM integration.onboarding_proposal WHERE id = %s",
+                            (proposal_id,)):
+                raise NotFoundError(f"proposal {proposal_id} not found")
+            if not p._query(conn, """
+                SELECT 1 FROM integration.onboarding_field_review
+                WHERE proposal_id = %s AND source_column = %s
+            """, (proposal_id, source_column)):
+                raise NotFoundError(f"field review for '{source_column}' not found")
+            transform = transform or "none"
+            if transform not in p.ALLOWED_TRANSFORMS:
+                raise ValidationError(
+                    f"transform '{transform}' not in allowlist: {sorted(p.ALLOWED_TRANSFORMS)}")
+            if not target_table or not target_column:
+                raise ValidationError("target_table and target_column are required")
+
+            p._execute(conn, """
+                INSERT INTO integration.onboarding_field_review
+                    (proposal_id, source_column, suggested_target_table,
+                     suggested_target_column, confidence, transform, reasoning,
+                     status, resolved_target_column, resolved_transform,
+                     resolved_by, resolved_at)
+                VALUES (%s, %s, %s, %s, 1.0, %s, %s, 'resolved', %s, %s, %s, now())
+            """, (proposal_id, source_column, target_table, target_column,
+                  transform, "manual extra mapping", target_column, transform,
+                  resolved_by))
+
+            pending = p._fetchval(conn, """
+                SELECT COUNT(*) FROM integration.onboarding_field_review
+                WHERE proposal_id = %s AND status = 'pending'
+            """, (proposal_id,))
+            new_status = "approved" if pending == 0 else "needs_review"
+            p._execute(conn, """
+                UPDATE integration.onboarding_proposal
+                SET status = %s, reviewed_by = %s, reviewed_at = now(), updated_at = now()
+                WHERE id = %s
+            """, (new_status, resolved_by, proposal_id))
+            conn.commit()
+        return {
+            "proposal_id": proposal_id,
+            "source_column": source_column,
+            "target_table": target_table,
+            "target_column": target_column,
+            "transform": transform,
+            "status": "resolved",
+            "pending_remaining": pending,
+            "proposal_status": new_status,
+        }
+    finally:
+        if owns:
+            central.close()
+
+
+def add_missing_mappings(proposal_id: int, mappings: list[dict],
+                         resolved_by: str = "admin",
+                         central: PostgresCentralConnector | None = None) -> dict:
+    """Add a batch of missing target mappings without disturbing existing rows.
+
+    Deploy failures often list several required target ids that should all be
+    fed by one source id. This helper handles that fan-out in one transaction:
+    it skips target columns that are already accepted/resolved, validates the
+    source column exists on the proposal, and inserts only the genuinely missing
+    rows. That keeps a targeted fix from wiping known-good id mappings.
+    """
+    if not mappings:
+        raise ValidationError("mappings are required")
+
+    p = _pipeline()
+    owns = central is None
+    central = central or PostgresCentralConnector()
+    added: list[dict] = []
+    skipped: list[dict] = []
+    try:
+        with central.connection() as conn:
+            if not p._query(conn, "SELECT 1 FROM integration.onboarding_proposal WHERE id = %s",
+                            (proposal_id,)):
+                raise NotFoundError(f"proposal {proposal_id} not found")
+            source_rows = p._query(conn, """
+                SELECT DISTINCT source_column
+                FROM integration.onboarding_field_review
+                WHERE proposal_id = %s
+            """, (proposal_id,))
+            source_columns = {r["source_column"] for r in source_rows}
+
+            for raw in mappings:
+                source_column = str(raw.get("source_column") or "").strip()
+                target_table = str(raw.get("target_table") or "").strip()
+                target_column = str(raw.get("target_column") or "").strip()
+                transform = str(raw.get("transform") or "none").strip() or "none"
+                item = {
+                    "source_column": source_column,
+                    "target_table": target_table,
+                    "target_column": target_column,
+                    "transform": transform,
+                }
+                if not source_column or not target_table or not target_column:
+                    skipped.append({**item, "reason": "source_column, target_table, and target_column are required"})
+                    continue
+                if source_column not in source_columns:
+                    skipped.append({**item, "reason": f"source column {source_column!r} is not on this proposal"})
+                    continue
+                if transform not in p.ALLOWED_TRANSFORMS:
+                    skipped.append({**item, "reason": f"transform {transform!r} is not allowed"})
+                    continue
+
+                existing = p._query(conn, """
+                    SELECT id, source_column, status
+                    FROM integration.onboarding_field_review
+                    WHERE proposal_id = %s
+                      AND suggested_target_table = %s
+                      AND COALESCE(resolved_target_column, suggested_target_column) = %s
+                      AND status IN ('accepted', 'resolved')
+                    ORDER BY id DESC LIMIT 1
+                """, (proposal_id, target_table, target_column))
+                if existing:
+                    skipped.append({**item, "reason": "target column already has an accepted/resolved mapping",
+                                    "review_id": existing[0]["id"]})
+                    continue
+
+                p._execute(conn, """
+                    INSERT INTO integration.onboarding_field_review
+                        (proposal_id, source_column, suggested_target_table,
+                         suggested_target_column, confidence, transform, reasoning,
+                         status, resolved_target_column, resolved_transform,
+                         resolved_by, resolved_at)
+                    VALUES (%s, %s, %s, %s, 1.0, %s, %s, 'resolved', %s, %s, %s, now())
+                """, (proposal_id, source_column, target_table, target_column,
+                      transform, "manual missing required mapping", target_column,
+                      transform, resolved_by))
+                added.append(item)
+
+            pending = p._fetchval(conn, """
+                SELECT COUNT(*) FROM integration.onboarding_field_review
+                WHERE proposal_id = %s AND status = 'pending'
+            """, (proposal_id,))
+            new_status = "approved" if pending == 0 else "needs_review"
+            p._execute(conn, """
+                UPDATE integration.onboarding_proposal
+                SET status = %s, reviewed_by = %s, reviewed_at = now(), updated_at = now()
+                WHERE id = %s
+            """, (new_status, resolved_by, proposal_id))
+            conn.commit()
+        return {
+            "proposal_id": proposal_id,
+            "added": added,
+            "skipped": skipped,
+            "pending_remaining": pending,
+            "proposal_status": new_status,
+            "next_step": "review/approve the proposal, then run deploy again",
+        }
+    finally:
+        if owns:
+            central.close()
+
+
 def onboard_bulk(source_schema: str, tables: list[str], target_system: str, actor: str,
                  central: PostgresCentralConnector | None = None,
                  progress=None) -> dict:

@@ -1374,6 +1374,13 @@ select.input {
   overflow-wrap: anywhere;
 }
 
+.job-item-recovery {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
 /* ---------- Progress ---------- */
 
 .progress {
@@ -1817,6 +1824,21 @@ textarea:focus-visible,
   border-left: 1px solid var(--border-strong);
   box-shadow: var(--elev-3);
   backdrop-filter: blur(10px);
+  transform: translateX(100%);
+  pointer-events: none;
+  transition: transform var(--dur) var(--ease-out),
+              background var(--dur-slow) var(--ease-out);
+}
+
+.agent-panel--open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-panel {
+    transition: none;
+  }
 }
 
 .agent-panel--fullscreen {
@@ -1834,11 +1856,38 @@ textarea:focus-visible,
 .agent-panel--fullscreen .agent-header,
 .agent-panel--fullscreen .agent-history,
 .agent-panel--fullscreen .agent-messages,
-.agent-panel--fullscreen .agent-composer {
+.agent-panel--fullscreen .agent-composer,
+.agent-panel--fullscreen .agent-pinned-job {
   width: 100%;
   max-width: 760px;
   margin-left: auto;
   margin-right: auto;
+}
+
+.agent-pinned-job {
+  margin: 8px 16px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius-sm);
+  background: rgba(34, 211, 238, 0.06);
+  font-size: 12px;
+}
+
+.agent-pinned-job-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-pinned-job-top .btn {
+  margin-left: auto;
+}
+
+.agent-pinned-job-error {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #fca5a5;
+  overflow-wrap: anywhere;
 }
 
 .agent-header {
@@ -1862,11 +1911,40 @@ textarea:focus-visible,
   letter-spacing: 0.2px;
 }
 
+.agent-autonomy-help {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 2px;
+}
+
 .agent-history {
   padding: 8px 16px;
   overflow-y: auto;
-  max-height: 11rem;
+  max-height: 14rem;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .agent-history,
+  .agent-pinned-job {
+    animation: agentPanelReveal var(--dur-slow) var(--ease-out);
+  }
+}
+
+@keyframes agentPanelReveal {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.agent-history-bulkbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
 }
 
 .agent-history-row {
@@ -1992,6 +2070,19 @@ textarea:focus-visible,
   word-break: break-word;
   font-size: 13.5px;
   line-height: 1.6;
+}
+
+.agent-action-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.agent-action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .agent-tool-chip {

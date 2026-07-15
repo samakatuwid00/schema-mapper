@@ -16,6 +16,7 @@ import {
   Table2,
   type LucideIcon,
 } from "lucide-react";
+import type { PinnedJobContext } from "./api/types";
 import { useAuth } from "./auth";
 import AgentSidebar from "./components/AgentSidebar";
 import JobDrawer from "./components/JobDrawer";
@@ -82,6 +83,7 @@ function Shell() {
   const navigate = useNavigate();
   // Closed by default; survives page navigation within the session.
   const [agentOpen, setAgentOpen] = useState(false);
+  const [pinnedJob, setPinnedJob] = useState<PinnedJobContext | null>(null);
 
   if (loading) {
     return (
@@ -168,8 +170,18 @@ function Shell() {
         </main>
       </div>
 
-      <JobDrawer />
-      <AgentSidebar open={agentOpen} onClose={() => setAgentOpen(false)} />
+      <JobDrawer
+        onRepairWithAssistant={(job) => {
+          setPinnedJob(job);
+          setAgentOpen(true);
+        }}
+      />
+      <AgentSidebar
+        open={agentOpen}
+        onClose={() => setAgentOpen(false)}
+        pinnedJob={pinnedJob}
+        onClearPinnedJob={() => setPinnedJob(null)}
+      />
     </div>
   );
 }

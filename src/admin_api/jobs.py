@@ -11,6 +11,7 @@ import json
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 import psycopg2.extras
 
@@ -20,6 +21,7 @@ from ..services import drift_resolution as drift_service
 from ..services import migrations as migrations_service
 from ..services import nightly_refresh as nightly_refresh_service
 from ..services import ops as ops_service
+from ..services import refresh_schedule as schedule_service
 from ..services import scan as scan_service
 from ..services.lrmis_onboarding import bulk_deploy_to_lrmis, bulk_propose_lrmis, deploy_to_lrmis
 from ..services.onboarding import backfill, discover, onboard_bulk, propose
@@ -197,16 +199,25 @@ def _h_migration_apply(params, ctx):
 
 
 def _h_nightly_refresh(params, ctx: JobContext):
-    """One-command rebuild: restore fresh source -> reset target -> re-deliver.
+    """One-command rebuild: dump + restore source -> reset target -> re-deliver.
 
-    Destructive (admin-only, single-flight). `restore` opts in to the source
-    restore; `dry_run` reports the plan and counts without changing anything.
+    Destructive (admin-only, single-flight). `dump_source` makes the run
+    self-contained (`pg_dump -Fc` of the live source into `sql/source/`, then
+    restore it); `restore` alone restores an existing source backup;
+    `source_backup_path` picks one explicitly. `dry_run` reports the plan and
+    counts without changing anything. `target_engine` picks the MySQL reset or
+    the Postgres target-backup restore; `target_backup_path` overrides the newest
+    target backup auto-selection.
     """
     return nightly_refresh_service.run_nightly_refresh(
         actor=params["_actor"],
         restore=_as_bool(params.get("restore")),
         dump_path=params.get("dump_path"),
         dry_run=_as_bool(params.get("dry_run")),
+        target_engine=params.get("target_engine"),
+        target_backup_path=params.get("target_backup_path"),
+        dump_source_db=_as_bool(params.get("dump_source")),
+        source_backup_path=params.get("source_backup_path"),
         progress=lambda i, n, msg: ctx.progress(i, n, msg),
     )
 
@@ -356,10 +367,14 @@ def list_jobs(limit: int = 100) -> list[dict]:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT id, job_type, reason, requested_by, status, progress_current,
-                       progress_total, created_at, started_at, finished_at, error_message
+                       progress_total, created_at, started_at, finished_at, error_message,
+                       (params ->> 'proposal_id') AS proposal_id
                 FROM integration.admin_job ORDER BY created_at DESC LIMIT %s
             """, (limit,))
-            return [dict(r) for r in cur.fetchall()]
+            rows = [dict(r) for r in cur.fetchall()]
+    for row in rows:
+        row["proposal_id"] = int(row["proposal_id"]) if row.get("proposal_id") else None
+    return rows
 
 
 def latest_event_id() -> int:
@@ -527,6 +542,74 @@ def runner() -> JobRunner:
 
 
 # ---------------------------------------------------------------------------
+# Refresh scheduler: enqueues the same nightly_refresh job at the configured time
+# ---------------------------------------------------------------------------
+
+SCHEDULER_TICK_SECONDS = 20
+
+
+def trigger_scheduled_refresh(now: datetime | None = None) -> dict | None:
+    """Enqueue the scheduled `nightly_refresh` when it is due; else return None.
+
+    The date is marked *before* the enqueue so a crash mid-enqueue cannot spawn a
+    second destructive run on the next tick. Enqueue reuses the single-flight
+    scope, so a refresh already queued or running rejects this one with a
+    ConflictError, which is recorded and skipped rather than raised at the loop.
+    """
+    now = now or datetime.now()                  # local server time (spec: 23:00 local)
+    schedule = schedule_service.get_schedule()
+    if not schedule_service.is_due(schedule, now):
+        return None
+
+    schedule_service.mark_triggered(now.strftime("%Y-%m-%d"))
+    params = {**(schedule.get("params") or schedule_service.DEFAULT_PARAMS),
+              "trigger": "scheduled"}
+    try:
+        return enqueue("nightly_refresh", params, requested_by="scheduler",
+                       role="admin", reason="scheduled nightly refresh")
+    except ConflictError as exc:
+        write_audit("scheduler", "job:nightly_refresh", target_type="admin_job",
+                    result="failure", error_message=f"scheduled refresh skipped: {exc}")
+        return None
+
+
+class RefreshScheduler:
+    """Polls the schedule once every tick and triggers the refresh when due."""
+
+    def __init__(self):
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True,
+                                        name="refresh-scheduler")
+
+    def start(self):
+        self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+
+    def _loop(self):
+        while not self._stop.is_set():
+            try:
+                trigger_scheduled_refresh()
+            except Exception:
+                # A missed tick (DB blip, bad config) must not kill the loop; the
+                # next tick inside the scheduled minute still fires.
+                pass
+            self._stop.wait(SCHEDULER_TICK_SECONDS)
+
+
+_scheduler: RefreshScheduler | None = None
+
+
+def scheduler() -> RefreshScheduler:
+    global _scheduler
+    if _scheduler is None:
+        _scheduler = RefreshScheduler()
+        _scheduler.start()
+    return _scheduler
+
+
+# ---------------------------------------------------------------------------
 # Standing delivery-worker loop (start/stop toggle)
 # ---------------------------------------------------------------------------
 
@@ -542,7 +625,7 @@ class WorkerController:
             if self._thread and self._thread.is_alive():
                 raise ConflictError("worker loop is already running")
             stop = threading.Event()
-            from datetime import datetime, timezone
+            from datetime import timezone
             started_at = datetime.now(timezone.utc).isoformat()
             self._status = {"running": True, "interval": interval,
                             "batch_size": batch_size, "started_by": actor,

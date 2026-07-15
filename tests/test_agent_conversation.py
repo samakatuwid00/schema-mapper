@@ -50,6 +50,17 @@ def test_heuristic_defers_only_recovery_requests():
     ("any drift lately?", "list_drift_reports"),
     ("resolve the drift now", "resolve_drift"),
     ("heal this delivery error", "heal_error"),
+    ("refresh_all succeeded 2/3", "inspect_job"),
+    ("author target db is paused status", "diagnose_entity_delivery"),
+    ("Deploy to target failed - mapping cannot be deployed", "explain_deploy_error"),
+    ("diagnose_entity_delivery divisions", "diagnose_entity_delivery"),
+    ("how do I fix this refresh job 447f3eb8-6ff6-4dde-ab38-b8f56cdc2fb5", "plan_refresh_failure_repair"),
+    ("division_libraries duplicate key value violates unique constraint", "diagnose_duplicate_key"),
+    ("fix duplicate key for division_libraries", "repair_duplicate_key"),
+    ("add mapping id to station_name.id", "add_mapping"),
+    ("reject mapping review 99", "reject_mapping_review"),
+    ("reopen mapping review 1217", "reopen_mapping_review"),
+    ("reject mapping legislative_district", "reject_mapping"),
 ])
 def test_heuristic_classifies_later_phase_intents(message, expected):
     assert heuristic_classify(message, {}).name == expected
@@ -75,6 +86,49 @@ def test_param_extraction_from_message_and_page_context():
         {"source_table": "authors"}
     assert heuristic_classify("explain this type mismatch", {}).params == \
         {"kind": "type_mismatch"}
+    assert heuristic_classify(
+        "job #84ad54c8-399b-4a6d-8808-c74259ef6a5b refresh_all",
+        {},
+    ).params == {"job_id": "84ad54c8-399b-4a6d-8808-c74259ef6a5b"}
+    assert heuristic_classify("author target db is paused status", {}).params == \
+        {"entity": "author"}
+    assert heuristic_classify("diagnose_entity_delivery divisions", {}).params == \
+        {"entity": "divisions"}
+    assert heuristic_classify(
+        "Deploy to target failed - mapping cannot be deployed: "
+        "- station_name.id is required but no source column maps to it",
+        {"proposal_id": 581},
+    ).params["proposal_id"] == 581
+    assert heuristic_classify(
+        "how do I fix this refresh job 447f3eb8-6ff6-4dde-ab38-b8f56cdc2fb5",
+        {},
+    ).params == {"job_id": "447f3eb8-6ff6-4dde-ab38-b8f56cdc2fb5"}
+    assert heuristic_classify(
+        "plan_refresh_failure_repair for job 8fb90391-339f-4ae3-b2d8-162e2b1c4585",
+        {},
+    ).params == {"job_id": "8fb90391-339f-4ae3-b2d8-162e2b1c4585"}
+    duplicate_params = heuristic_classify(
+        'fix duplicate key for division_libraries: duplicate key value violates '
+        'unique constraint "profile_pkey" DETAIL: Key (id)=(abc) already exists.',
+        {},
+    ).params
+    assert duplicate_params["entity"] == "division_libraries"
+    assert duplicate_params["target_table"] == "profile"
+    assert duplicate_params["target_column"] == "id"
+    assert duplicate_params["target_id"] == "abc"
+    assert heuristic_classify(
+        "add mapping id to station_name.id proposal 581", {}
+    ).params == {
+        "proposal_id": 581, "source_column": "id",
+        "target_table": "station_name", "target_column": "id"}
+    assert heuristic_classify(
+        "reject mapping legislative_district proposal 581", {}
+    ).params == {"proposal_id": 581,
+                 "source_column": "legislative_district"}
+    assert heuristic_classify("reject mapping review 99", {}).params == \
+        {"review_id": 99}
+    assert heuristic_classify("send review 1217 back to review queue", {}).params == \
+        {"review_id": 1217}
 
 
 # --- LLM classification + failover (§3.3) --------------------------------------
@@ -141,6 +195,15 @@ def test_templates_render_every_mvp_intent():
     assert "pending: 3" in render_result("check_status",
                                          {"outbox": {"pending": 3}})
     assert render_result("summarize_proposal", {"summary": "5 mapped."}) == "5 mapped."
+    assert "review 1208: station_id -> station_address.station_id" in render_result(
+        "summarize_proposal",
+        {"summary": "5 mapped.",
+         "accepted_mappings": [{
+             "review_id": 1208,
+             "source_column": "station_id",
+             "suggested_target_table": "station_address",
+             "suggested_target_column": "station_id",
+         }]})
     assert render_result("explain_blocker",
                          {"deploy_ready": True}).startswith("Nothing is blocking")
     assert "Blocked:" in render_result("explain_blocker",
@@ -352,6 +415,109 @@ def test_session_creates_conversation_and_streams_clarification():
     assert manager.rows["c1"]["title"].lower().startswith("gibberish")
 
 
+def test_session_help_lists_chat_commands():
+    manager = _MemManager()
+    session = _session(Intent(None, {}, 0.0, "heuristic"), manager)
+    events = session.process_message("--help")
+    by = _events_by_type(events)
+    assert "Chat commands:" in by["done"][0].data["content"]
+    assert "inspect job <job_id>" in by["done"][0].data["content"]
+    assert "reopen mapping review <review_id>" in by["done"][0].data["content"]
+    assert "tool_call" not in by
+
+
+def _resolve_job_repair_registry(result):
+    def handler(params, **seams):
+        assert params == {"text": params["text"]}
+        return result
+    return {
+        "resolve_deploy_job_repair": ToolDef(
+            "resolve_deploy_job_repair", "resolve", {"type": "object",
+                                                     "properties": {"text": {"type": "string"}},
+                                                     "required": ["text"]},
+            handler, autonomy="auto_safe"),
+    }
+
+
+def test_pasted_deploy_job_message_bypasses_classifier():
+    manager = _MemManager()
+    registry = _resolve_job_repair_registry({
+        "job_id": "ff2c6da7-30e7-4711-b159-282e96c23704",
+        "proposal_id": 582, "proposal_recovered": True,
+        "missing_required": [{"target_table": "station_name", "target_column": "id"}],
+        "draft_mappings": [{"source_column": "id", "target_table": "station_name",
+                            "target_column": "id"}],
+        "manual_required": [],
+        "actions": [{"type": "open_proposal", "proposal_id": 582}],
+        "summary": "1 required target column(s) are unmapped.",
+    })
+
+    def unreachable_classifier(message, page_context):
+        raise AssertionError("classifier must not run for a pasted deploy job")
+
+    session = AgentSession(1, manager=manager,
+                           dispatcher=ToolDispatcher(registry),
+                           classifier=unreachable_classifier)
+    events = session.process_message(
+        "#ff2c6da7-30e7-4711-b159-282e96c23704 deploy_lrmis failed\n"
+        "mapping cannot be deployed:\n"
+        "- station_name.id is required but no source column maps to it")
+    by = _events_by_type(events)
+
+    assert by["tool_call"][0].data["tool"] == "resolve_deploy_job_repair"
+    assert by["tool_call"][0].data["executed"] is True
+    content = by["done"][0].data["content"]
+    assert "Proposal 582 recovered" in content
+    assert "station_name.id" in content
+    assert "Open the proposal: /mappings/582" in content
+
+
+def test_pasted_deploy_job_without_resolvable_proposal_asks_for_one():
+    manager = _MemManager()
+    registry = _resolve_job_repair_registry({
+        "job_id": "84ad54c8-399b-4a6d-8808-c74259ef6a5b",
+        "proposal_id": None, "proposal_recovered": False,
+        "missing_required": [{"target_table": "station_name", "target_column": "id"}],
+        "draft_mappings": [], "manual_required": [],
+        "actions": [], "summary": "1 required target column(s) are unmapped.",
+    })
+    session = AgentSession(1, manager=manager,
+                           dispatcher=ToolDispatcher(registry),
+                           classifier=lambda m, c: Intent(None, {}, 0.0, "heuristic"))
+    events = session.process_message(
+        "#84ad54c8-399b-4a6d-8808-c74259ef6a5b deploy_lrmis failed\n"
+        "mapping cannot be deployed:\n"
+        "- station_name.id is required but no source column maps to it")
+    content = _events_by_type(events)["done"][0].data["content"]
+
+    assert "reply with a proposal id" in content
+    assert "Open the proposal:" not in content
+
+
+def test_pending_confirmation_still_wins_over_pasted_deploy_job_text():
+    call = {"tool": "add_missing_mappings",
+           "params": {"proposal_id": 582, "mappings": []}}
+    registry = {
+        **_resolve_job_repair_registry({}),
+        "add_missing_mappings": ToolDef(
+            "add_missing_mappings", "add", {"type": "object",
+                                            "properties": {"proposal_id": {"type": "integer"},
+                                                           "mappings": {"type": "array"}},
+                                            "required": ["proposal_id", "mappings"]},
+            lambda params, **seams: {"proposal_id": 582, "added": [], "skipped": []},
+            autonomy="propose_only"),
+    }
+    manager = _MemManager()
+    session = AgentSession(1, manager=manager,
+                           dispatcher=ToolDispatcher(registry),
+                           classifier=lambda m, c: Intent(None, {}, 0.0, "heuristic"))
+    events = session.process_message(
+        "#ff2c6da7-30e7-4711-b159-282e96c23704 deploy_lrmis failed, please confirm",
+        confirm=call)
+    tool_call = _events_by_type(events)["tool_call"][0]
+    assert tool_call.data["tool"] == "add_missing_mappings"
+
+
 def test_session_deferred_intent_points_to_dashboard():
     session = _session(Intent("deferred", {}, 0.9, "heuristic"))
     events = session.process_message("swap the target schema")
@@ -390,6 +556,51 @@ def test_session_confirmation_roundtrip_for_mutating_tool():
         confirm={"tool": "mut_tool", "params": {"n": 1}})
     assert calls == [("mut_tool", {"n": 1})]
     assert _events_by_type(second)["tool_result"][0].data["result"] == {"ok": "mut_tool"}
+
+
+def test_session_text_confirmation_reuses_pending_tool_params():
+    manager = _MemManager()
+    intent = Intent("mut_tool", {"n": 1}, 0.9, "heuristic")
+    registry, calls = _spy_registry()
+    session = AgentSession(1, manager=manager,
+                           dispatcher=ToolDispatcher(registry),
+                           classifier=lambda m, c: intent)
+    session.process_message("mutate something")
+
+    second = session.process_message("done", conversation_id="c1")
+
+    assert calls == [("mut_tool", {"n": 1})]
+    assert _events_by_type(second)["tool_result"][0].data["result"] == {"ok": "mut_tool"}
+
+
+def test_mapping_repair_request_is_confirmation_gated():
+    calls = []
+    registry = {
+        "add_mapping": ToolDef(
+            "add_mapping", "repair",
+            {"type": "object",
+             "properties": {"proposal_id": {"type": "integer"},
+                            "source_column": {"type": "string"},
+                            "target_table": {"type": "string"},
+                            "target_column": {"type": "string"}},
+             "required": ["proposal_id", "source_column",
+                          "target_table", "target_column"]},
+            lambda params, **s: calls.append(params) or {"ok": True},
+            autonomy="propose_only"),
+    }
+    session = AgentSession(
+        1, manager=_MemManager(), dispatcher=ToolDispatcher(registry),
+        classifier=lambda m, c: Intent(
+            "add_mapping",
+            {"proposal_id": 581, "source_column": "id",
+             "target_table": "station_name", "target_column": "id"},
+            0.9, "h"))
+
+    events = session.process_message("add mapping id to station_name.id")
+
+    call = _events_by_type(events)["tool_call"][0].data
+    assert call["requires_confirmation"] is True
+    assert calls == []
 
 
 def test_session_resumes_and_switches_tier():
@@ -457,6 +668,7 @@ def test_workflow_status_without_active_workflow():
 def test_heuristic_classifies_workflow_status():
     assert heuristic_classify("where are we in the onboarding?", {}).name == \
         "workflow_status"
+    assert heuristic_classify("--help", {}).name == "chat_help"
 
 
 def test_swap_dry_run_execution_suggests_next_swap_step():
@@ -491,6 +703,87 @@ def test_later_phase_templates_render():
                               "blocked": ["schools"]})
     assert "dry-run complete" in render_result("resolve_drift",
                                                {"dry_run": True})
+    assert "refresh_all" in render_result(
+        "inspect_job",
+        {"job_id": "j1", "job_type": "refresh_all", "status": "succeeded",
+         "progress_current": 2, "progress_total": 3,
+         "failures": [{"entity": "authors", "error": "boom"}]})
+    inspect_text = render_result(
+        "inspect_job",
+        {"job_id": "j1", "job_type": "refresh_all", "status": "succeeded",
+         "failures": [{"entity": "divisions", "error": "bad reference"}],
+         "repair_plan": {
+             "items": [{
+                 "entity": "divisions",
+                 "category": "reference_match_missing",
+                 "diagnostic": {
+                     "suspect_mapping_reviews": [{
+                         "review_id": 1217,
+                         "proposal_id": 582,
+                         "source_column": "address",
+                         "target_table": "station_address",
+                         "target_column": "id",
+                     }],
+                 },
+                 "gated_tools": [{
+                     "tool": "reopen_mapping_review",
+                     "params": {"review_id": 1217},
+                 }],
+             }],
+         }})
+    assert "proposal 582 review 1217" in inspect_text
+    assert "`reopen mapping review 1217`" in inspect_text
+    assert "authors is deployed" in render_result(
+        "diagnose_entity_delivery",
+        {"entity": "authors", "entity_status": "deployed",
+         "target_counts": [{"table": "author", "rows": 0}],
+         "recommendations": ["run refresh"]})
+    assert "station_name.id" in render_result(
+        "explain_deploy_error",
+        {"missing_required": [{"target_table": "station_name",
+                               "target_column": "id"}],
+         "suggested_actions": [{"action": "add_mapping",
+                                "source_column": "id",
+                                "target_table": "station_name",
+                                "target_column": "id"}]})
+    assert "safe to prepare" in render_result(
+        "diagnose_duplicate_key",
+        {"entity": "division_libraries", "target_table": "profile",
+         "target_column": "id", "target_id": "abc",
+         "safe_to_repair": True})
+    assert "division_libraries" in render_result(
+        "plan_refresh_failure_repair",
+        {"summary": "2 failed entity repair item(s)",
+         "items": [{"entity": "division_libraries",
+                    "category": "duplicate_key",
+                    "diagnosis": "not safe",
+                    "gated_tools": [{"tool": "reject_mapping_review",
+                                     "params": {"review_id": 99}}],
+                    "next_steps": ["review mapping"]}]})
+    assert "Recorded duplicate-key crosswalk repair" in render_result(
+        "repair_duplicate_key",
+        {"entity": "division_libraries", "target_table": "profile",
+         "target_column": "id", "target_id": "abc",
+         "next_step": "retry refresh for division_libraries"})
+    assert "Added mapping" in render_result(
+        "add_mapping",
+        {"proposal_id": 581, "source_column": "id",
+         "target_table": "station_name", "target_column": "id",
+         "proposal_status": "approved"})
+    assert "Rejected" in render_result(
+        "reject_mapping",
+        {"proposal_id": 581, "source_column": "legislative_district",
+         "proposal_status": "approved"})
+    assert "review 99" in render_result(
+        "reject_mapping_review",
+        {"review_id": 99, "proposal_id": 583, "source_column": "librarian",
+         "target_table": "profile", "target_column": "id",
+         "proposal_status": "approved"})
+    assert "Reopened review 1217" in render_result(
+        "reopen_mapping_review",
+        {"review_id": 1217, "proposal_id": 582, "source_column": "address",
+         "target_table": "station_address", "target_column": "id",
+         "proposal_status": "needs_review"})
 
 
 # --- §0.3 privacy fixture: row values never reach prompts or storage ------------

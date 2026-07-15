@@ -1,10 +1,21 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { MessageSquareWarning } from "lucide-react";
 import { listJobs } from "../api/client";
 import { subscribeJobEvents } from "../api/sse";
-import type { JobSummary } from "../api/types";
+import type { JobSummary, PinnedJobContext } from "../api/types";
 import { fmtAgo } from "../utils";
 import StatusChip from "./StatusChip";
+
+const RECOVERABLE_JOB_TYPES = new Set(["deploy_lrmis", "deploy"]);
+
+function jobRepairContext(job: JobSummary): PinnedJobContext {
+  return {
+    job_id: job.id, job_type: job.job_type, status: job.status,
+    error_message: job.error_message, proposal_id: job.proposal_id,
+  };
+}
 
 function JobProgress({ job }: { job: JobSummary }) {
   const total = job.progress_total ?? 0;
@@ -21,8 +32,12 @@ function JobProgress({ job }: { job: JobSummary }) {
   );
 }
 
+export interface JobDrawerProps {
+  onRepairWithAssistant?: (job: PinnedJobContext) => void;
+}
+
 /** Collapsible right-side drawer: last 20 jobs, live-updated via /api/events SSE. */
-export default function JobDrawer() {
+export default function JobDrawer({ onRepairWithAssistant }: JobDrawerProps) {
   const [open, setOpen] = useState(false);
   const [connected, setConnected] = useState(false);
   const queryClient = useQueryClient();
@@ -97,6 +112,18 @@ export default function JobDrawer() {
                 )}
               </div>
               {job.error_message && <div className="job-error mono">{job.error_message}</div>}
+              {job.status === "failed" && RECOVERABLE_JOB_TYPES.has(job.job_type)
+                && job.proposal_id && (
+                <div className="job-item-recovery">
+                  <Link className="btn btn-ghost btn-xs" to={`/mappings/${job.proposal_id}`}>
+                    Open proposal
+                  </Link>
+                  <button type="button" className="btn btn-ghost btn-xs"
+                          onClick={() => onRepairWithAssistant?.(jobRepairContext(job))}>
+                    <MessageSquareWarning size={12} aria-hidden="true" /> Repair with Assistant
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -207,6 +207,19 @@ export interface JobSummary {
   started_at?: string | null;
   finished_at?: string | null;
   error_message?: string | null;
+  /** Recovered from `params.proposal_id` for deploy_lrmis jobs, so a failed
+   * deploy card can link straight to the mapping proposal that caused it. */
+  proposal_id?: number | null;
+}
+
+/** A failed job pinned into the assistant panel from a "Repair with Assistant"
+ * job-drawer action, so the operator can read the job while chatting about it. */
+export interface PinnedJobContext {
+  job_id: number;
+  job_type: string;
+  status: JobStatus;
+  error_message?: string | null;
+  proposal_id?: number | null;
 }
 
 export interface JobDetail extends JobSummary {
@@ -227,6 +240,15 @@ export interface CreateJobResponse {
 }
 
 // ---- Worker ----
+
+export interface RefreshSchedule {
+  time: string;
+  enabled: boolean;
+  params?: Record<string, unknown>;
+  last_triggered_date?: string | null;
+  updated_at?: string | null;
+  updated_by?: string | null;
+}
 
 export interface WorkerStatus {
   running: boolean;

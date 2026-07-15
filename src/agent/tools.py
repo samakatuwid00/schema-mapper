@@ -24,6 +24,7 @@ import os
 from ..services import drift_resolution as drift_service
 from ..services import onboarding as onboarding_service
 from ..services import ops as ops_service
+from ..services import operator_diagnostics as diagnostics_service
 from ..services import schema_swap as schema_swap_service
 from .tool_defs import (RECOVERY_TOOLS, ToolDef, ValidationError,
                         validate_params)
@@ -47,7 +48,7 @@ def _show_schema(params: dict, **seams) -> dict:
     return ops_service.get_schema_trees(**kwargs)
 
 
-_FIELD_KEYS = ("source_column", "suggested_target_table",
+_FIELD_KEYS = ("review_id", "source_column", "suggested_target_table",
                "suggested_target_column", "resolved_target_column",
                "confidence", "status", "transform")
 
@@ -55,7 +56,16 @@ _FIELD_KEYS = ("source_column", "suggested_target_table",
 def _field_view(field: dict) -> dict:
     """Schema-level allowlist projection of a field review row (redaction by
     construction — sample values or payloads never pass through)."""
-    return {k: field.get(k) for k in _FIELD_KEYS}
+    return {
+        "review_id": field.get("review_id") or field.get("id"),
+        "source_column": field.get("source_column"),
+        "suggested_target_table": field.get("suggested_target_table"),
+        "suggested_target_column": field.get("suggested_target_column"),
+        "resolved_target_column": field.get("resolved_target_column"),
+        "confidence": field.get("confidence"),
+        "status": field.get("status"),
+        "transform": field.get("transform"),
+    }
 
 
 def _summarize_proposal(params: dict, **seams) -> dict:
@@ -69,12 +79,19 @@ def _summarize_proposal(params: dict, **seams) -> dict:
     low = [f for f in fields
            if not f.get("suggested_target_column")
            or (f.get("confidence") or 0.0) < threshold]
+    accepted = [
+        f for f in fields
+        if f.get("status") in ("accepted", "resolved")
+        and f.get("suggested_target_table")
+        and (f.get("resolved_target_column") or f.get("suggested_target_column"))
+    ]
     unmet = review["proposal"].get("unmet_required_columns") or []
     return {
         "proposal": review["proposal"],
         "field_count": len(fields),
         "by_status": by_status,
         "low_confidence": [_field_view(f) for f in low],
+        "accepted_mappings": [_field_view(f) for f in accepted],
         "unmet_required_columns": unmet,
         "risk": "high" if (low or unmet) else "low",
         "summary": (f"{len(fields)} mapped columns, {len(low)} below "
@@ -155,6 +172,105 @@ def _onboard_table(params: dict, **seams) -> dict:
     return {"proposal": result,
             "note": ("proposal created for human review; nothing was "
                      "deployed — approval and deploy stay gated.")}
+
+
+def _inspect_job(params: dict, **seams) -> dict:
+    service = seams.get("diagnostics_service") or diagnostics_service
+    result = service.inspect_job(params.get("job_id"))
+    if result.get("failures"):
+        try:
+            result["repair_plan"] = service.plan_refresh_failure_repair(
+                result.get("job_id") or params.get("job_id"),
+                target_system=params.get("target_system", "LRMIS"))
+        except Exception as exc:
+            result["repair_plan_error"] = str(exc)
+    return result
+
+
+def _diagnose_entity_delivery(params: dict, **seams) -> dict:
+    service = seams.get("diagnostics_service") or diagnostics_service
+    return service.diagnose_entity_delivery(
+        params["entity"], params.get("target_system", "LRMIS"))
+
+
+def _explain_deploy_error(params: dict, **seams) -> dict:
+    service = seams.get("diagnostics_service") or diagnostics_service
+    return service.explain_deploy_error(
+        params["error"],
+        entity=params.get("entity"),
+        proposal_id=params.get("proposal_id"))
+
+
+def _diagnose_duplicate_key(params: dict, **seams) -> dict:
+    service = seams.get("diagnostics_service") or diagnostics_service
+    return service.diagnose_duplicate_key(
+        params["entity"],
+        error=params.get("error"),
+        target_table=params.get("target_table"),
+        target_column=params.get("target_column"),
+        target_id=params.get("target_id"),
+        target_system=params.get("target_system", "LRMIS"))
+
+
+def _plan_refresh_failure_repair(params: dict, **seams) -> dict:
+    service = seams.get("diagnostics_service") or diagnostics_service
+    return service.plan_refresh_failure_repair(
+        params.get("job_id"),
+        target_system=params.get("target_system", "LRMIS"))
+
+
+def _resolve_deploy_job_repair(params: dict, **seams) -> dict:
+    service = seams.get("diagnostics_service") or diagnostics_service
+    return service.resolve_deploy_job_repair(
+        params["text"], target_system=params.get("target_system", "LRMIS"))
+
+
+def _repair_duplicate_key(params: dict, **seams) -> dict:
+    service = seams.get("diagnostics_service") or diagnostics_service
+    return service.repair_duplicate_key(
+        params["entity"],
+        error=params.get("error"),
+        target_table=params.get("target_table"),
+        target_column=params.get("target_column"),
+        target_id=params.get("target_id"),
+        target_system=params.get("target_system", "LRMIS"),
+        actor=params.get("actor", "agent"))
+
+
+def _add_mapping(params: dict, **seams) -> dict:
+    return onboarding_service.add_mapping(
+        int(params["proposal_id"]),
+        params["source_column"],
+        params["target_table"],
+        params["target_column"],
+        transform=params.get("transform", "none"),
+        resolved_by=params.get("actor", "agent"))
+
+
+def _add_missing_mappings(params: dict, **seams) -> dict:
+    return onboarding_service.add_missing_mappings(
+        int(params["proposal_id"]),
+        list(params["mappings"]),
+        resolved_by=params.get("actor", "agent"))
+
+
+def _reject_mapping(params: dict, **seams) -> dict:
+    return onboarding_service.reject(
+        int(params["proposal_id"]),
+        params["source_column"],
+        rejected_by=params.get("actor", "agent"))
+
+
+def _reject_mapping_review(params: dict, **seams) -> dict:
+    return onboarding_service.reject_field_review(
+        int(params["review_id"]),
+        rejected_by=params.get("actor", "agent"))
+
+
+def _reopen_mapping_review(params: dict, **seams) -> dict:
+    return onboarding_service.reopen_field_review(
+        int(params["review_id"]),
+        reopened_by=params.get("actor", "agent"))
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +482,142 @@ LATER_PHASE_TOOLS: list[ToolDef] = [
                                       "dsn": {"type": "string"}},
                        "required": []},
         handler=_swap_target_apply, autonomy="destructive"),
+    ToolDef(
+        name="inspect_job",
+        description="Inspect an admin worker job by id, or the latest job: "
+                    "status, progress, error, recent events, and per-entity "
+                    "failures where available. Read-only.",
+        params_schema={"type": "object",
+                       "properties": {"job_id": {"type": "string"},
+                                      "target_system": {"type": "string"}},
+                       "required": []},
+        handler=_inspect_job, autonomy="auto_safe"),
+    ToolDef(
+        name="diagnose_entity_delivery",
+        description="Diagnose a deployed entity that has no target data: "
+                    "entity status, target tables, target row counts, "
+                    "crosswalk counts, latest related refresh job, and next "
+                    "safe action. Read-only.",
+        params_schema={"type": "object",
+                       "properties": {"entity": {"type": "string"},
+                                      "target_system": {"type": "string"}},
+                       "required": ["entity"]},
+        handler=_diagnose_entity_delivery, autonomy="auto_safe"),
+    ToolDef(
+        name="explain_deploy_error",
+        description="Parse a deploy validation error into missing target "
+                    "columns and concrete repair suggestions. Read-only.",
+        params_schema={"type": "object",
+                       "properties": {"error": {"type": "string"},
+                                      "entity": {"type": "string"},
+                                      "proposal_id": {"type": "integer"}},
+                       "required": ["error"]},
+        handler=_explain_deploy_error, autonomy="auto_safe"),
+    ToolDef(
+        name="diagnose_duplicate_key",
+        description="Diagnose a target duplicate-primary-key failure and "
+                    "determine whether a missing crosswalk can be safely "
+                    "recorded. Read-only.",
+        params_schema={"type": "object",
+                       "properties": {"entity": {"type": "string"},
+                                      "error": {"type": "string"},
+                                      "target_table": {"type": "string"},
+                                      "target_column": {"type": "string"},
+                                      "target_id": {"type": "string"},
+                                      "target_system": {"type": "string"}},
+                       "required": ["entity"]},
+        handler=_diagnose_duplicate_key, autonomy="auto_safe"),
+    ToolDef(
+        name="plan_refresh_failure_repair",
+        description="Inspect a refresh job and produce a read-only, per-entity "
+                    "repair checklist. Includes gated tool suggestions only "
+                    "when a repair is proven safe.",
+        params_schema={"type": "object",
+                       "properties": {"job_id": {"type": "string"},
+                                      "target_system": {"type": "string"}},
+                       "required": []},
+        handler=_plan_refresh_failure_repair, autonomy="auto_safe"),
+    ToolDef(
+        name="repair_duplicate_key",
+        description="Confirmed duplicate-key repair: records a missing "
+                    "central crosswalk for an existing target row after the "
+                    "diagnostic proves ownership is safe. Confirmation-gated.",
+        params_schema={"type": "object",
+                       "properties": {"entity": {"type": "string"},
+                                      "error": {"type": "string"},
+                                      "target_table": {"type": "string"},
+                                      "target_column": {"type": "string"},
+                                      "target_id": {"type": "string"},
+                                      "target_system": {"type": "string"},
+                                      "actor": {"type": "string"}},
+                       "required": ["entity"]},
+        handler=_repair_duplicate_key, autonomy="propose_only"),
+    ToolDef(
+        name="resolve_deploy_job_repair",
+        description="Resolve a pasted failed deploy_lrmis job message into a "
+                    "repair context: recovers the job's stored proposal id, "
+                    "parses missing required target columns, and drafts "
+                    "confirmation-gated *.id fan-out mappings. Read-only.",
+        params_schema={"type": "object",
+                       "properties": {"text": {"type": "string"},
+                                      "target_system": {"type": "string"}},
+                       "required": ["text"]},
+        handler=_resolve_deploy_job_repair, autonomy="auto_safe"),
+    ToolDef(
+        name="add_mapping",
+        description="Add a manual source-column to target table/column "
+                    "mapping row on a proposal. Confirmation-gated.",
+        params_schema={"type": "object",
+                       "properties": {"proposal_id": {"type": "integer"},
+                                      "source_column": {"type": "string"},
+                                      "target_table": {"type": "string"},
+                                      "target_column": {"type": "string"},
+                                      "transform": {"type": "string"},
+                                      "actor": {"type": "string"}},
+                       "required": ["proposal_id", "source_column",
+                                    "target_table", "target_column"]},
+        handler=_add_mapping, autonomy="propose_only"),
+    ToolDef(
+        name="add_missing_mappings",
+        description="Add a confirmation-gated batch of missing required "
+                    "target mappings to a proposal, skipping target columns "
+                    "that already have accepted/resolved mappings.",
+        params_schema={"type": "object",
+                       "properties": {"proposal_id": {"type": "integer"},
+                                      "mappings": {"type": "array"},
+                                      "actor": {"type": "string"}},
+                       "required": ["proposal_id", "mappings"]},
+        handler=_add_missing_mappings, autonomy="propose_only"),
+    ToolDef(
+        name="reject_mapping",
+        description="Reject one source-column mapping on a proposal so deploy "
+                    "ignores it. Confirmation-gated.",
+        params_schema={"type": "object",
+                       "properties": {"proposal_id": {"type": "integer"},
+                                      "source_column": {"type": "string"},
+                                      "actor": {"type": "string"}},
+                       "required": ["proposal_id", "source_column"]},
+        handler=_reject_mapping, autonomy="propose_only"),
+    ToolDef(
+        name="reject_mapping_review",
+        description="Reject one exact field-review mapping row by review id. "
+                    "Safer for fan-out mappings where a source column feeds "
+                    "multiple targets. Confirmation-gated.",
+        params_schema={"type": "object",
+                       "properties": {"review_id": {"type": "integer"},
+                                      "actor": {"type": "string"}},
+                       "required": ["review_id"]},
+        handler=_reject_mapping_review, autonomy="propose_only"),
+    ToolDef(
+        name="reopen_mapping_review",
+        description="Reopen one exact field-review row in the normal review "
+                    "queue by review id. Preserves the suspect mapping so an "
+                    "operator can correct it in the UI. Confirmation-gated.",
+        params_schema={"type": "object",
+                       "properties": {"review_id": {"type": "integer"},
+                                      "actor": {"type": "string"}} ,
+                       "required": ["review_id"]},
+        handler=_reopen_mapping_review, autonomy="propose_only"),
 ]
 
 # MVP tools + the source-swap/recovery tools defined by

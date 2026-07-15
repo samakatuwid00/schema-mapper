@@ -19,6 +19,11 @@ EXPECTED_TOOLS = {
     # §8 later-phase tools
     "heal_error", "list_drift_reports", "resolve_drift",
     "swap_target_dry_run", "swap_target_apply",
+    "inspect_job", "diagnose_entity_delivery", "explain_deploy_error",
+    "diagnose_duplicate_key", "plan_refresh_failure_repair",
+    "repair_duplicate_key", "resolve_deploy_job_repair",
+    "add_mapping", "add_missing_mappings", "reject_mapping", "reject_mapping_review",
+    "reopen_mapping_review",
 }
 
 
@@ -130,9 +135,11 @@ def test_summarize_proposal_flags_low_confidence_and_redacts(monkeypatch):
 def test_summarize_low_risk_when_all_confident(monkeypatch):
     monkeypatch.setattr(tools.onboarding_service, "get_review",
                         lambda pid: _review(status="approved",
-                                            fields=[_field("id")]))
+                                            fields=[_field("id", id=1208)]))
     result = REGISTRY["summarize_proposal"].handler({"proposal_id": 7})
     assert result["risk"] == "low" and result["low_confidence"] == []
+    assert result["accepted_mappings"][0]["review_id"] == 1208
+    assert result["accepted_mappings"][0]["source_column"] == "id"
 
 
 def test_explain_blocker_reports_status_and_unmet(monkeypatch):
@@ -207,6 +214,16 @@ def test_later_phase_autonomy_flags():
     assert REGISTRY["heal_error"].autonomy == "propose_only"
     assert REGISTRY["list_drift_reports"].autonomy == "auto_safe"
     assert REGISTRY["swap_target_dry_run"].autonomy == "auto_safe"
+    assert REGISTRY["inspect_job"].autonomy == "auto_safe"
+    assert REGISTRY["diagnose_entity_delivery"].autonomy == "auto_safe"
+    assert REGISTRY["explain_deploy_error"].autonomy == "auto_safe"
+    assert REGISTRY["diagnose_duplicate_key"].autonomy == "auto_safe"
+    assert REGISTRY["plan_refresh_failure_repair"].autonomy == "auto_safe"
+    assert REGISTRY["repair_duplicate_key"].autonomy == "propose_only"
+    assert REGISTRY["add_mapping"].autonomy == "propose_only"
+    assert REGISTRY["reject_mapping"].autonomy == "propose_only"
+    assert REGISTRY["reject_mapping_review"].autonomy == "propose_only"
+    assert REGISTRY["reopen_mapping_review"].autonomy == "propose_only"
     assert REGISTRY["resolve_drift"].destructive is True
     assert REGISTRY["swap_target_apply"].destructive is True
 
@@ -289,3 +306,120 @@ def test_swap_target_confirm_token_follows_pg_dsn(monkeypatch):
                         lambda **kw: pytest.fail("must not run"))
     with pytest.raises(ValidationError, match="requires confirm='oldlrmis'"):
         REGISTRY["swap_target_apply"].handler({}, target_adapter=object())
+
+
+def test_operator_diagnostic_tools_wrap_service(monkeypatch):
+    class FakeDiagnostics:
+        @staticmethod
+        def inspect_job(job_id=None):
+            return {
+                "job_id": job_id or "latest",
+                "status": "succeeded",
+                "failures": [{"entity": "divisions", "error": "bad ref"}],
+            }
+
+        @staticmethod
+        def diagnose_entity_delivery(entity, target_system="LRMIS"):
+            return {"entity": entity, "target_system": target_system}
+
+        @staticmethod
+        def explain_deploy_error(error, entity=None, proposal_id=None):
+            return {"error": error, "entity": entity, "proposal_id": proposal_id}
+
+        @staticmethod
+        def diagnose_duplicate_key(entity, **kwargs):
+            return {"entity": entity, "safe_to_repair": True, **kwargs}
+
+        @staticmethod
+        def plan_refresh_failure_repair(job_id=None, target_system="LRMIS"):
+            return {"job_id": job_id, "target_system": target_system,
+                    "items": [{"entity": "divisions"}]}
+
+        @staticmethod
+        def repair_duplicate_key(entity, **kwargs):
+            return {"entity": entity, "applied": True, **kwargs}
+
+    monkeypatch.setattr(tools, "diagnostics_service", FakeDiagnostics)
+
+    inspected = REGISTRY["inspect_job"].handler({"job_id": "abc"})
+    assert inspected["job_id"] == "abc"
+    assert inspected["repair_plan"]["items"][0]["entity"] == "divisions"
+    diagnosed = REGISTRY["diagnose_entity_delivery"].handler(
+        {"entity": "authors"})
+    assert diagnosed == {"entity": "authors", "target_system": "LRMIS"}
+    explained = REGISTRY["explain_deploy_error"].handler(
+        {"error": "mapping cannot be deployed", "entity": "authors",
+         "proposal_id": 9})
+    assert explained["proposal_id"] == 9
+    dup = REGISTRY["diagnose_duplicate_key"].handler(
+        {"entity": "division_libraries", "target_table": "profile",
+         "target_id": "abc"})
+    assert dup["safe_to_repair"] is True
+    plan = REGISTRY["plan_refresh_failure_repair"].handler({"job_id": "job-1"})
+    assert plan["job_id"] == "job-1"
+    repaired = REGISTRY["repair_duplicate_key"].handler(
+        {"entity": "division_libraries", "target_table": "profile",
+         "target_id": "abc", "actor": "deped"})
+    assert repaired["applied"] is True and repaired["actor"] == "deped"
+
+
+def test_mapping_repair_tools_call_onboarding_services(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        tools.onboarding_service, "add_mapping",
+        lambda pid, src, table, col, transform="none", resolved_by="admin":
+        calls.append(("add", pid, src, table, col, transform, resolved_by))
+        or {"proposal_id": pid, "source_column": src,
+            "target_table": table, "target_column": col,
+            "proposal_status": "approved"})
+    monkeypatch.setattr(
+        tools.onboarding_service, "add_missing_mappings",
+        lambda pid, mappings, resolved_by="admin":
+        calls.append(("add_missing", pid, mappings, resolved_by))
+        or {"proposal_id": pid, "added": list(mappings), "skipped": [],
+            "proposal_status": "approved"})
+    monkeypatch.setattr(
+        tools.onboarding_service, "reject",
+        lambda pid, src, rejected_by="admin":
+        calls.append(("reject", pid, src, rejected_by))
+        or {"proposal_id": pid, "source_column": src,
+            "proposal_status": "needs_review"})
+    monkeypatch.setattr(
+        tools.onboarding_service, "reject_field_review",
+        lambda review_id, rejected_by="admin":
+        calls.append(("reject_review", review_id, rejected_by))
+        or {"review_id": review_id, "proposal_id": 12,
+            "source_column": "librarian", "target_table": "profile",
+            "target_column": "id", "proposal_status": "approved"})
+    monkeypatch.setattr(
+        tools.onboarding_service, "reopen_field_review",
+        lambda review_id, reopened_by="admin":
+        calls.append(("reopen_review", review_id, reopened_by))
+        or {"review_id": review_id, "proposal_id": 12,
+            "source_column": "address", "target_table": "station_address",
+            "target_column": "id", "proposal_status": "needs_review"})
+
+    REGISTRY["add_mapping"].handler({
+        "proposal_id": 12, "source_column": "id",
+        "target_table": "station_name", "target_column": "id",
+        "actor": "deped"})
+    REGISTRY["add_missing_mappings"].handler({
+        "proposal_id": 12,
+        "mappings": [{"source_column": "id", "target_table": "station_address",
+                      "target_column": "id"}],
+        "actor": "deped"})
+    REGISTRY["reject_mapping"].handler({
+        "proposal_id": 12, "source_column": "legislative_district"})
+    REGISTRY["reject_mapping_review"].handler({
+        "review_id": 99, "actor": "deped"})
+    REGISTRY["reopen_mapping_review"].handler({
+        "review_id": 1217, "actor": "deped"})
+
+    assert calls == [
+        ("add", 12, "id", "station_name", "id", "none", "deped"),
+        ("add_missing", 12, [{"source_column": "id", "target_table": "station_address",
+                              "target_column": "id"}], "deped"),
+        ("reject", 12, "legislative_district", "agent"),
+        ("reject_review", 99, "deped"),
+        ("reopen_review", 1217, "deped"),
+    ]

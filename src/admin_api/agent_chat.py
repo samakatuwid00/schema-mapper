@@ -79,8 +79,20 @@ async def chat(body: ChatBody, user: AdminUser = Depends(require_operator)):
 
 
 @agent_router.get("/conversations")
-def list_conversations(user: AdminUser = Depends(current_user)):
-    return _manager().list_for_user(user.id)
+def list_conversations(q: str | None = None,
+                       user: AdminUser = Depends(current_user)):
+    return _manager().list_for_user(user.id, query=q)
+
+
+class BulkDeleteBody(BaseModel):
+    ids: list[str]
+
+
+@agent_router.post("/conversations/bulk-delete")
+def bulk_delete_conversations(body: BulkDeleteBody,
+                              user: AdminUser = Depends(require_operator)):
+    deleted = _manager().bulk_delete(user.id, body.ids)
+    return {"deleted": deleted}
 
 
 @agent_router.get("/conversations/{conversation_id}")

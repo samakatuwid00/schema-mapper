@@ -16,6 +16,7 @@ import type {
   ProposalResponse,
   ProposalSummary,
   QuarantineRow,
+  RefreshSchedule,
   SchemasResponse,
   StatusResponse,
   User,
@@ -179,6 +180,19 @@ export const resolveMapping = (payload: {
   transform: string;
 }) => post<unknown>("/api/actions/resolve", payload);
 
+export const rejectMapping = (payload: {
+  proposal_id: number;
+  source_column: string;
+}) => post<unknown>("/api/actions/reject-mapping", payload);
+
+export const addMapping = (payload: {
+  proposal_id: number;
+  source_column: string;
+  target_table: string;
+  target_column: string;
+  transform: string;
+}) => post<unknown>("/api/actions/add-mapping", payload);
+
 export const getLrmisSchema = () =>
   get<{ tables: Record<string, string[]> }>("/api/lrmis-schema");
 
@@ -199,6 +213,13 @@ export const startWorker = (payload: { interval: number; batch_size: number; rea
   post<unknown>("/api/worker/start", payload);
 
 export const stopWorker = (reason: string) => post<unknown>("/api/worker/stop", { reason });
+
+// ---- Refresh schedule ----
+
+export const getRefreshSchedule = () => get<RefreshSchedule>("/api/refresh-schedule");
+
+export const updateRefreshSchedule = (payload: { time?: string; enabled?: boolean }) =>
+  request<RefreshSchedule>("PUT", "/api/refresh-schedule", payload);
 
 // ---- Migrations ----
 
@@ -405,14 +426,17 @@ export interface ConversationDetail extends Omit<ConversationSummary, "message_c
   messages: AgentMessage[];
 }
 
-export const listConversations = () =>
-  get<ConversationSummary[]>("/api/agent/conversations");
+export const listConversations = (query?: string) =>
+  get<ConversationSummary[]>(`/api/agent/conversations${qs({ q: query })}`);
 
 export const getConversation = (id: string) =>
   get<ConversationDetail>(`/api/agent/conversations/${id}`);
 
 export const deleteConversation = (id: string) =>
   request<{ ok: boolean }>("DELETE", `/api/agent/conversations/${id}`);
+
+export const bulkDeleteConversations = (ids: string[]) =>
+  post<{ deleted: number }>("/api/agent/conversations/bulk-delete", { ids });
 
 export interface AgentStreamEvent {
   event: "conversation" | "token" | "tool_call" | "tool_result" | "error" | "done";
@@ -425,6 +449,47 @@ export interface AgentChatPayload {
   context?: Record<string, unknown>;
   autonomy_tier?: AutonomyTier;
   confirm?: { tool: string; params: Record<string, unknown> } | null;
+}
+
+export function parseAgentStreamBlock(block: string): AgentStreamEvent | null {
+  let eventName: string | null = null;
+  const dataLines: string[] = [];
+  for (const rawLine of block.replace(/\r\n/g, "\n").split("\n")) {
+    const line = rawLine.trimEnd();
+    if (line.startsWith("event:")) eventName = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+  }
+  if (!eventName || dataLines.length === 0) return null;
+  try {
+    return {
+      event: eventName as AgentStreamEvent["event"],
+      data: JSON.parse(dataLines.join("\n")) as Record<string, unknown>,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function parseAgentStreamBuffer(
+  buffer: string,
+  onEvent: (event: AgentStreamEvent) => void,
+  flush = false,
+): string {
+  buffer = buffer.replace(/\r\n/g, "\n");
+  let boundary = buffer.indexOf("\n\n");
+  while (boundary >= 0) {
+    const block = buffer.slice(0, boundary);
+    buffer = buffer.slice(boundary + 2);
+    const event = parseAgentStreamBlock(block);
+    if (event) onEvent(event);
+    boundary = buffer.indexOf("\n\n");
+  }
+  if (flush && buffer.trim()) {
+    const event = parseAgentStreamBlock(buffer);
+    if (event) onEvent(event);
+    return "";
+  }
+  return buffer;
 }
 
 /**
@@ -465,27 +530,12 @@ export async function streamAgentChat(
   let buffer = "";
   for (;;) {
     const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let boundary = buffer.indexOf("\n\n");
-    while (boundary >= 0) {
-      const block = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      boundary = buffer.indexOf("\n\n");
-      let eventName: string | null = null;
-      let dataLine: string | null = null;
-      for (const line of block.split("\n")) {
-        if (line.startsWith("event:")) eventName = line.slice(6).trim();
-        else if (line.startsWith("data:")) dataLine = line.slice(5).trim();
-      }
-      if (eventName && dataLine) {
-        try {
-          onEvent({ event: eventName as AgentStreamEvent["event"],
-                    data: JSON.parse(dataLine) as Record<string, unknown> });
-        } catch {
-          /* skip malformed frame (e.g. ping) */
-        }
-      }
+    if (done) {
+      buffer += decoder.decode();
+      parseAgentStreamBuffer(buffer, onEvent, true);
+      break;
     }
+    buffer += decoder.decode(value, { stream: true });
+    buffer = parseAgentStreamBuffer(buffer, onEvent);
   }
 }

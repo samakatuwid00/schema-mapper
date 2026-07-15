@@ -33,6 +33,7 @@ import psycopg2.extras
 
 from ..connectors import PostgresCentralConnector
 from ..services.common import NotFoundError, ValidationError
+from ..services.operator_diagnostics import extract_job_id
 from . import workflows
 from .tool_defs import ToolDef, validate_params
 from .tools import REGISTRY, list_tools
@@ -725,6 +726,42 @@ def _fmt_deploy_error(result: dict) -> str:
     return "\n".join(lines)
 
 
+def _fmt_resolve_deploy_job_repair(result: dict) -> str:
+    job_id = result.get("job_id")
+    proposal_id = result.get("proposal_id")
+    lines: list[str] = []
+    if job_id:
+        lines.append(f"Job {job_id}.")
+    if proposal_id:
+        lines.append(f"Proposal {proposal_id} recovered from the job.")
+    else:
+        lines.append("Could not recover a proposal id from that job — reply "
+                     "with a proposal id, or open the job in the job drawer.")
+    missing = result.get("missing_required") or []
+    if missing:
+        lines.append("Missing required target columns:")
+        lines += [f"- {m.get('target_table')}.{m.get('target_column')}"
+                  for m in missing]
+    drafts = result.get("draft_mappings") or []
+    if drafts:
+        lines.append(f"Draft repair ({len(drafts)} mapping(s), confirmation required):")
+        lines += [f"- {d.get('source_column')} -> "
+                  f"{d.get('target_table')}.{d.get('target_column')}"
+                  for d in drafts]
+    manual = result.get("manual_required") or []
+    if manual:
+        lines.append("Needs a manual source-column choice:")
+        lines += [f"- {m.get('target_table')}.{m.get('target_column')}"
+                  for m in manual]
+    if proposal_id:
+        lines.append(f"Open the proposal: /mappings/{proposal_id}")
+        lines.append("Approved proposals can leave the review queue but "
+                     "stay reachable by URL.")
+    lines.append("After repair: review, approve, then redeploy — nothing "
+                 "redeploys automatically.")
+    return "\n".join(lines)
+
+
 def _fmt_diagnose_duplicate(result: dict) -> str:
     target = f"{result.get('target_table')}.{result.get('target_column')}"
     if result.get("safe_to_repair"):
@@ -785,6 +822,28 @@ def _fmt_add_mapping(result: dict) -> str:
     return "\n".join(lines)
 
 
+def _fmt_add_missing_mappings(result: dict) -> str:
+    added = result.get("added") or []
+    skipped = result.get("skipped") or []
+    lines = [f"Updated missing mappings on proposal {result.get('proposal_id')}."]
+    if added:
+        lines.append("Added:")
+        lines += [
+            f"- {m.get('source_column')} -> {m.get('target_table')}.{m.get('target_column')}"
+            for m in added[:12]
+        ]
+    if skipped:
+        lines.append("Skipped:")
+        lines += [
+            f"- {m.get('target_table')}.{m.get('target_column')}: {m.get('reason')}"
+            for m in skipped[:8]
+        ]
+    lines.append(f"Proposal is {result.get('proposal_status', '?')}.")
+    if result.get("next_step"):
+        lines.append(f"Next: {result.get('next_step')}.")
+    return "\n".join(lines)
+
+
 def _fmt_reject_mapping(result: dict) -> str:
     lines = [
         f"Rejected `{result.get('source_column')}` on proposal {result.get('proposal_id')}.",
@@ -831,10 +890,12 @@ TEMPLATES = {
     "inspect_job": _fmt_inspect_job,
     "diagnose_entity_delivery": _fmt_diagnose_entity,
     "explain_deploy_error": _fmt_deploy_error,
+    "resolve_deploy_job_repair": _fmt_resolve_deploy_job_repair,
     "diagnose_duplicate_key": _fmt_diagnose_duplicate,
     "plan_refresh_failure_repair": _fmt_refresh_repair_plan,
     "repair_duplicate_key": _fmt_repair_duplicate,
     "add_mapping": _fmt_add_mapping,
+    "add_missing_mappings": _fmt_add_missing_mappings,
     "reject_mapping": _fmt_reject_mapping,
     "reject_mapping_review": _fmt_reject_mapping_review,
     "reopen_mapping_review": _fmt_reopen_mapping_review,
@@ -1029,15 +1090,29 @@ class ConversationManager:
             row["messages"] = json.loads(row["messages"])
         return row
 
-    def list_for_user(self, user_id: int) -> list[dict]:
+    def list_for_user(self, user_id: int, query: str | None = None) -> list[dict]:
+        """Title/redacted-message search (D4): searches persisted, already-
+        redacted conversation content only — never raw source/target rows,
+        which never reach persistence in the first place (D9)."""
         with self._conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute("""
-                    SELECT id, title, autonomy_tier, created_at, updated_at,
-                           jsonb_array_length(messages) AS message_count
-                    FROM integration.agent_conversation
-                    WHERE user_id = %s ORDER BY updated_at DESC
-                """, (user_id,))
+                if query:
+                    like = f"%{query}%"
+                    cur.execute("""
+                        SELECT id, title, autonomy_tier, created_at, updated_at,
+                               jsonb_array_length(messages) AS message_count
+                        FROM integration.agent_conversation
+                        WHERE user_id = %s
+                          AND (title ILIKE %s OR messages::text ILIKE %s)
+                        ORDER BY updated_at DESC
+                    """, (user_id, like, like))
+                else:
+                    cur.execute("""
+                        SELECT id, title, autonomy_tier, created_at, updated_at,
+                               jsonb_array_length(messages) AS message_count
+                        FROM integration.agent_conversation
+                        WHERE user_id = %s ORDER BY updated_at DESC
+                    """, (user_id,))
                 return [dict(r) for r in cur.fetchall()]
 
     def delete(self, conversation_id: str, user_id: int) -> None:
@@ -1051,6 +1126,22 @@ class ConversationManager:
             conn.commit()
         if not deleted:
             raise NotFoundError(f"conversation {conversation_id} not found")
+
+    def bulk_delete(self, user_id: int, conversation_ids: list[str]) -> int:
+        """Delete every id owned by `user_id`; ids that are foreign or do not
+        exist are silently ignored so their existence is never revealed (D4)."""
+        ids = [str(i) for i in conversation_ids]
+        if not ids:
+            return 0
+        with self._conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    DELETE FROM integration.agent_conversation
+                    WHERE user_id = %s AND id = ANY(%s::uuid[])
+                """, (user_id, ids))
+                deleted = cur.rowcount
+            conn.commit()
+        return deleted
 
     def set_tier(self, conversation_id: str, user_id: int, tier: str) -> None:
         if tier not in AUTONOMY_TIERS:
@@ -1126,6 +1217,11 @@ _HELP_RE = re.compile(
     r"^\s*(--help|help|chat help|help commands|what commands.*)\s*$",
     re.I,
 )
+_DEPLOY_JOB_TEXT_RE = re.compile(
+    r"deploy_lrmis|mapping cannot be deployed|"
+    r"is required but no source column maps to it",
+    re.I,
+)
 
 
 def _pending_confirmation(messages: list[dict]) -> dict | None:
@@ -1147,6 +1243,14 @@ def _looks_like_confirmation(message: str) -> bool:
 
 def _looks_like_help(message: str) -> bool:
     return bool(_HELP_RE.search(message or ""))
+
+
+def _looks_like_pasted_deploy_job(message: str) -> bool:
+    """A pasted failed-job message (design D1): has a job UUID plus a deploy
+    job-type or deploy-error marker, so it routes straight to
+    `resolve_deploy_job_repair` instead of the substring intent classifier."""
+    return bool(extract_job_id(message)
+                and _DEPLOY_JOB_TEXT_RE.search(message or ""))
 
 
 class AgentSession:
@@ -1225,6 +1329,19 @@ class AgentSession:
                                          [user_message, assistant],
                                          title_seed=message)
             events.append(StreamEvent("done", {"content": assistant["content"]}))
+            return events
+
+        if _looks_like_pasted_deploy_job(message):
+            outcome = self.dispatcher.dispatch(
+                "resolve_deploy_job_repair", {"text": message},
+                tier=tier, confidence=1.0)
+            events.extend(self._outcome_events(outcome))
+            assistant = self._assistant_message(outcome)
+            self.manager.append_messages(conversation_id, self.user_id,
+                                         [user_message, assistant],
+                                         title_seed=message)
+            events.append(StreamEvent("done", {"content": assistant["content"],
+                                               "conversation_id": str(conversation_id)}))
             return events
 
         intent = self._classify(message, page_context)

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import ChatMessage from "../ChatMessage";
 
@@ -84,5 +85,58 @@ describe("ChatMessage", () => {
     );
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.getByText(/## still typing/)).toBeInTheDocument();
+  });
+
+  it("renders an open-proposal chip from a settled tool result's actions", () => {
+    render(
+      <MemoryRouter>
+        <ChatMessage
+          message={{ role: "assistant", content: "Proposal 582 recovered.",
+                     tool_results: [{ actions: [
+                       { type: "open_proposal", proposal_id: 582 },
+                     ] }] }}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Open proposal 582").closest("a"))
+      .toHaveAttribute("href", "/mappings/582");
+  });
+
+  it("runs a gated_repair action chip via onRunAction", () => {
+    const onRunAction = vi.fn();
+    render(
+      <MemoryRouter>
+        <ChatMessage
+          onRunAction={onRunAction}
+          message={{ role: "assistant", content: "Draft repair ready.",
+                     tool_results: [{ actions: [{
+                       type: "gated_repair", tool: "add_missing_mappings",
+                       params: { proposal_id: 582, mappings: [] },
+                       label: "Add 1 missing id mapping(s)",
+                     }] }] }}
+        />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText("Add 1 missing id mapping(s)"));
+    expect(onRunAction).toHaveBeenCalledWith({
+      tool: "add_missing_mappings",
+      params: { proposal_id: 582, mappings: [] },
+      requires_confirmation: true,
+    });
+  });
+
+  it("does not render action chips while streaming", () => {
+    render(
+      <MemoryRouter>
+        <ChatMessage
+          streaming
+          message={{ role: "assistant", content: "still going",
+                     tool_results: [{ actions: [
+                       { type: "open_proposal", proposal_id: 582 },
+                     ] }] }}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText(/Open proposal/)).toBeNull();
   });
 });

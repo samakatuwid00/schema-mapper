@@ -7,6 +7,7 @@ vi.mock("../../api/client", () => ({
   listConversations: vi.fn(),
   getConversation: vi.fn(),
   deleteConversation: vi.fn(),
+  bulkDeleteConversations: vi.fn(),
   streamAgentChat: vi.fn(),
 }));
 vi.mock("../../hooks/useAgentChat", () => ({ useAgentChat: vi.fn() }));
@@ -27,11 +28,12 @@ function chatState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderSidebar(state = chatState(), route = "/", open = true) {
+function renderSidebar(state = chatState(), route = "/", open = true,
+                       extraProps: Record<string, unknown> = {}) {
   vi.mocked(useAgentChat).mockReturnValue(state as never);
   return render(
     <MemoryRouter initialEntries={[route]}>
-      <AgentSidebar open={open} onClose={() => {}} />
+      <AgentSidebar open={open} onClose={() => {}} {...extraProps} />
     </MemoryRouter>,
   );
 }
@@ -42,9 +44,18 @@ describe("AgentSidebar", () => {
     vi.mocked(api.listConversations).mockResolvedValue([] as never);
   });
 
-  it("renders nothing when closed (closed by default)", () => {
+  it("stays mounted but hidden and non-interactive when closed (design D7 slide)", () => {
     renderSidebar(chatState(), "/", false);
-    expect(screen.queryByLabelText("Migration assistant")).toBeNull();
+    const panel = screen.getByLabelText("Migration assistant");
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    expect(panel).not.toHaveClass("agent-panel--open");
+  });
+
+  it("marks the panel open and not aria-hidden once opened", () => {
+    renderSidebar();
+    const panel = screen.getByLabelText("Migration assistant");
+    expect(panel).toHaveAttribute("aria-hidden", "false");
+    expect(panel).toHaveClass("agent-panel--open");
   });
 
   it("shows a bullet-list empty-state hint before any messages", () => {
@@ -75,12 +86,38 @@ describe("AgentSidebar", () => {
       page: "/mappings/7", context: { proposal_id: 7 } });
   });
 
-  it("offers exactly the two MVP autonomy tiers (no auto_all)", () => {
+  it("offers exactly the two MVP autonomy tiers with friendly labels (no auto_all)", () => {
     renderSidebar();
-    const options = screen.getByLabelText("Autonomy tier")
-      .querySelectorAll("option");
-    expect([...options].map((o) => o.getAttribute("value"))).toEqual(
-      ["propose_only", "auto_safe"]);
+    const options = within(
+      screen.getByRole("radiogroup", { name: "Autonomy tier" }),
+    ).getAllByRole("radio");
+    expect(options.map((o) => o.textContent)).toEqual(["Ask first", "Auto safe"]);
+  });
+
+  it("defaults to Ask first (propose_only) checked, and explains the mode", () => {
+    renderSidebar(chatState({ tier: "propose_only" }));
+    const group = screen.getByRole("radiogroup", { name: "Autonomy tier" });
+    expect(within(group).getByRole("radio", { name: "Ask first" }))
+      .toHaveAttribute("aria-checked", "true");
+    expect(within(group).getByRole("radio", { name: "Auto safe" }))
+      .toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText(/always asks for your approval first/))
+      .toBeInTheDocument();
+    expect(screen.getByText("propose_only")).toBeInTheDocument();
+  });
+
+  it("switching to Auto safe persists the backend enum value and updates help text", () => {
+    const state = chatState({ tier: "propose_only" });
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("radio", { name: "Auto safe" }));
+    expect(state.setTier).toHaveBeenCalledWith("auto_safe");
+  });
+
+  it("shows Auto-safe mode's destructive-confirmation caveat when selected", () => {
+    renderSidebar(chatState({ tier: "auto_safe" }));
+    expect(screen.getByText(/Destructive actions still require your approval/))
+      .toBeInTheDocument();
+    expect(screen.getByText("auto_safe")).toBeInTheDocument();
   });
 
   it("renders streaming messages and forwards confirmation to the hook", () => {
@@ -118,6 +155,67 @@ describe("AgentSidebar", () => {
     fireEvent.click(await screen.findByRole("button",
                                             { name: /delete what's blocking/i }));
     await waitFor(() => expect(api.deleteConversation).toHaveBeenCalledWith("c1"));
+  });
+
+  it("searches history and shows an empty state for no matches", async () => {
+    vi.mocked(api.listConversations).mockImplementation((q) =>
+      Promise.resolve((!q ? [
+        { id: "c1", title: "What's blocking?", autonomy_tier: "propose_only",
+          created_at: "t", updated_at: "t", message_count: 2 },
+      ] : []) as never));
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+    await screen.findByRole("button", { name: "What's blocking?" });
+
+    fireEvent.change(screen.getByLabelText("Search conversation history"),
+                     { target: { value: "nothing matches this" } });
+    await waitFor(() => expect(api.listConversations)
+      .toHaveBeenCalledWith("nothing matches this"));
+    expect(await screen.findByText("No conversations match your search."))
+      .toBeInTheDocument();
+  });
+
+  it("bulk-deletes selected conversations after a count-based confirm", async () => {
+    vi.mocked(api.listConversations).mockResolvedValue([
+      { id: "c1", title: "First", autonomy_tier: "propose_only",
+        created_at: "t", updated_at: "t", message_count: 2 },
+      { id: "c2", title: "Second", autonomy_tier: "propose_only",
+        created_at: "t", updated_at: "t", message_count: 2 },
+    ] as never);
+    vi.mocked(api.bulkDeleteConversations).mockResolvedValue({ deleted: 2 } as never);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+    await screen.findByRole("button", { name: "First" });
+    fireEvent.click(screen.getByLabelText("Select First"));
+    fireEvent.click(screen.getByLabelText("Select Second"));
+
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /delete selected/i }));
+
+    expect(confirmSpy).toHaveBeenCalledWith("Delete 2 selected conversations?");
+    await waitFor(() => expect(api.bulkDeleteConversations)
+      .toHaveBeenCalledWith(["c1", "c2"]));
+  });
+
+  it("starts a fresh conversation when the loaded chat is bulk-deleted", async () => {
+    vi.mocked(api.listConversations).mockResolvedValue([
+      { id: "c1", title: "Loaded", autonomy_tier: "propose_only",
+        created_at: "t", updated_at: "t", message_count: 2 },
+    ] as never);
+    vi.mocked(api.bulkDeleteConversations).mockResolvedValue({ deleted: 1 } as never);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const state = chatState({ conversationId: "c1" });
+    renderSidebar(state);
+
+    fireEvent.click(screen.getByRole("button", { name: "Conversation history" }));
+    await screen.findByRole("button", { name: "Loaded" });
+    fireEvent.click(screen.getByLabelText("Select Loaded"));
+    fireEvent.click(screen.getByRole("button", { name: /delete selected/i }));
+
+    await waitFor(() => expect(state.reset).toHaveBeenCalled());
   });
 
   it("starts a fresh chat from the new-chat button", () => {
@@ -224,5 +322,58 @@ describe("AgentSidebar", () => {
     fireEvent.keyDown(input, { key: "Escape" });
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(input).toHaveValue("/onboard");
+  });
+
+  const PINNED_JOB = {
+    job_id: 42, job_type: "deploy_lrmis", status: "failed",
+    error_message: "mapping cannot be deployed", proposal_id: 582,
+  };
+
+  it("shows a pinned job card and prefills a repair draft", () => {
+    renderSidebar(chatState(), "/", true, { pinnedJob: PINNED_JOB });
+    expect(screen.getByText("#42 deploy_lrmis")).toBeInTheDocument();
+    expect(screen.getByText("mapping cannot be deployed")).toBeInTheDocument();
+    expect(screen.getByText("Open proposal 582").closest("a"))
+      .toHaveAttribute("href", "/mappings/582");
+    expect(screen.getByLabelText("Message the assistant"))
+      .toHaveValue("#42 deploy_lrmis failed mapping cannot be deployed");
+  });
+
+  it("does not clobber an in-progress draft when a job gets pinned", () => {
+    const state = chatState();
+    const { rerender } = renderSidebar(state, "/", true, { pinnedJob: null });
+    fireEvent.change(screen.getByLabelText("Message the assistant"),
+                     { target: { value: "already typing" } });
+    rerender(
+      <MemoryRouter>
+        <AgentSidebar open onClose={() => {}} pinnedJob={PINNED_JOB} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByLabelText("Message the assistant"))
+      .toHaveValue("already typing");
+  });
+
+  it("unpins the job via the dismiss control", () => {
+    const onClear = vi.fn();
+    renderSidebar(chatState(), "/", true,
+                 { pinnedJob: PINNED_JOB, onClearPinnedJob: onClear });
+    fireEvent.click(screen.getByLabelText("Unpin job"));
+    expect(onClear).toHaveBeenCalled();
+  });
+
+  it("keeps the pinned job card visible in full-screen mode", () => {
+    renderSidebar(chatState(), "/", true, { pinnedJob: PINNED_JOB });
+    fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(screen.getByText("#42 deploy_lrmis")).toBeInTheDocument();
+  });
+
+  it("includes the pinned job id and proposal id in the sent context", () => {
+    const state = chatState();
+    renderSidebar(state, "/tables", true, { pinnedJob: PINNED_JOB });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(state.send).toHaveBeenCalledWith(
+      "#42 deploy_lrmis failed mapping cannot be deployed",
+      { page: "/tables", context: { job_id: 42, proposal_id: 582 } },
+    );
   });
 });

@@ -62,18 +62,33 @@ class _MemManager:
             row["title"] = title_seed.strip()[:conv.TITLE_MAX]
         return row["messages"]
 
-    def list_for_user(self, user_id):
+    def list_for_user(self, user_id, query=None):
+        rows = [r for r in self.rows.values() if r["user_id"] == user_id]
+        if query:
+            needle = query.lower()
+            rows = [r for r in rows
+                    if needle in (r["title"] or "").lower()
+                    or needle in json.dumps(r["messages"]).lower()]
         return [{"id": r["id"], "title": r["title"],
                  "autonomy_tier": r["autonomy_tier"],
                  "created_at": r["created_at"], "updated_at": r["updated_at"],
                  "message_count": len(r["messages"])}
-                for r in self.rows.values() if r["user_id"] == user_id]
+                for r in rows]
 
     def delete(self, conversation_id, user_id):
         row = self.rows.get(str(conversation_id))
         if row is None or row["user_id"] != user_id:
             raise NotFoundError(f"conversation {conversation_id} not found")
         self.rows.pop(str(conversation_id))
+
+    def bulk_delete(self, user_id, conversation_ids):
+        deleted = 0
+        for cid in conversation_ids:
+            row = self.rows.get(str(cid))
+            if row is not None and row["user_id"] == user_id:
+                self.rows.pop(str(cid))
+                deleted += 1
+        return deleted
 
 
 def _parse_sse(text: str) -> list[tuple[str, dict]]:
@@ -280,6 +295,54 @@ def test_conversation_crud_scoped_to_user(harness):
         lambda: AdminUser(1, "tester", "operator")
     assert client.delete(f"/api/agent/conversations/{listed[0]['id']}").json() == {"ok": True}
     assert client.get("/api/agent/conversations").json() == []
+
+
+def test_conversation_search_matches_title_and_is_user_scoped(harness):
+    client = harness["client"]
+    _chat(client, {"message": "status?"})
+    _chat(client, {"message": "onboard authors"})
+
+    matched = client.get("/api/agent/conversations", params={"q": "onboard"}).json()
+    assert len(matched) == 1
+    assert "onboard" in matched[0]["title"].lower()
+
+    harness["app"].dependency_overrides[current_user] = \
+        lambda: AdminUser(2, "other", "operator")
+    assert client.get("/api/agent/conversations",
+                      params={"q": "onboard"}).json() == []
+    harness["app"].dependency_overrides[current_user] = \
+        lambda: AdminUser(1, "tester", "operator")
+
+
+def test_bulk_delete_deletes_owned_ids_and_ignores_foreign_without_leaking(harness):
+    client = harness["client"]
+    first = _chat(client, {"message": "status?"})
+    cid1 = dict(first)["conversation"]["conversation_id"]
+    second = _chat(client, {"message": "onboard authors"})
+    cid2 = dict(second)["conversation"]["conversation_id"]
+
+    response = client.post("/api/agent/conversations/bulk-delete",
+                           json={"ids": [cid1, cid2, "not-real-id"]})
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 2}
+    assert client.get("/api/agent/conversations").json() == []
+
+
+def test_bulk_delete_does_not_delete_another_users_conversation(harness):
+    client = harness["client"]
+    first = _chat(client, {"message": "status?"})
+    cid = dict(first)["conversation"]["conversation_id"]
+
+    harness["app"].dependency_overrides[current_user] = \
+        lambda: AdminUser(2, "other", "operator")
+    response = client.post("/api/agent/conversations/bulk-delete",
+                           json={"ids": [cid]})
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 0}
+
+    harness["app"].dependency_overrides[current_user] = \
+        lambda: AdminUser(1, "tester", "operator")
+    assert len(client.get("/api/agent/conversations").json()) == 1
 
 
 def test_stream_recovery_reload_returns_persisted_messages(harness):
