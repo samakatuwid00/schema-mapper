@@ -122,4 +122,46 @@ describe("AgentSidebar", () => {
     renderSidebar(chatState({ error: "quota exhausted" }));
     expect(screen.getByText("quota exhausted")).toBeInTheDocument();
   });
+
+  it("expands to full screen and back, preserving the draft", () => {
+    renderSidebar(chatState(), "/tables");
+    const draftInput = screen.getByLabelText("Message the assistant");
+    fireEvent.change(draftInput, { target: { value: "still drafting" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(screen.getByLabelText("Migration assistant"))
+      .toHaveClass("agent-panel--fullscreen");
+    expect(screen.getByLabelText("Message the assistant"))
+      .toHaveValue("still drafting");
+
+    fireEvent.click(screen.getByRole("button", { name: "Exit full screen" }));
+    expect(screen.getByLabelText("Migration assistant"))
+      .not.toHaveClass("agent-panel--fullscreen");
+    expect(screen.getByLabelText("Message the assistant"))
+      .toHaveValue("still drafting");
+  });
+
+  it("collapses full screen on Escape", () => {
+    renderSidebar(chatState());
+    fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(screen.getByLabelText("Migration assistant"))
+      .toHaveClass("agent-panel--fullscreen");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByLabelText("Migration assistant"))
+      .not.toHaveClass("agent-panel--fullscreen");
+  });
+
+  it("preserves messages across a full-screen toggle while streaming", () => {
+    const state = chatState({
+      streaming: true,
+      messages: [
+        { role: "user", content: "status?" },
+        { role: "assistant", content: "checking" },
+      ],
+    });
+    renderSidebar(state);
+    fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(screen.getByText("status?")).toBeInTheDocument();
+    expect(screen.getByText("checking")).toBeInTheDocument();
+  });
 });

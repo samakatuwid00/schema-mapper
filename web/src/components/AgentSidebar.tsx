@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { History, Plus, SendHorizonal, Trash2, X } from "lucide-react";
+import { History, Maximize2, Minimize2, Plus, SendHorizonal, Trash2, X } from "lucide-react";
 import {
   deleteConversation,
   listConversations,
@@ -9,6 +9,7 @@ import {
 } from "../api/client";
 import { useAgentChat } from "../hooks/useAgentChat";
 import { errMsg } from "../utils";
+import AssistantAvatar from "./AssistantAvatar";
 import ChatMessage from "./ChatMessage";
 
 export interface AgentSidebarProps {
@@ -37,6 +38,7 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<ConversationSummary[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -45,6 +47,19 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
       el.scrollTo({ top: el.scrollHeight });
     }
   }, [chat.messages]);
+
+  useEffect(() => {
+    if (!open) setFullscreen(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [fullscreen]);
 
   const refreshHistory = () => {
     listConversations()
@@ -71,15 +86,13 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
   return (
     <aside
       aria-label="Migration assistant"
-      style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "22rem",
-               display: "flex", flexDirection: "column", zIndex: 40,
-               background: "var(--panel-bg, #16181d)",
-               borderLeft: "1px solid var(--border, #333)" }}
+      className={`agent-panel${fullscreen ? " agent-panel--fullscreen" : ""}`}
     >
-      <div className="panel-header"
-           style={{ padding: "0.6rem 0.8rem", display: "flex",
-                    alignItems: "center", gap: "0.4rem" }}>
-        <strong style={{ flex: 1 }}>Migration assistant</strong>
+      <div className="agent-header">
+        <div className="agent-header-title">
+          <AssistantAvatar active={chat.streaming} />
+          <strong>Migration assistant</strong>
+        </div>
         <button type="button" className="btn btn-ghost btn-sm" title="New chat"
                 aria-label="New chat"
                 onClick={() => { chat.reset(); setHistoryOpen(false); }}>
@@ -91,12 +104,18 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
           <History size={14} />
         </button>
         <button type="button" className="btn btn-ghost btn-sm"
+                title={fullscreen ? "Exit full screen" : "Full screen"}
+                aria-label={fullscreen ? "Exit full screen" : "Full screen"}
+                onClick={() => setFullscreen((v) => !v)}>
+          {fullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        </button>
+        <button type="button" className="btn btn-ghost btn-sm"
                 aria-label="Close assistant" onClick={onClose}>
           <X size={14} />
         </button>
       </div>
 
-      <label className="field" style={{ padding: "0 0.8rem" }}>
+      <label className="field" style={{ padding: "0 16px" }}>
         <span className="field-label dim">Autonomy</span>
         <select className="input" aria-label="Autonomy tier" value={chat.tier}
                 onChange={(e) => chat.setTier(e.target.value as AutonomyTier)}>
@@ -106,17 +125,13 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
       </label>
 
       {historyOpen && (
-        <div style={{ padding: "0.4rem 0.8rem", overflowY: "auto",
-                      maxHeight: "10rem",
-                      borderBottom: "1px solid var(--border, #333)" }}>
+        <div className="agent-history">
           {historyError && <div className="form-error">{historyError}</div>}
           {history.length === 0 ? (
             <span className="dim">No previous conversations.</span>
           ) : (
             history.map((conversation) => (
-              <div key={conversation.id}
-                   style={{ display: "flex", gap: "0.3rem",
-                            alignItems: "center" }}>
+              <div key={conversation.id} className="agent-history-row">
                 <button type="button" className="btn btn-ghost btn-sm"
                         style={{ flex: 1, textAlign: "left", minWidth: 0,
                                  overflow: "hidden", textOverflow: "ellipsis" }}
@@ -142,10 +157,9 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
         </div>
       )}
 
-      <div ref={scrollRef}
-           style={{ flex: 1, overflowY: "auto", padding: "0.5rem 0.8rem" }}>
+      <div ref={scrollRef} className="agent-messages">
         {chat.messages.length === 0 && (
-          <p className="dim" style={{ fontSize: "0.85rem" }}>
+          <p className="agent-empty">
             I'm the migration assistant — ask about status, proposals, blockers,
             schemas, or say "onboard &lt;table&gt;". Actions that change anything
             always ask for your approval.
@@ -168,11 +182,9 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
         {chat.error && <div className="alert alert-danger">{chat.error}</div>}
       </div>
 
-      <div style={{ display: "flex", gap: "0.4rem", padding: "0.6rem 0.8rem",
-                    borderTop: "1px solid var(--border, #333)" }}>
+      <div className="agent-composer">
         <input
           className="input"
-          style={{ flex: 1 }}
           aria-label="Message the assistant"
           placeholder={chat.streaming ? "Thinking…" : "Ask the assistant…"}
           value={draft}

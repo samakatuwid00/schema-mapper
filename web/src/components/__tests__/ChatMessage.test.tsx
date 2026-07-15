@@ -51,4 +51,38 @@ describe("ChatMessage", () => {
     );
     expect(screen.queryByRole("button", { name: /approve/i })).toBeNull();
   });
+
+  it("renders settled assistant markdown as formatted elements", () => {
+    render(
+      <ChatMessage
+        message={{ role: "assistant",
+                   content: "## Status\n\n- one\n- two\n\n`inline code`" }}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Status" })).toBeInTheDocument();
+    expect(screen.getByText("one").closest("li")).toBeTruthy();
+    expect(screen.getByText("inline code").tagName).toBe("CODE");
+  });
+
+  it("renders raw HTML in assistant content as inert text, not markup", () => {
+    render(
+      <ChatMessage
+        message={{ role: "assistant",
+                   content: '<img src=x onerror="window.__pwned=true">' }}
+      />,
+    );
+    expect(document.querySelector("img")).toBeNull();
+    expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
+  });
+
+  it("keeps the streaming tail as plain text, not markdown", () => {
+    render(
+      <ChatMessage
+        streaming
+        message={{ role: "assistant", content: "## still typing" }}
+      />,
+    );
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.getByText(/## still typing/)).toBeInTheDocument();
+  });
 });

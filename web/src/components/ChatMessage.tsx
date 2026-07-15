@@ -1,5 +1,8 @@
-import { Bot, Check, Cog, User, X } from "lucide-react";
+import { Check, Cog, User, X } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { AgentMessage, AgentToolCall } from "../api/client";
+import AssistantAvatar from "./AssistantAvatar";
 
 export interface ChatMessageProps {
   message: AgentMessage;
@@ -10,29 +13,29 @@ export interface ChatMessageProps {
 }
 
 /**
- * One chat message: role icon, text, compact tool-call indicators, and inline
- * Approve/Cancel controls when the agent proposed a gated action.
+ * One chat message: avatar, text, compact tool-call indicators, and inline
+ * Approve/Cancel controls when the agent proposed a gated action. Assistant
+ * text renders as sanitized markdown once settled; the live streaming tail
+ * stays plain text so partial markdown never flickers or breaks.
  */
 export default function ChatMessage({ message, streaming = false,
                                       onConfirm, onCancel }: ChatMessageProps) {
   const isUser = message.role === "user";
   const pending = (message.tool_calls ?? []).find(
     (call) => call.requires_confirmation);
+  const renderMarkdown = !isUser && !streaming;
 
   return (
     <div
       data-role={message.role}
-      style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start",
-               margin: "0.5rem 0" }}
+      className={`agent-msg ${isUser ? "agent-msg--user" : "agent-msg--assistant"}`}
     >
-      <span className="dim" aria-hidden="true" style={{ marginTop: 2 }}>
-        {isUser ? <User size={14} /> : <Bot size={14} />}
+      <span aria-hidden="true" style={{ marginTop: 2 }}>
+        {isUser ? <User size={14} className="dim" /> : <AssistantAvatar active={streaming} />}
       </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="agent-msg-body">
         {(message.tool_calls ?? []).map((call, index) => (
-          <div key={index} className="mono dim" data-testid="tool-chip"
-               style={{ fontSize: "0.75rem", display: "flex", gap: "0.3rem",
-                        alignItems: "center" }}>
+          <div key={index} className="mono agent-tool-chip" data-testid="tool-chip">
             <Cog size={12} aria-hidden="true" />
             {call.tool}
             {call.requires_confirmation
@@ -45,10 +48,16 @@ export default function ChatMessage({ message, streaming = false,
           </div>
         ))}
 
-        <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-          {message.content}
-          {streaming && !isUser ? <span className="dim">▌</span> : null}
-        </div>
+        {renderMarkdown ? (
+          <div className="agent-markdown">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+          </div>
+        ) : (
+          <div className="agent-msg-plain">
+            {message.content}
+            {streaming && !isUser ? <span className="dim">▌</span> : null}
+          </div>
+        )}
 
         {pending && onConfirm && (
           <div className="row-actions" style={{ marginTop: "0.5rem" }}>
