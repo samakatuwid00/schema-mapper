@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AgentSidebar, { pageContextFor } from "../AgentSidebar";
@@ -45,6 +45,15 @@ describe("AgentSidebar", () => {
   it("renders nothing when closed (closed by default)", () => {
     renderSidebar(chatState(), "/", false);
     expect(screen.queryByLabelText("Migration assistant")).toBeNull();
+  });
+
+  it("shows a bullet-list empty-state hint before any messages", () => {
+    renderSidebar();
+    expect(screen.getByText("status")).toBeInTheDocument();
+    expect(screen.getByText("proposals")).toBeInTheDocument();
+    expect(screen.getByText("blockers")).toBeInTheDocument();
+    expect(screen.getByText("schemas")).toBeInTheDocument();
+    expect(screen.getByText(/onboard/)).toBeInTheDocument();
   });
 
   it("sends the message with page-aware context from the route", () => {
@@ -163,5 +172,57 @@ describe("AgentSidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Full screen" }));
     expect(screen.getByText("status?")).toBeInTheDocument();
     expect(screen.getByText("checking")).toBeInTheDocument();
+  });
+
+  it("opens the slash-command menu and filters as the user types", () => {
+    renderSidebar();
+    const input = screen.getByLabelText("Message the assistant");
+    fireEvent.change(input, { target: { value: "/" } });
+    const menu = screen.getByRole("listbox", { name: "Command suggestions" });
+    expect(menu).toBeInTheDocument();
+    // filter narrows the list to matching commands
+    fireEvent.change(input, { target: { value: "/inspect" } });
+    const options = within(
+      screen.getByRole("listbox", { name: "Command suggestions" }),
+    ).getAllByRole("option");
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveTextContent("inspect job <job_id>");
+  });
+
+  it("hides the menu when the draft does not start with a slash", () => {
+    renderSidebar();
+    const input = screen.getByLabelText("Message the assistant");
+    fireEvent.change(input, { target: { value: "check status" } });
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("inserts the picked command instead of sending it", () => {
+    const state = chatState();
+    renderSidebar(state);
+    const input = screen.getByLabelText("Message the assistant");
+    fireEvent.change(input, { target: { value: "/inspect" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(input).toHaveValue("inspect job <job_id>");
+    expect(state.send).not.toHaveBeenCalled();
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("navigates the menu with arrow keys before inserting", () => {
+    renderSidebar();
+    const input = screen.getByLabelText("Message the assistant");
+    fireEvent.change(input, { target: { value: "/" } });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    // second command in the palette is "check status"
+    expect(input).toHaveValue("check status");
+  });
+
+  it("Escape closes the menu without inserting", () => {
+    renderSidebar();
+    const input = screen.getByLabelText("Message the assistant");
+    fireEvent.change(input, { target: { value: "/onboard" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(input).toHaveValue("/onboard");
   });
 });

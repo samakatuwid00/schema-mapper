@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { History, Maximize2, Minimize2, Plus, SendHorizonal, Trash2, X } from "lucide-react";
 import {
@@ -9,8 +9,10 @@ import {
 } from "../api/client";
 import { useAgentChat } from "../hooks/useAgentChat";
 import { errMsg } from "../utils";
+import { filterCommands, PLACEHOLDER_RE, type AgentCommand } from "../agentCommands";
 import AssistantAvatar from "./AssistantAvatar";
 import ChatMessage from "./ChatMessage";
+import CommandMenu from "./CommandMenu";
 
 export interface AgentSidebarProps {
   open: boolean;
@@ -39,7 +41,17 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
   const [history, setHistory] = useState<ConversationSummary[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuIndex, setMenuIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Slash-command palette: "/" as the first character opens the suggestion
+  // list, filtered by whatever follows it.
+  const menuCommands = useMemo(
+    () => (menuOpen ? filterCommands(draft.slice(1)) : []),
+    [menuOpen, draft],
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -80,7 +92,58 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
     const message = draft.trim();
     if (!message || chat.streaming) return;
     setDraft("");
+    setMenuOpen(false);
     void chat.send(message, context);
+  };
+
+  const onDraftChange = (value: string) => {
+    setDraft(value);
+    setMenuOpen(value.startsWith("/"));
+    setMenuIndex(0);
+  };
+
+  // Insert the picked command; select its first <placeholder> so the user types
+  // straight over it. Runs after the controlled value re-renders.
+  const applyCommand = (command: AgentCommand) => {
+    setDraft(command.template);
+    setMenuOpen(false);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      const match = command.template.match(PLACEHOLDER_RE);
+      if (match && match.index != null) {
+        el.setSelectionRange(match.index, match.index + match[0].length);
+      } else {
+        el.setSelectionRange(command.template.length, command.template.length);
+      }
+    });
+  };
+
+  const onComposerKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (menuOpen && menuCommands.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setMenuIndex((i) => (i + 1) % menuCommands.length);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setMenuIndex((i) => (i - 1 + menuCommands.length) % menuCommands.length);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        applyCommand(menuCommands[menuIndex]);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        return;
+      }
+    }
+    if (event.key === "Enter") submit();
   };
 
   return (
@@ -159,11 +222,17 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
 
       <div ref={scrollRef} className="agent-messages">
         {chat.messages.length === 0 && (
-          <p className="agent-empty">
-            I'm the migration assistant — ask about status, proposals, blockers,
-            schemas, or say "onboard &lt;table&gt;". Actions that change anything
-            always ask for your approval.
-          </p>
+          <div className="agent-empty">
+            <p>Migration assistant. Ask:</p>
+            <ul>
+              <li>status</li>
+              <li>proposals</li>
+              <li>blockers</li>
+              <li>schemas</li>
+            </ul>
+            <p>Say: "onboard &lt;table&gt;"</p>
+            <p>Changes need your approval.</p>
+          </div>
         )}
         {chat.messages.map((message, index) => {
           const last = index === chat.messages.length - 1;
@@ -183,16 +252,23 @@ export default function AgentSidebar({ open, onClose }: AgentSidebarProps) {
       </div>
 
       <div className="agent-composer">
+        {menuOpen && (
+          <CommandMenu
+            commands={menuCommands}
+            activeIndex={menuIndex}
+            onSelect={applyCommand}
+            onHover={setMenuIndex}
+          />
+        )}
         <input
+          ref={inputRef}
           className="input"
           aria-label="Message the assistant"
-          placeholder={chat.streaming ? "Thinking…" : "Ask the assistant…"}
+          placeholder={chat.streaming ? "Thinking…" : "Ask the assistant… (/ for commands)"}
           value={draft}
           disabled={chat.streaming}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") submit();
-          }}
+          onChange={(e) => onDraftChange(e.target.value)}
+          onKeyDown={onComposerKeyDown}
         />
         <button type="button" className="btn btn-primary btn-sm"
                 aria-label="Send" disabled={chat.streaming || !draft.trim()}

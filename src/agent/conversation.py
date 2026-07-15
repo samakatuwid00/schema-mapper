@@ -110,11 +110,51 @@ class StreamEvent:
 # "where are we" reads the persisted workflow state without any tool call.
 _DEFERRED = "deferred"
 _WORKFLOW_STATUS = "workflow_status"
+_CHAT_HELP = "chat_help"
 _INTENT_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
+    (_CHAT_HELP, ("--help", "chat help", "help commands",
+                  "what commands", "supported commands")),
     (_DEFERRED, ("restore a backup", "restore the target", "restore the source",
                  "recover from backup", "restore from backup")),
     (_WORKFLOW_STATUS, ("where are we", "workflow status", "current step",
                         "what step", "how far along")),
+    ("reopen_mapping_review", ("reopen mapping review",
+                               "send review back",
+                               "back to review queue",
+                               "return review",
+                               "reopen review")),
+    ("reject_mapping_review", ("reject field review", "reject review",
+                               "reject mapping review")),
+    ("reject_mapping", ("reject mapping", "remove mapping",
+                        "reject and remove")),
+    ("add_mapping", ("add mapping", "manual mapping", "map id to",
+                     "map id ->", "maps to")),
+    ("plan_refresh_failure_repair", ("plan_refresh_failure_repair",
+                                     "plan refresh failure repair",
+                                     "repair refresh failure",
+                                     "fix refresh job", "fix this refresh",
+                                     "how to fix this job",
+                                     "how do i fix this refresh",
+                                     "failed refresh")),
+    ("repair_duplicate_key", ("repair duplicate key", "fix duplicate key",
+                              "reconcile duplicate", "record the missing crosswalk")),
+    ("diagnose_duplicate_key", ("duplicate key", "already exists",
+                                "unique constraint")),
+    ("explain_deploy_error", ("mapping cannot be deployed",
+                              "required but no source column maps",
+                              "deploy to target failed",
+                              "deploying to target failed",
+                              "no row in reference table")),
+    ("diagnose_entity_delivery", ("diagnose_entity_delivery",
+                                  "diagnose entity delivery",
+                                  "diagnose target data",
+                                  "no data in target", "has no data",
+                                  "doesn't have data", "doesnt have data",
+                                  "target db is empty", "paused status",
+                                  "is paused", "deployed but no data")),
+    ("inspect_job", ("inspect job", "job status", "worker job",
+                     "worker & queues", "worker and queues", "refresh_all",
+                     "failed job")),
     ("swap_source_schema", ("swap the source", "source schema changed",
                             "restructured source", "new source schema",
                             "source swap")),
@@ -144,16 +184,71 @@ _INTENT_PATTERNS: list[tuple[str, tuple[str, ...]]] = [
 
 _PROPOSAL_ID_RE = re.compile(r"(?:proposal\s*#?|#)(\d+)", re.I)
 _TABLE_RE = re.compile(r"\b(?:onboard|table)\s+([a-z_][a-z0-9_]*)", re.I)
+_JOB_ID_RE = re.compile(
+    r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+    re.I,
+)
+_ENTITY_RE = re.compile(
+    r"\b(?:for|entity|table|refresh|deploy(?:ed|ing)?|onboard)\s+"
+    r"([a-z_][a-z0-9_]*(?:\s+[a-z_][a-z0-9_]*)?)",
+    re.I,
+)
+_LEADING_ENTITY_RE = re.compile(
+    r"\b([a-z_][a-z0-9_]*(?:\s+[a-z_][a-z0-9_]*)?)\s+"
+    r"(?:is deployed|has no data|doesn't have|doesnt have|target db|is paused|duplicate key)",
+    re.I,
+)
+_DIRECT_DIAGNOSE_ENTITY_RE = re.compile(
+    r"\bdiagnose(?:_entity_delivery| entity delivery| target data)?\s+"
+    r"([a-z_][a-z0-9_]*)\b",
+    re.I,
+)
+_MAPPING_TARGET_RE = re.compile(
+    r"\b([a-z_][a-z0-9_]*)\s*(?:->|to)\s*"
+    r"([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)\b",
+    re.I,
+)
+_REJECT_COLUMN_RE = re.compile(
+    r"\breject(?:\s+mapping)?\s+([a-z_][a-z0-9_]*)\b", re.I)
+_REVIEW_ID_RE = re.compile(r"\b(?:review|field review)\s*#?\s*(\d+)\b", re.I)
+
+
+def _proposal_id(message: str, page_context: dict) -> int | None:
+    match = _PROPOSAL_ID_RE.search(message)
+    if match:
+        return int(match.group(1))
+    if page_context.get("proposal_id") is not None:
+        return int(page_context["proposal_id"])
+    return None
+
+
+def _normalize_entity(value: str | None) -> str | None:
+    if not value:
+        return None
+    entity = re.sub(r"\s+", "_", value.strip().lower())
+    if entity in {"a", "the", "it", "this", "that", "target", "source",
+                  "data", "status", "db", "fix", "repair", "diagnose"}:
+        return None
+    return entity
+
+
+def _extract_entity(message: str, page_context: dict) -> str | None:
+    if page_context.get("entity"):
+        return str(page_context["entity"])
+    for regex in (_DIRECT_DIAGNOSE_ENTITY_RE, _LEADING_ENTITY_RE, _ENTITY_RE):
+        match = regex.search(message)
+        entity = _normalize_entity(match.group(1) if match else None)
+        if entity:
+            return entity
+    return None
 
 
 def _extract_params(intent_name: str, message: str, page_context: dict) -> dict:
     params: dict = {}
     if intent_name in ("summarize_proposal", "explain_blocker", "deploy_guidance"):
-        match = _PROPOSAL_ID_RE.search(message)
-        if match:
-            params["proposal_id"] = int(match.group(1))
-        elif page_context.get("proposal_id") is not None:
-            params["proposal_id"] = int(page_context["proposal_id"])
+        pid = _proposal_id(message, page_context)
+        if pid is not None:
+            params["proposal_id"] = pid
     if intent_name == "onboard_table":
         match = _TABLE_RE.search(message)
         if match and match.group(1) not in ("a", "the", "new"):
@@ -171,6 +266,79 @@ def _extract_params(intent_name: str, message: str, page_context: dict) -> dict:
         params["error"] = str(page_context.get("error") or message)
     if intent_name == "resolve_drift" and page_context.get("entity"):
         params["entities"] = [str(page_context["entity"])]
+    if intent_name == "inspect_job":
+        match = _JOB_ID_RE.search(message)
+        if match:
+            params["job_id"] = match.group(0)
+        if page_context.get("target_system"):
+            params["target_system"] = str(page_context["target_system"])
+    if intent_name == "plan_refresh_failure_repair":
+        match = _JOB_ID_RE.search(message)
+        if match:
+            params["job_id"] = match.group(0)
+        if page_context.get("job_id"):
+            params["job_id"] = str(page_context["job_id"])
+        if page_context.get("target_system"):
+            params["target_system"] = str(page_context["target_system"])
+    if intent_name == "diagnose_entity_delivery":
+        entity = _extract_entity(message, page_context)
+        if entity:
+            params["entity"] = entity
+        if page_context.get("target_system"):
+            params["target_system"] = str(page_context["target_system"])
+    if intent_name == "explain_deploy_error":
+        params["error"] = str(page_context.get("error") or message)
+        entity = _extract_entity(message, page_context)
+        if entity:
+            params["entity"] = entity
+        pid = _proposal_id(message, page_context)
+        if pid is not None:
+            params["proposal_id"] = pid
+    if intent_name in ("diagnose_duplicate_key", "repair_duplicate_key"):
+        params["error"] = str(page_context.get("error") or message)
+        entity = _extract_entity(message, page_context)
+        if entity:
+            params["entity"] = entity
+        try:
+            from ..services.operator_diagnostics import parse_duplicate_key
+            duplicate = parse_duplicate_key(params["error"]) or {}
+        except Exception:
+            duplicate = {}
+        params.update({k: v for k, v in duplicate.items() if v})
+        for key in ("target_table", "target_column", "target_id",
+                    "target_system", "actor"):
+            if page_context.get(key):
+                params[key] = str(page_context[key])
+    if intent_name == "add_mapping":
+        pid = _proposal_id(message, page_context)
+        if pid is not None:
+            params["proposal_id"] = pid
+        match = _MAPPING_TARGET_RE.search(message)
+        if match:
+            params["source_column"] = match.group(1)
+            params["target_table"] = match.group(2)
+            params["target_column"] = match.group(3)
+        if page_context.get("actor"):
+            params["actor"] = str(page_context["actor"])
+    if intent_name in ("reject_mapping_review", "reopen_mapping_review"):
+        review_match = _REVIEW_ID_RE.search(message)
+        if review_match:
+            params["review_id"] = int(review_match.group(1))
+        if page_context.get("review_id"):
+            params["review_id"] = int(page_context["review_id"])
+        if page_context.get("actor"):
+            params["actor"] = str(page_context["actor"])
+    if intent_name == "reject_mapping":
+        pid = _proposal_id(message, page_context)
+        if pid is not None:
+            params["proposal_id"] = pid
+        match = _REJECT_COLUMN_RE.search(message)
+        if match and match.group(1) not in {"mapping", "it", "this"}:
+            params["source_column"] = match.group(1)
+        elif page_context.get("source_column"):
+            params["source_column"] = str(page_context["source_column"])
+        if page_context.get("actor"):
+            params["actor"] = str(page_context["actor"])
     return params
 
 
@@ -290,18 +458,37 @@ def _fmt_check_status(result: dict) -> str:
     quarantine = result.get("quarantine_unresolved")
     if quarantine is not None:
         parts.append(f"unresolved quarantine: {quarantine}")
-    return "Integration status — " + ", ".join(str(p) for p in parts) + "."
+    lines = ["Integration status:"] + [f"- {p}" for p in parts]
+    return "\n".join(lines)
 
 
 def _fmt_summarize(result: dict) -> str:
-    return result.get("summary") or "Proposal summary unavailable."
+    summary = result.get("summary") or "Proposal summary unavailable."
+    mappings = result.get("accepted_mappings") or []
+    if not mappings:
+        return summary
+    pieces = []
+    for field in mappings[:20]:
+        target_column = (
+            field.get("resolved_target_column")
+            or field.get("suggested_target_column")
+            or "?"
+        )
+        target = f"{field.get('suggested_target_table')}.{target_column}"
+        label = f"review {field.get('review_id')}" if field.get("review_id") else "review ?"
+        pieces.append(f"{label}: {field.get('source_column')} -> {target}")
+    lines = [summary, "Accepted mappings:"] + [f"- {p}" for p in pieces]
+    if len(mappings) > 20:
+        lines.append(f"(+{len(mappings) - 20} more)")
+    return "\n".join(lines)
 
 
 def _fmt_blocker(result: dict) -> str:
     if result.get("deploy_ready"):
         return "Nothing is blocking — this proposal is ready to deploy."
     blockers = result.get("blockers") or ["unknown blocker"]
-    return "Blocked: " + " | ".join(blockers)
+    lines = ["Blocked:"] + [f"- {b}" for b in blockers]
+    return "\n".join(lines)
 
 
 def _fmt_schema(result: dict) -> str:
@@ -313,39 +500,53 @@ def _fmt_schema(result: dict) -> str:
                 for t in tables]
     source = names(result.get("source"))
     target = names(result.get("target"))
-    return (f"Source has {len(source)} tables ({', '.join(source[:8])}"
-            f"{'…' if len(source) > 8 else ''}); target has {len(target)} "
-            f"tables ({', '.join(target[:8])}{'…' if len(target) > 8 else ''}).")
+    lines = [f"Source: {len(source)} tables"]
+    if source:
+        lines.append("- " + ", ".join(source[:8]) + ("…" if len(source) > 8 else ""))
+    lines.append(f"Target: {len(target)} tables")
+    if target:
+        lines.append("- " + ", ".join(target[:8]) + ("…" if len(target) > 8 else ""))
+    return "\n".join(lines)
 
 
 def _fmt_guidance(result: dict) -> str:
     actions = result.get("recommended_actions") or []
     status = "ready to deploy" if result.get("deploy_ready") else "not deploy-ready"
-    return (f"This proposal is {status}. " +
-            (" Next: " + "; ".join(actions) if actions else ""))
+    lines = [f"This proposal is {status}."]
+    if actions:
+        lines.append("Next:")
+        lines += [f"- {a}" for a in actions]
+    return "\n".join(lines)
 
 
 def _fmt_dilemma(result: dict) -> str:
     options = result.get("options") or []
     labels = [o.get("label", o.get("action", "?")) for o in options]
-    return (f"Options for this {result.get('kind', 'dilemma')}: "
-            + "; ".join(labels)
-            + f". Recommended: {result.get('recommended', 'manual')}.")
+    lines = [f"Options for this {result.get('kind', 'dilemma')}:"]
+    lines += [f"- {label}" for label in labels]
+    lines.append(f"Recommended: {result.get('recommended', 'manual')}.")
+    return "\n".join(lines)
 
 
 def _fmt_onboard(result: dict) -> str:
     note = result.get("note") or ""
     proposal = result.get("proposal") or {}
     pid = proposal.get("proposal_id") or proposal.get("id")
-    lead = (f"Created proposal {pid} for review. " if pid
-            else "Created a proposal for review. ")
-    return lead + note
+    lead = (f"Created proposal {pid} for review." if pid
+            else "Created a proposal for review.")
+    lines = [lead]
+    if note:
+        lines.append(note)
+    return "\n".join(lines)
 
 
 def _fmt_heal(result: dict) -> str:
-    return (f"Proposed heal: {result.get('action', '?')} "
-            f"({json.dumps(result.get('detail') or {})}). "
-            + str(result.get("note") or ""))
+    lines = [f"Proposed heal: {result.get('action', '?')}",
+             f"- detail: {json.dumps(result.get('detail') or {})}"]
+    note = result.get("note")
+    if note:
+        lines.append(str(note))
+    return "\n".join(lines)
 
 
 def _fmt_drift_list(result: dict) -> str:
@@ -354,10 +555,14 @@ def _fmt_drift_list(result: dict) -> str:
         return "No drift reports recorded — schemas match their contracts."
     latest = (result.get("reports") or [{}])[0]
     impacted = latest.get("impacted_entities") or []
-    return (f"{count} drift report(s). Latest: {latest.get('target_system', '?')}"
-            f", impacted entities: {', '.join(map(str, impacted)) or 'none'}. "
-            "Say \"resolve drift\" to re-map and re-deliver them "
-            "(confirmation required).")
+    lines = [
+        f"{count} drift report(s).",
+        f"- latest target: {latest.get('target_system', '?')}",
+        f"- impacted entities: {', '.join(map(str, impacted)) or 'none'}",
+        "Say \"resolve drift\" to re-map and re-deliver them "
+        "(confirmation required).",
+    ]
+    return "\n".join(lines)
 
 
 def _fmt_resolve_drift(result: dict) -> str:
@@ -371,19 +576,242 @@ def _fmt_swap_dry_run(result: dict) -> str:
     if not affected:
         return ("Swap preview: no deployed entities are affected by the "
                 "target diff — an apply would only recreate and re-deliver.")
-    return (f"Swap preview: {len(affected)} affected entities "
-            f"({', '.join(map(str, affected))}). Applying re-maps them "
-            "(human-gated), recreates the target, and re-delivers — "
-            "destructive, typed confirmation required.")
+    lines = [
+        f"Swap preview: {len(affected)} affected entities",
+        "- " + ", ".join(map(str, affected)),
+        "Applying will:",
+        "- re-map affected entities (human-gated)",
+        "- recreate the target",
+        "- re-deliver",
+        "Destructive — typed confirmation required.",
+    ]
+    return "\n".join(lines)
 
 
 def _fmt_swap_apply(result: dict) -> str:
     status = result.get("status", "?")
     if status == "blocked_on_review":
-        return ("Swap blocked on low-confidence re-mappings: "
-                f"{', '.join(map(str, result.get('blocked') or []))}. "
-                "Resolve them or re-run with force.")
+        lines = ["Swap blocked on low-confidence re-mappings:"]
+        lines += [f"- {b}" for b in (result.get("blocked") or [])]
+        lines.append("Resolve them, or re-run with force.")
+        return "\n".join(lines)
     return f"Target swap {status}."
+
+
+def _fmt_inspect_job(result: dict) -> str:
+    job_id = result.get("job_id", "?")
+    job_type = result.get("job_type", "?")
+    status = result.get("status", "?")
+    lines = [f"Job {job_id} ({job_type}) is {status}."]
+    if result.get("progress_total") is not None:
+        lines.append(
+            f"- progress: {result.get('progress_current', 0)}/{result.get('progress_total')}")
+    error = result.get("error_message")
+    if error:
+        lines.append(f"- error: {error}")
+    failures = result.get("failures") or []
+    if failures:
+        lines.append("Failures:")
+        for f in failures[:3]:
+            lines.append(f"- {f.get('entity') or '?'}: {f.get('error') or f.get('status')}")
+    repair_text = _fmt_job_repair_handles(result.get("repair_plan") or {})
+    if repair_text:
+        lines.append(repair_text)
+    return "\n".join(lines)
+
+
+def _fmt_job_repair_handles(plan: dict) -> str:
+    items = plan.get("items") or []
+    if not items:
+        return ""
+    lines = ["Repair handles:"]
+    for item in items[:3]:
+        entity = item.get("entity") or "unknown"
+        category = item.get("category") or "unknown"
+        lines.append(f"- {entity} [{category}]")
+        for review in _repair_reviews(item)[:3]:
+            bits = []
+            if review.get("proposal_id"):
+                bits.append(f"proposal {review.get('proposal_id')}")
+            if review.get("review_id"):
+                bits.append(f"review {review.get('review_id')}")
+            source = review.get("source_column") or "?"
+            target = f"{review.get('target_table')}.{review.get('target_column')}"
+            bits.append(f"{source} -> {target}")
+            lines.append(f"  - {' '.join(bits)}")
+        commands = [
+            cmd for cmd in (
+                _command_for_tool_call(call)
+                for call in _repair_gated_calls(item)[:3]
+            ) if cmd
+        ]
+        for cmd in commands:
+            lines.append(f"  - command: {cmd}")
+    return "\n".join(lines)
+
+
+def _repair_reviews(item: dict) -> list[dict]:
+    diagnostic = item.get("diagnostic") or {}
+    reviews = []
+    if diagnostic.get("mapping_review"):
+        reviews.append(diagnostic["mapping_review"])
+    reviews.extend(diagnostic.get("suspect_mapping_reviews") or [])
+    duplicate_review = (item.get("diagnostic") or {}).get("mapping_review")
+    if duplicate_review and duplicate_review not in reviews:
+        reviews.append(duplicate_review)
+    return [r for r in reviews if isinstance(r, dict)]
+
+
+def _repair_gated_calls(item: dict) -> list[dict]:
+    calls = item.get("gated_tools") or []
+    if item.get("gated_tool"):
+        calls = [item["gated_tool"], *calls]
+    return [c for c in calls if isinstance(c, dict)]
+
+
+def _command_for_tool_call(call: dict) -> str | None:
+    tool = call.get("tool")
+    params = call.get("params") or {}
+    if tool == "reopen_mapping_review" and params.get("review_id"):
+        return f"`reopen mapping review {params['review_id']}`"
+    if tool == "reject_mapping_review" and params.get("review_id"):
+        return f"`reject mapping review {params['review_id']}`"
+    if tool == "repair_duplicate_key":
+        return "`repair duplicate key ...`"
+    return f"`{tool}`" if tool else None
+
+
+def _fmt_diagnose_entity(result: dict) -> str:
+    entity = result.get("entity", "?")
+    status = result.get("entity_status", "?")
+    counts = result.get("target_counts") or []
+    if counts:
+        count_text = ", ".join(
+            f"{c.get('table')}: {c.get('rows') if 'rows' in c else c.get('error', '?')}"
+            for c in counts
+        )
+    else:
+        count_text = "no target tables recorded"
+    lines = [f"{entity} is {status}.", f"- target counts: {count_text}"]
+    latest_job = result.get("latest_job") or {}
+    if latest_job:
+        lines.append(f"- latest job: {latest_job.get('job_type')} {latest_job.get('status')}")
+    recs = result.get("recommendations") or []
+    if recs:
+        lines.append("Next:")
+        lines += [f"- {r}" for r in recs]
+    else:
+        lines.append("Next: no recommendation.")
+    return "\n".join(lines)
+
+
+def _fmt_deploy_error(result: dict) -> str:
+    missing = result.get("missing_required") or []
+    if missing:
+        lines = ["Deploy is blocked — required target columns are unmapped:"]
+        lines += [f"- {m.get('target_table')}.{m.get('target_column')}" for m in missing]
+    else:
+        lines = [result.get("summary") or "Deploy error parsed."]
+    actions = result.get("suggested_actions") or []
+    if actions:
+        lines.append("Suggested:")
+        for action in actions[:4]:
+            if action.get("action") == "add_mapping":
+                src = action.get("source_column") or "<source_column>"
+                lines.append(
+                    f"- add `{src} -> {action.get('target_table')}.{action.get('target_column')}`")
+            else:
+                lines.append(f"- {action.get('reason') or action.get('action')}")
+    return "\n".join(lines)
+
+
+def _fmt_diagnose_duplicate(result: dict) -> str:
+    target = f"{result.get('target_table')}.{result.get('target_column')}"
+    if result.get("safe_to_repair"):
+        lines = [
+            f"Duplicate-key repair is safe to prepare for {result.get('entity')}.",
+            f"- {target}={result.get('target_id')} exists, not claimed by another crosswalk row.",
+            "Confirm `repair_duplicate_key` to record the missing crosswalk, "
+            "then retry refresh for this entity.",
+        ]
+        return "\n".join(lines)
+    reasons = result.get("reasons") or ["manual review required"]
+    lines = [f"Duplicate-key repair is not safe to auto-prepare for {result.get('entity')}:"]
+    lines += [f"- {r}" for r in reasons]
+    return "\n".join(lines)
+
+
+def _fmt_refresh_repair_plan(result: dict) -> str:
+    items = result.get("items") or []
+    if not items:
+        return result.get("summary") or "No refresh failures to repair."
+    lines = [result.get("summary") or f"{len(items)} repair item(s)."]
+    for item in items[:5]:
+        entity = item.get("entity") or "unknown"
+        category = item.get("category") or "unknown"
+        diagnosis = item.get("diagnosis") or "inspect manually"
+        lines.append(f"- {entity} [{category}]: {diagnosis}")
+        gated = item.get("gated_tools") or ([] if not item.get("gated_tool") else [item["gated_tool"]])
+        if gated:
+            for call in gated[:3]:
+                params = call.get("params") or {}
+                if params:
+                    detail = ", ".join(f"{k}={v}" for k, v in params.items())
+                    lines.append(f"  - gated action: `{call.get('tool')}` ({detail})")
+                else:
+                    lines.append(f"  - gated action: `{call.get('tool')}`")
+        else:
+            for step in (item.get("next_steps") or [])[:2]:
+                lines.append(f"  - next: {step}")
+    return "\n".join(lines)
+
+
+def _fmt_repair_duplicate(result: dict) -> str:
+    lines = [
+        f"Recorded duplicate-key crosswalk repair for {result.get('entity')}.",
+        f"- {result.get('target_table')}.{result.get('target_column')}={result.get('target_id')}",
+        f"Next: {result.get('next_step', 'retry refresh')}.",
+    ]
+    return "\n".join(lines)
+
+
+def _fmt_add_mapping(result: dict) -> str:
+    lines = [
+        f"Added mapping on proposal {result.get('proposal_id')}.",
+        f"- {result.get('source_column')} -> "
+        f"{result.get('target_table')}.{result.get('target_column')}",
+        f"Proposal is {result.get('proposal_status', '?')}.",
+    ]
+    return "\n".join(lines)
+
+
+def _fmt_reject_mapping(result: dict) -> str:
+    lines = [
+        f"Rejected `{result.get('source_column')}` on proposal {result.get('proposal_id')}.",
+        f"Proposal is {result.get('proposal_status', '?')}.",
+    ]
+    return "\n".join(lines)
+
+
+def _fmt_reject_mapping_review(result: dict) -> str:
+    lines = [
+        f"Rejected review {result.get('review_id')} on proposal {result.get('proposal_id')}.",
+        f"- {result.get('source_column')} -> "
+        f"{result.get('target_table')}.{result.get('target_column')}",
+        f"Proposal is {result.get('proposal_status', '?')}.",
+    ]
+    return "\n".join(lines)
+
+
+def _fmt_reopen_mapping_review(result: dict) -> str:
+    lines = [
+        f"Reopened review {result.get('review_id')} in the review queue.",
+        f"- {result.get('source_column')} -> "
+        f"{result.get('target_table')}.{result.get('target_column')}",
+        f"On proposal {result.get('proposal_id')}, status: "
+        f"{result.get('proposal_status', '?')}.",
+    ]
+    return "\n".join(lines)
 
 
 TEMPLATES = {
@@ -400,20 +828,63 @@ TEMPLATES = {
     "swap_target_dry_run": _fmt_swap_dry_run,
     "swap_target_apply": _fmt_swap_apply,
     "swap_source_schema": _fmt_swap_dry_run,
+    "inspect_job": _fmt_inspect_job,
+    "diagnose_entity_delivery": _fmt_diagnose_entity,
+    "explain_deploy_error": _fmt_deploy_error,
+    "diagnose_duplicate_key": _fmt_diagnose_duplicate,
+    "plan_refresh_failure_repair": _fmt_refresh_repair_plan,
+    "repair_duplicate_key": _fmt_repair_duplicate,
+    "add_mapping": _fmt_add_mapping,
+    "reject_mapping": _fmt_reject_mapping,
+    "reject_mapping_review": _fmt_reject_mapping_review,
+    "reopen_mapping_review": _fmt_reopen_mapping_review,
 }
 
-CLARIFICATION_TEXT = (
-    "I did not catch a supported request. I can: check integration status, "
-    "summarize a proposal, explain what blocks a deploy, show the schemas, "
-    "give deploy guidance, explain a mapping dilemma, onboard a table "
-    "(propose-only), list or resolve schema drift, preview or apply a "
-    "schema swap, or propose an error heal. Try e.g. \"what's blocking "
-    "proposal 42?\".")
+CLARIFICATION_TEXT = "\n".join([
+    "I did not catch a supported request. I can:",
+    "- check integration status",
+    "- summarize a proposal",
+    "- explain what blocks a deploy",
+    "- show the schemas",
+    "- give deploy guidance",
+    "- explain a mapping dilemma",
+    "- onboard a table (propose-only)",
+    "- inspect worker jobs",
+    "- diagnose deployed target data",
+    "- explain deploy errors",
+    "- plan refresh failure repairs",
+    "- diagnose or repair duplicate-key crosswalks",
+    "- prepare mapping repairs",
+    "- list or resolve schema drift",
+    "- preview or apply a schema swap",
+    "- propose an error heal",
+    "",
+    "Try e.g. \"what's blocking proposal 42?\"",
+])
 
-DEFERRED_TEXT = (
-    "Chat-guided backup recovery is not available — restores stay on the "
-    "Recovery page (Maintain group) or `scripts/recover.py`, both behind "
-    "the same typed-confirmation gates.")
+CHAT_HELP_TEXT = """Chat commands:
+- `--help` — this list.
+- `inspect job <job_id>` — worker status, failures, repair handles.
+- `plan_refresh_failure_repair for job <job_id>` — build repair checklist.
+- `summarize proposal <proposal_id>` — accepted mappings + review ids.
+- `diagnose_entity_delivery <entity>` — deployed status + target row counts.
+- `reopen mapping review <review_id>` — bad mapping back to Review Queue.
+- `reject mapping review <review_id>` — reject one bad mapping row.
+- `add mapping <source_column> to <target_table>.<target_column> proposal <proposal_id>` — manual mapping.
+- `explain deploy error <error text>` — parse missing required mappings.
+- `diagnose duplicate key for <entity>: <error text>` — safe to repair?
+- `repair duplicate key ...` — gated crosswalk repair (if diagnostic says safe).
+- `onboard <source_table>` — create proposal. Deploys nothing.
+- `show schema`, `check status`, `list drift reports`, `schema swap` — read-only guidance.
+
+Tip: type `/` in the box to pick a command."""
+
+DEFERRED_TEXT = "\n".join([
+    "Chat-guided backup recovery is not available. Restores stay on:",
+    "- the Recovery page (Maintain group)",
+    "- `scripts/recover.py`",
+    "Both are behind the same typed-confirmation gates.",
+])
 
 
 def render_result(tool_name: str, result: dict) -> str:
@@ -646,6 +1117,36 @@ def _cap_messages(messages: list[dict]) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 TOKEN_CHUNK = 80
+_CONFIRM_WORD_RE = re.compile(
+    r"\b(yes|yep|ok|okay|confirm|confirmed|approve|approved|done|proceed|"
+    r"go ahead|run it|do it)\b",
+    re.I,
+)
+_HELP_RE = re.compile(
+    r"^\s*(--help|help|chat help|help commands|what commands.*)\s*$",
+    re.I,
+)
+
+
+def _pending_confirmation(messages: list[dict]) -> dict | None:
+    """Return the most recent still-gated tool call from assistant history."""
+    for message in reversed(messages):
+        if message.get("role") != "assistant":
+            continue
+        for call in reversed(message.get("tool_calls") or []):
+            if call.get("requires_confirmation"):
+                return {"tool": call.get("tool"), "params": call.get("params") or {}}
+        if message.get("tool_results"):
+            return None
+    return None
+
+
+def _looks_like_confirmation(message: str) -> bool:
+    return bool(_CONFIRM_WORD_RE.search(message or ""))
+
+
+def _looks_like_help(message: str) -> bool:
+    return bool(_HELP_RE.search(message or ""))
 
 
 class AgentSession:
@@ -692,7 +1193,28 @@ class AgentSession:
         if page_context:
             user_message["page_context"] = page_context
 
+        if _looks_like_help(message):
+            text = CHAT_HELP_TEXT
+            assistant = {"role": "assistant", "content": text,
+                         "created_at": _now_iso()}
+            self.manager.append_messages(conversation_id, self.user_id,
+                                         [user_message, assistant],
+                                         title_seed=message)
+            events.extend(StreamEvent("token", {"text": chunk})
+                          for chunk in _chunks(text))
+            events.append(StreamEvent("done", {"content": text,
+                                               "conversation_id": str(conversation_id)}))
+            return events
+
         # -- confirmation round-trip: execute the previously proposed call --
+        # The UI normally sends an explicit confirm payload, but operators also
+        # type "done" / "approve" naturally after a prompt. Reuse the saved
+        # pending params so the table/proposal name is not lost.
+        confirm = confirm or (
+            _pending_confirmation(row["messages"])
+            if _looks_like_confirmation(message)
+            else None
+        )
         if confirm:
             outcome = self.dispatcher.dispatch(
                 str(confirm.get("tool")), dict(confirm.get("params") or {}),
@@ -707,7 +1229,11 @@ class AgentSession:
 
         intent = self._classify(message, page_context)
 
-        if intent.name == _DEFERRED:
+        if intent.name == _CHAT_HELP:
+            text = CHAT_HELP_TEXT
+            assistant = {"role": "assistant", "content": text,
+                         "created_at": _now_iso()}
+        elif intent.name == _DEFERRED:
             text = DEFERRED_TEXT
             assistant = {"role": "assistant", "content": text,
                          "created_at": _now_iso()}

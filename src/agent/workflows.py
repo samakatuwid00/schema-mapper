@@ -125,7 +125,7 @@ def describe(state: WorkflowState) -> str:
         parts.append(f"Done: {', '.join(state.completed_steps)}.")
     if remaining:
         parts.append(f"Remaining: {', '.join(remaining)}.")
-    return " ".join(parts)
+    return "\n".join(parts)
 
 
 def next_step_suggestion(state: WorkflowState) -> str:
